@@ -20,8 +20,7 @@ defmodule YtSearch.Application do
       YtSearchWeb.Endpoint,
       # Start a worker by calling: YtSearch.Worker.start_link(arg)
       # {YtSearch.Worker, arg}
-
-      {Cachex, name: :mp4_links}
+      {Mutex, name: Mp4LinkMutex}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

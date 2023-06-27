@@ -45,7 +45,7 @@ defmodule YtSearch.MixProject do
       {:jason, "~> 1.2"},
       {:mock, "~> 0.3.8"},
       {:plug_cowboy, "~> 2.5"},
-      {:cachex, "~> 3.6.0"}
+      {:mutex, "~>1.3"}
     ]
   end
 

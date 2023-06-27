@@ -24,21 +24,7 @@ defmodule YtSearchWeb.SlotController do
           mp4_url =
             case Mp4Link.fetch_by_id(slot.youtube_id) do
               nil ->
-                # get mp4 from ytdlp
-                {output, exit_status} =
-                  System.cmd("yt-dlp", [
-                    "--no-check-certificate",
-                    "--no-cache-dir",
-                    "--rm-cache-dir",
-                    "-f",
-                    "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-                    "--get-url",
-                    youtube_url
-                  ])
-
-                new_mp4_link = String.trim(output)
-                Mp4Link.insert(slot.youtube_id, new_mp4_link)
-                new_mp4_link
+                fetch_mp4_link(slot.youtube_id, youtube_url)
 
               data ->
                 data.mp4_link
@@ -51,5 +37,36 @@ defmodule YtSearchWeb.SlotController do
           |> redirect(external: youtube_url)
         end
     end
+  end
+
+  defp fetch_mp4_link(youtube_id, youtube_url) do
+    Mutex.under(Mp4LinkMutex, youtube_id, fn ->
+      IO.puts("calling mp4")
+
+      # refetch to prevent double fetch
+      case Mp4Link.fetch_by_id(youtube_id) do
+        nil ->
+          # get mp4 from ytdlp
+          IO.puts("calling mp4 for real")
+
+          {output, exit_status} =
+            System.cmd("yt-dlp", [
+              "--no-check-certificate",
+              "--no-cache-dir",
+              "--rm-cache-dir",
+              "-f",
+              "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
+              "--get-url",
+              youtube_url
+            ])
+
+          new_mp4_link = String.trim(output)
+          Mp4Link.insert(youtube_id, new_mp4_link)
+          new_mp4_link
+
+        link ->
+          link.mp4_link
+      end
+    end)
   end
 end
