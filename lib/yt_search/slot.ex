@@ -13,6 +13,12 @@ defmodule YtSearch.Slot do
     field(:youtube_id, :string)
   end
 
+  @spec from(Integer.t()) :: Slot.t()
+  def fetch_by_id(slot_id) do
+    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    Repo.one(query)
+  end
+
   @spec from(String.t()) :: Slot.t()
   def from(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
