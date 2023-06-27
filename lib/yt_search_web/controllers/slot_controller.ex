@@ -20,6 +20,8 @@ defmodule YtSearchWeb.SlotController do
 
         youtube_url = "https://youtube.com/watch?v=#{slot.youtube_id}"
 
+        IO.inspect(agent)
+
         if String.contains?(agent, "stagefright") or String.contains?(agent, "AVProMobileVideo") do
           mp4_url =
             case Mp4Link.fetch_by_id(slot.youtube_id) do
