@@ -17,9 +17,11 @@ defmodule YtSearch.Application do
       # Start Finch
       {Finch, name: YtSearch.Finch},
       # Start the Endpoint (http/https)
-      YtSearchWeb.Endpoint
+      YtSearchWeb.Endpoint,
       # Start a worker by calling: YtSearch.Worker.start_link(arg)
       # {YtSearch.Worker, arg}
+
+      {Cachex, name: :mp4_links}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
