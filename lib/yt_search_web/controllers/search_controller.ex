@@ -3,9 +3,18 @@ defmodule YtSearchWeb.SearchController do
 
   def search(conn, _params) do
     # TODO this can be nil
-    search_query = conn.query_params["search"]
-    IO.puts("want to do '#{search_query}'")
+    case conn.query_params["search"] do
+      nil ->
+        conn
+        |> put_status(400)
+        |> json(%{error: true, message: "need search param fam"})
 
+      search_query ->
+        do_search(conn, search_query)
+    end
+  end
+
+  def do_search(conn, search_query) do
     escaped_query = search_query |> URI.encode()
 
     {output, exit_status} =
