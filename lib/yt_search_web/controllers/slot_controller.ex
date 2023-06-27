@@ -1,6 +1,7 @@
 defmodule YtSearchWeb.SlotController do
   use YtSearchWeb, :controller
   alias YtSearch.Slot
+  alias YtSearch.Mp4Link
 
   def fetch_video(conn, %{"slot_id" => slot_id_query}) do
     {slot_id, _} = slot_id_query |> Integer.parse()
@@ -21,7 +22,7 @@ defmodule YtSearchWeb.SlotController do
 
         if String.contains?(agent, "stagefright") or String.contains?(agent, "AVProMobileVideo") do
           mp4_url =
-            case Cachex.get!(:mp4_links, slot.youtube_id) do
+            case Mp4Link.fetch_by_id(slot.youtube_id) do
               nil ->
                 # get mp4 from ytdlp
                 {output, exit_status} =
@@ -36,11 +37,11 @@ defmodule YtSearchWeb.SlotController do
                   ])
 
                 new_mp4_link = String.trim(output)
-                Cachex.put(:mp4_links, slot.youtube_id, new_mp4_link)
+                Mp4Link.insert(slot.youtube_id, new_mp4_link)
                 new_mp4_link
 
-              v ->
-                v
+              data ->
+                data.mp4_link
             end
 
           conn
