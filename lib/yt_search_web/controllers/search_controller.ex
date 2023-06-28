@@ -1,6 +1,8 @@
 defmodule YtSearchWeb.SearchController do
   use YtSearchWeb, :controller
 
+  alias YtSearch.Youtube
+
   def search(conn, _params) do
     # TODO this can be nil
     case conn.query_params["search"] do
@@ -15,22 +17,10 @@ defmodule YtSearchWeb.SearchController do
   end
 
   def do_search(conn, search_query) do
-    escaped_query = search_query |> URI.encode()
-
-    {output, exit_status} =
-      System.cmd("yt-dlp", [
-        "https://www.youtube.com/results?search_query=#{escaped_query}",
-        "--dump-json",
-        "--flat-playlist",
-        "--playlist-end",
-        "15"
-      ])
+    {:ok, youtube_json_results} = Youtube.search(search_query)
 
     results =
-      output
-      |> IO.inspect()
-      |> String.split("\n", trim: true)
-      |> Enum.map(&Jason.decode!/1)
+      youtube_json_results
       |> Enum.filter(fn data ->
         # dont give Channel entries (future stuff)
         data["ie_key"] == "Youtube"
