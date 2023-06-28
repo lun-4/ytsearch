@@ -2,6 +2,7 @@ defmodule YtSearchWeb.SearchController do
   use YtSearchWeb, :controller
 
   alias YtSearch.Youtube
+  alias YtSearch.SearchSlot
 
   def search(conn, _params) do
     case conn.query_params["search"] || conn.query_params["q"] do
@@ -25,6 +26,11 @@ defmodule YtSearchWeb.SearchController do
         data["ie_key"] == "Youtube"
       end)
       |> Enum.map(fn ytdlp_data ->
+        # spawn background task for thumbnail fetching
+        Youtube.Thumbnail.fetch_in_background(ytdlp_data)
+        ytdlp_data
+      end)
+      |> Enum.map(fn ytdlp_data ->
         slot = YtSearch.Slot.from(ytdlp_data["id"])
 
         %{
@@ -40,7 +46,19 @@ defmodule YtSearchWeb.SearchController do
         }
       end)
 
+    search_slot =
+      results
+      |> Enum.map(fn r ->
+        {numeric, _fractional} = Integer.parse(r.slot_id)
+        numeric
+      end)
+      |> Jason.encode!()
+      |> SearchSlot.from()
+
     conn
-    |> json(%{search_results: results})
+    |> json(%{
+      search_results: results,
+      slot_id: "#{search_slot.id}"
+    })
   end
 end

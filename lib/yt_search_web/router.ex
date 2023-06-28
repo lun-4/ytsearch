@@ -12,6 +12,7 @@ defmodule YtSearchWeb.Router do
   scope "/api/v1", YtSearchWeb do
     get("/search", SearchController, :search)
     get("/s/:slot_id", SlotController, :fetch_video)
+    get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
   end
 
   # smaller url version of the api, this is a bodge for
@@ -19,6 +20,7 @@ defmodule YtSearchWeb.Router do
   # - quest vrchat keyboard not actually scrolling properly when link is too long
   scope "/a/1", YtSearchWeb do
     get("/s", SearchController, :search)
+    get("/at/:search_slot_id", AtlasController, :fetch)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

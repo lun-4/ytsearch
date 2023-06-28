@@ -13,7 +13,6 @@ defmodule YtSearch.Youtube do
         # is good
         {:ok,
          stdout
-         |> IO.inspect()
          |> String.split("\n", trim: true)
          |> Enum.map(&Jason.decode!/1)}
 

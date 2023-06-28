@@ -39,14 +39,10 @@ defmodule YtSearch.Mp4Link do
 
   defp fetch_mp4_link(youtube_id, youtube_url) do
     Mutex.under(Mp4LinkMutex, youtube_id, fn ->
-      IO.puts("calling mp4")
-
       # refetch to prevent double fetch
       case fetch_by_id(youtube_id) do
         nil ->
           # get mp4 from ytdlp
-          IO.puts("calling mp4 for real")
-
           new_mp4_link = Youtube.fetch_mp4_link(youtube_id)
           insert(youtube_id, new_mp4_link)
           new_mp4_link
