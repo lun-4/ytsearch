@@ -1,5 +1,5 @@
 defmodule YtSearchWeb.SlotTest do
-  use YtSearchWeb.ConnCase, async: true
+  use YtSearchWeb.ConnCase, async: false
   import Mock
   alias YtSearch.Slot
 
