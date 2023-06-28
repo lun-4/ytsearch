@@ -54,4 +54,46 @@ defmodule YtSearchWeb.SearchTest do
       assert get_resp_header(conn, "location") == ["https://youtube.com/watch?v=Jouh2mdt1fz"]
     end
   end
+
+  test "small route", %{conn: conn} do
+    with_mock(
+      System,
+      [:passthrough],
+      cmd: fn _, _ ->
+        {@test_output, 0}
+      end,
+      system_time: fn a -> passthrough([a]) end
+    ) do
+      conn =
+        conn
+        |> get(~p"/a/1/s?q=urban+rescue+ranch")
+
+      assert json_response(conn, 200) == %{
+               "search_results" => [
+                 %{
+                   "duration" => 612.0,
+                   "slot_id" => "1",
+                   "title" => "How to Cook Capybara Pie (eating Big Ounce)",
+                   "youtube_id" => "Jouh2mdt1fI",
+                   "youtube_url" => "https://www.youtube.com/watch?v=Jouh2mdt1fI",
+                   "channel_name" => "The Urban Rescue Ranch",
+                   "description" => nil,
+                   "uploaded_at" => 1_687_803_719,
+                   "view_count" => 1_245_513
+                 },
+                 %{
+                   "duration" => 612.0,
+                   "slot_id" => "2",
+                   "title" => "How to Cook Capybara Pie (eating Big Ounce)",
+                   "youtube_id" => "Jouh2mdt1fz",
+                   "youtube_url" => "https://www.youtube.com/watch?v=Jouh2mdt1fI",
+                   "channel_name" => "The Urban Rescue Ranch",
+                   "description" => nil,
+                   "uploaded_at" => 1_687_803_719,
+                   "view_count" => 1_245_513
+                 }
+               ]
+             }
+    end
+  end
 end

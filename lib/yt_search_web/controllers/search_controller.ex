@@ -4,8 +4,7 @@ defmodule YtSearchWeb.SearchController do
   alias YtSearch.Youtube
 
   def search(conn, _params) do
-    # TODO this can be nil
-    case conn.query_params["search"] do
+    case conn.query_params["search"] || conn.query_params["q"] do
       nil ->
         conn
         |> put_status(400)

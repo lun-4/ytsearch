@@ -14,6 +14,13 @@ defmodule YtSearchWeb.Router do
     get("/s/:slot_id", SlotController, :fetch_video)
   end
 
+  # smaller url version of the api, this is a bodge for
+  # - quest vrchat keyboard not having a cursor you can click on
+  # - quest vrchat keyboard not actually scrolling properly when link is too long
+  scope "/a/1", YtSearchWeb do
+    get("/s", SearchController, :search)
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:yt_search, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
