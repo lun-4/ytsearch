@@ -5,19 +5,36 @@ defmodule YtSearch.Mp4Link do
   import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
   alias YtSearch.Youtube
+  alias YtSearch.TTL
 
   @type t :: %__MODULE__{}
 
   @primary_key {:youtube_id, :string, autogenerate: false}
 
+  # 30 minutes ttl for mp4 link
+  @ttl 30 * 60
+
   schema "links" do
     field(:mp4_link, :string)
+    timestamps()
   end
 
   @spec fetch_by_id(String.t()) :: Mp4Link.t()
   def fetch_by_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-    Repo.one(query)
+
+    case Repo.one(query) do
+      nil ->
+        nil
+
+      link ->
+        if TTL.expired?(link, @ttl) do
+          Repo.delete!(link)
+          nil
+        else
+          link
+        end
+    end
   end
 
   @spec insert(String.t(), String.t()) :: Mp4Link.t()

@@ -4,6 +4,7 @@ defmodule YtSearch.Slot do
   import Ecto.Query
   import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
+  alias YtSearch.TTL
 
   @type t :: %__MODULE__{}
 
@@ -11,6 +12,7 @@ defmodule YtSearch.Slot do
 
   schema "slots" do
     field(:youtube_id, :string)
+    timestamps()
   end
 
   @spec from(Integer.t()) :: Slot.t()
