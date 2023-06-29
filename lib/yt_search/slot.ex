@@ -27,7 +27,9 @@ defmodule YtSearch.Slot do
 
     case Repo.one(query) do
       nil ->
-        %__MODULE__{youtube_id: youtube_id, id: find_available_id()}
+        {:ok, new_id} = find_available_id()
+
+        %__MODULE__{youtube_id: youtube_id, id: new_id}
         |> Repo.insert!()
 
       slot ->
@@ -35,33 +37,42 @@ defmodule YtSearch.Slot do
     end
   end
 
-  defp find_available_id() do
-    query = from s in __MODULE__, select: max(s.id)
-
-    max_id =
-      case Repo.one(query) do
-        nil -> 0
-        v -> v
-      end
-
-    possible_available_id = max_id + 1
-
-    if possible_available_id > @urls do
-      # delete lowest id
-      query = from s in __MODULE__, select: min(s.id)
-      min_id = Repo.one!(query)
-      delete_query = from s in __MODULE__, where: s.id == ^min_id
-      Repo.delete!(delete_query)
-
-      # min_id is now an available id 
-      min_id
-    else
-      possible_available_id
-    end
-  end
-
+  @max_id_retries 20
+  # 12 hours
+  @ttl 12 * 60 * 60
   # this number must be synced with the world build
   @urls 100_000
+
+  defp find_available_id() do
+    find_available_id(0)
+  end
+
+  @spec find_available_id(Integer.t()) :: {:ok, Integer.t()} | {:error, :no_available_id}
+  defp find_available_id(retries) do
+    # generate id, check if 
+
+    random_id = :rand.uniform(@urls)
+    query = from s in __MODULE__, where: s.id == ^random_id, select: s
+
+    case Repo.one(query) do
+      nil ->
+        {:ok, random_id}
+
+      slot ->
+        # already existing from id, check if it needs to be
+        # refreshed
+        if TTL.expired?(slot, @ttl) do
+          Repo.delete!(slot)
+          {:ok, random_id}
+        else
+          if retries > @max_id_retries do
+            {:error, :no_available_id}
+          else
+            find_available_id(retries + 1)
+          end
+        end
+    end
+  end
 
   # slot system
   # 100 k
