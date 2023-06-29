@@ -31,7 +31,7 @@ defmodule YtSearch.Youtube do
         "-f",
         "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
         "--get-url",
-        Youtube.Util.to_watch_url(youtube_id)
+        YtSearch.Youtube.Util.to_watch_url(youtube_id)
       ])
 
     String.trim(output)
