@@ -9,6 +9,9 @@ defmodule YtSearch.SearchSlot do
 
   @primary_key {:id, :integer, autogenerate: false}
 
+  # this number must be synced with the world build
+  @urls 100_000
+
   schema "search_slots" do
     field(:slots_json, :string)
     timestamps()
@@ -55,9 +58,6 @@ defmodule YtSearch.SearchSlot do
       possible_available_id
     end
   end
-
-  # this number must be synced with the world build
-  @urls 100_000
 
   # slot system
   # 100 k
