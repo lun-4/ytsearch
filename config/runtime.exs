@@ -20,6 +20,8 @@ if System.get_env("PHX_SERVER") do
   config :yt_search, YtSearchWeb.Endpoint, server: true
 end
 
+config :yt_search, YtSearch.Youtube, ytdlp_path: System.get_env("YTDLP_PATH") || "yt-dlp"
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||
@@ -58,8 +60,6 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base
-
-  config :yt_search, YtSearch.Youtube, ytdlp_path: System.get_env("YTDLP_PATH") || "yt-dlp"
 
   # ## SSL Support
   #
