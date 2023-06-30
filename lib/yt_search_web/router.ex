@@ -19,6 +19,7 @@ defmodule YtSearchWeb.Router do
   # smaller url version of the api, this is a bodge for
   # - quest vrchat keyboard not having a cursor you can click on
   # - quest vrchat keyboard not actually scrolling properly when link is too long
+  # - world url map has less bytes per url, which helps on overall world size
   scope "/a/1", YtSearchWeb do
     get("/s", SearchController, :search)
     get("/at/:search_slot_id", AtlasController, :fetch)
