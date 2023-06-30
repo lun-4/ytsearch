@@ -1,4 +1,6 @@
 defmodule YtSearch.Youtube do
+  require Logger
+
   @spec ytdlp() :: String.t()
   defp ytdlp() do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
@@ -24,6 +26,7 @@ defmodule YtSearch.Youtube do
          |> Enum.map(&Jason.decode!/1)}
 
       {stdout, other_error_code} ->
+        Logger.error("stdout: #{stdout}")
         {:error, {:invalid_error_code, other_error_code}}
     end
   end
