@@ -40,7 +40,7 @@ defmodule YtSearchWeb.SearchController do
           duration: ytdlp_data["duration"],
           channel_name: ytdlp_data["channel"],
           description: ytdlp_data["description"],
-          uploaded_at: ytdlp_data["epoch"],
+          uploaded_at: ytdlp_data["timestamp"],
           view_count: ytdlp_data["view_count"],
           slot_id: "#{slot.id}"
         }
