@@ -9,7 +9,7 @@ defmodule YtSearch.Youtube do
   def search(query) do
     escaped_query = query |> URI.encode()
 
-    case System.cmd(ytdlp, [
+    case System.cmd(ytdlp(), [
            "https://www.youtube.com/results?search_query=#{escaped_query}",
            "--dump-json",
            "--flat-playlist",
@@ -33,7 +33,7 @@ defmodule YtSearch.Youtube do
 
   def fetch_mp4_link(youtube_id) do
     {output, exit_status} =
-      System.cmd(ytdlp, [
+      System.cmd(ytdlp(), [
         "--no-check-certificate",
         # TODO do we want cache-dir??
         "--no-cache-dir",

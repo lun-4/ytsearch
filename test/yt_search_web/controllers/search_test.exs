@@ -17,26 +17,28 @@ defmodule YtSearchWeb.SearchTest do
 
   defp verify_search_results(json_response) do
     verify_single_result(json_response["search_results"] |> Enum.at(0), %{
+      "type" => "video",
       "duration" => 612.0,
       "title" => "How to Cook Capybara Pie (eating Big Ounce)",
       "youtube_id" => "Jouh2mdt1fI",
       "youtube_url" => "https://www.youtube.com/watch?v=Jouh2mdt1fI",
       "channel_name" => "The Urban Rescue Ranch",
       "description" => nil,
-      "uploaded_at" => 1_687_803_719,
+      "uploaded_at" => nil,
       "view_count" => 1_245_513
     })
 
     verify_single_result(
       json_response["search_results"] |> Enum.at(1),
       %{
+        "type" => "video",
         "duration" => 612.0,
         "title" => "How to Cook Capybara Pie (eating Big Ounce)",
         "youtube_id" => "Jouh2mdt1fz",
         "youtube_url" => "https://www.youtube.com/watch?v=Jouh2mdt1fI",
         "channel_name" => "The Urban Rescue Ranch",
         "description" => nil,
-        "uploaded_at" => 1_687_803_719,
+        "uploaded_at" => nil,
         "view_count" => 1_245_513
       }
     )

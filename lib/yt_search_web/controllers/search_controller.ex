@@ -33,7 +33,15 @@ defmodule YtSearchWeb.SearchController do
       |> Enum.map(fn ytdlp_data ->
         slot = YtSearch.Slot.from(ytdlp_data["id"])
 
+        video_entity_type =
+          if ytdlp_data["duration"] == nil do
+            "short"
+          else
+            "video"
+          end
+
         %{
+          type: video_entity_type,
           title: ytdlp_data["title"],
           youtube_id: ytdlp_data["id"],
           youtube_url: ytdlp_data["url"],
