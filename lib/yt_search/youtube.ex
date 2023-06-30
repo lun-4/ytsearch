@@ -12,7 +12,9 @@ defmodule YtSearch.Youtube do
            "--dump-json",
            "--flat-playlist",
            "--playlist-end",
-           "15"
+           "15",
+           "--extractor-args",
+           "youtubetab:approximate_metadata"
          ]) do
       {stdout, 0} ->
         # is good
