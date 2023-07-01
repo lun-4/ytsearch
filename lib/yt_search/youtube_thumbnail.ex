@@ -20,7 +20,7 @@ defmodule YtSearch.Youtube.Thumbnail do
     end)
 
     %ThumbnailMetadata{
-      aspect_ratio: selected_thumbnail_metadata["height"] / selected_thumbnail_metadata["width"]
+      aspect_ratio: selected_thumbnail_metadata["width"] / selected_thumbnail_metadata["height"]
     }
   end
 
