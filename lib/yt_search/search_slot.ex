@@ -27,24 +27,23 @@ defmodule YtSearch.SearchSlot do
     Repo.one!(query)
   end
 
-  def video_slots(search_slot) do
+  def get_slots(search_slot) do
     search_slot.slots_json
     |> Jason.decode!()
   end
 
   def from_playlist(playlist) do
     playlist
-    |> Enum.map(fn r ->
-      {numeric, _fractional} = Integer.parse(r.slot_id)
-      numeric
+    |> Enum.map(fn entry ->
+      {numeric, _fractional} = Integer.parse(entry.slot_id)
+      [entry.type, numeric]
     end)
     |> Jason.encode!()
-    # conflicts with Ecto.Query
-    |> __MODULE__.from()
+    |> from_slots_json()
   end
 
-  @spec from(String.t()) :: SearchSlot.t()
-  def from(slots_json) do
+  @spec from_slots_json(String.t()) :: SearchSlot.t()
+  defp from_slots_json(slots_json) do
     {:ok, new_id} = find_available_id()
 
     %__MODULE__{slots_json: slots_json, id: new_id}
