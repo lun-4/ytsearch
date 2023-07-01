@@ -4,6 +4,7 @@ defmodule YtSearch.Thumbnail.Atlas do
   alias YtSearch.Thumbnail
   alias YtSearch.SearchSlot
   alias YtSearch.Slot
+  alias YtSearch.ChannelSlot
   alias Mogrify.Draw
 
   @spec assemble(String.t()) ::
@@ -22,9 +23,20 @@ defmodule YtSearch.Thumbnail.Atlas do
 
   def do_assemble(search_slot) do
     thumbnail_paths =
-      search_slot.slots_json
-      |> Jason.decode!()
-      |> Enum.map(&Slot.fetch_by_id/1)
+      search_slot
+      |> SearchSlot.get_slots()
+      |> Enum.map(fn entry ->
+        case entry do
+          ["channel", slot_id] ->
+            ChannelSlot.fetch(slot_id)
+
+          [typ, slot_id] when typ == "video" or typ == "short" ->
+            Slot.fetch_by_id(slot_id)
+
+          _ ->
+            raise "invalid type for entry: #{inspect(entry)}"
+        end
+      end)
       |> Enum.map(fn slot ->
         # for each slot, attach to its thumbnail mutex, so if
         # theres thumbnails still being downloaded, we wait for

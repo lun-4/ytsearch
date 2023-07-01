@@ -3,6 +3,7 @@ defmodule YtSearch.ThumbnailAtlasTest do
 
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
+  alias YtSearch.ChannelSlot
   alias YtSearch.Thumbnail
 
   defp png_data do
@@ -15,7 +16,14 @@ defmodule YtSearch.ThumbnailAtlasTest do
     # setup
     thumb = Thumbnail.insert(@test_youtube_id, "image/webp", png_data())
     slot = Slot.from(@test_youtube_id)
-    search_slot = SearchSlot.from([slot.id] |> Jason.encode!())
+    channel_slot = ChannelSlot.from(@test_youtube_id)
+
+    search_slot =
+      SearchSlot.from_playlist([
+        %{type: "video", slot_id: "#{slot.id}"},
+        %{type: "channel", slot_id: "#{channel_slot.id}"}
+      ])
+
     %{slot: slot, search_slot: search_slot, thumbnnail: thumb}
   end
 
