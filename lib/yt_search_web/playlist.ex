@@ -24,6 +24,10 @@ defmodule YtSearchWeb.Playlist do
 
       {entity_type, ytdlp_data}
     end)
+    # TODO actually support playlist slots
+    |> Enum.filter(fn {entity_type, data} ->
+      entity_type != :playlist
+    end)
     |> Enum.map(fn {entity_type, ytdlp_data} ->
       thumbnail_metadata = Youtube.Thumbnail.fetch_in_background(ytdlp_data)
 
