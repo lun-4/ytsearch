@@ -53,12 +53,14 @@ defmodule YtSearch.Youtube.Thumbnail do
   @thumbnail_size 128
 
   defp do_download_thumbnail(youtube_id, url) do
+    Logger.debug("thumbnail requesting #{url}")
+
     {:ok, response} =
       Finch.build(
         :get,
         # youtube channels give urls without scheme for some reason
         if String.starts_with?(url, "//") do
-          "http:#{url}"
+          "https:#{url}"
         else
           url
         end
@@ -80,7 +82,10 @@ defmodule YtSearch.Youtube.Thumbnail do
       final_body = File.read!(temporary_path)
       {:ok, Thumbnail.insert(youtube_id, content_type, final_body)}
     else
-      Logger.error("expected 200, got #{inspect(response.status)} #{inspect(response.body)}")
+      Logger.error(
+        "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"
+      )
+
       {:error, {:http_response, response.status, response.headers, response.body}}
     end
   end
