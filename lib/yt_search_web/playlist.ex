@@ -25,7 +25,17 @@ defmodule YtSearchWeb.Playlist do
       case entity_type do
         t when t == :video or t == :short ->
           slot = YtSearch.Slot.from(ytdlp_data["id"])
-          channel_slot = YtSearch.ChannelSlot.from(ytdlp_data["channel_id"])
+
+          channel_slot =
+            if ytdlp_data["channel_id"] != nil do
+              YtSearch.ChannelSlot.from(ytdlp_data["channel_id"])
+            else
+              # when using /channel/videos, channel_id is null, so
+              # fallback to playlist_uploader_id in these cases
+              YtSearch.ChannelSlot.from(ytdlp_data["playlist_uploader_id"])
+            end
+
+          channel_name = ytdlp_data["channel"] || ytdlp_data["playlist_uploader_name"]
 
           %{
             type: entity_type,
@@ -33,13 +43,8 @@ defmodule YtSearchWeb.Playlist do
             youtube_id: ytdlp_data["id"],
             youtube_url: ytdlp_data["url"],
             duration: ytdlp_data["duration"],
-            channel_name: ytdlp_data["channel"],
-            channel_slot:
-              if channel_slot != nil do
-                "#{channel_slot.id}"
-              else
-                nil
-              end,
+            channel_name: channel_name,
+            channel_slot: "#{channel_slot.id}",
             description: ytdlp_data["description"],
             uploaded_at: ytdlp_data["timestamp"],
             view_count: ytdlp_data["view_count"],

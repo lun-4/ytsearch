@@ -17,7 +17,7 @@ defmodule YtSearchWeb.SearchTest do
 
   defp verify_single_result(given, expected) do
     # validate they're integers at least
-    assert_int_or_null(given["slot_id"])
+    {_, ""} = Integer.parse(given["slot_id"])
     assert_int_or_null(given["channel_slot"])
 
     given_without_slot_id =
