@@ -8,7 +8,11 @@ defmodule YtSearchWeb.Playlist do
       entity_type =
         case ytdlp_data["ie_key"] do
           "YoutubeTab" ->
-            :channel
+            if String.contains?(ytdlp_data["url"], "/playlist?") do
+              :playlist
+            else
+              :channel
+            end
 
           "Youtube" ->
             if String.contains?(ytdlp_data["url"], "/shorts/") do
@@ -91,8 +95,26 @@ defmodule YtSearchWeb.Playlist do
             slot_id: "#{slot.id}"
           }
 
+        :playlist ->
+          # slot = YtSearch.PlaylistSlot.from(ytdlp_data["id"])
+
+          %{
+            type: :playlist,
+            title: ytdlp_data["title"],
+            youtube_id: ytdlp_data["id"],
+            youtube_url: ytdlp_data["url"],
+            duration: ytdlp_data["duration"],
+            channel_name: ytdlp_data["channel"],
+            description: ytdlp_data["description"],
+            uploaded_at: ytdlp_data["timestamp"],
+            view_count: ytdlp_data["view_count"],
+            thumbnail: thumbnail_metadata,
+            channel_slot: nil,
+            slot_id: nil
+          }
+
         _ ->
-          raise "invalid type"
+          raise "invalid type: #{entity_type}"
       end
     end)
   end
