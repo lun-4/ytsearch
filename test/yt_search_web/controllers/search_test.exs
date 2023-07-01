@@ -2,9 +2,8 @@ defmodule YtSearchWeb.SearchTest do
   use YtSearchWeb.ConnCase, async: false
   import Mock
 
-  @video_data_3 "{\"_type\": \"url\", \"ie_key\": \"Youtube\", \"id\": \"9HO61id2TTQ\", \"url\": \"https://www.youtube.com/watch?v=9HO61id2TTQ\", \"title\": \"I\u2019ve Had Enough.\", \"description\": \"I have eaten Kevin.\\n\\n\\nWarm regards,\\nUncle farmer dad Ben \\ud83d\\udc68\\ud83c\\udffb\\u200d\\ud83c\\udf3e\\ud83e\\udd1d\\n\\nDONT SUBSCRIBE TO THIS CRINGE FAKE CHANNEL!!!:\\nhttps://www.youtube.com/channel/UCmTTgL4AolBts0ETnlWx3ow\\n\\nWe Finally...\", \"duration\": 639.0, \"channel_id\": null, \"channel\": null, \"channel_url\": null, \"thumbnails\": [{\"url\": \"https://i.ytimg.com/vi/9HO61id2TTQ/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDsF3hBAxouqVmISxx6R9Fv2HOGCQ\", \"height\": 94, \"width\": 168}, {\"url\": \"https://i.ytimg.com/vi/9HO61id2TTQ/hqdefault.jpg?sqp=-oaymwEbCMQBEG5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLA4Xi7pnkMgoe3-9dHel90xusEClg\", \"height\": 110, \"width\": 196}, {\"url\": \"https://i.ytimg.com/vi/9HO61id2TTQ/hqdefault.jpg?sqp=-oaymwEcCPYBEIoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLC5u1ySrIcKemiHtbHrRe0VScYd8g\", \"height\": 138, \"width\": 246}, {\"url\": \"https://i.ytimg.com/vi/9HO61id2TTQ/hqdefault.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDufQui7imFEFw_Y9E4mfFfBSHF4A\", \"height\": 188, \"width\": 336}], \"timestamp\": null, \"release_timestamp\": null, \"availability\": null, \"view_count\": 510271, \"live_status\": null, \"__x_forwarded_for_ip\": null, \"webpage_url\": \"https://www.youtube.com/watch?v=9HO61id2TTQ\", \"original_url\": \"https://www.youtube.com/watch?v=9HO61id2TTQ\", \"webpage_url_basename\": \"watch\", \"webpage_url_domain\": \"youtube.com\", \"extractor\": \"youtube\", \"extractor_key\": \"Youtube\", \"playlist_count\": null, \"playlist\": \"The Urban Rescue Ranch - Videos\", \"playlist_id\": \"UCv3mh2P-q3UCtR9-2q8B-ZA\", \"playlist_title\": \"The Urban Rescue Ranch - Videos\", \"playlist_uploader\": \"The Urban Rescue Ranch\", \"playlist_uploader_id\": \"UCv3mh2P-q3UCtR9-2q8B-ZA\", \"n_entries\": 15, \"playlist_index\": 1, \"__last_playlist_index\": 15, \"playlist_autonumber\": 1, \"duration_string\": \"10:39\", \"epoch\": 1688142651, \"filename\": \"I\u2019ve Had Enough. [9HO61id2TTQ].NA\", \"urls\": \"https://www.youtube.com/watch?v=9HO61id2TTQ\", \"_version\": {\"version\": \"2023.03.04\", \"current_git_head\": null, \"release_git_head\": \"392389b7df7b818f794b231f14dc396d4875fbad\", \"repository\": \"yt-dlp/yt-dlp\"}}"
   @test_output File.read!("test/support/files/the_urban_rescue_ranch_search.json")
-  @channel_test_output "#{@video_data_3}"
+  @channel_test_output File.read!("test/support/files/the_urban_rescue_ranch_channel.json")
 
   defp assert_int_or_null(nil), do: nil
 
@@ -83,17 +82,15 @@ defmodule YtSearchWeb.SearchTest do
       %{
         "channel_name" => "The Urban Rescue Ranch",
         "description" =>
-          "I have eaten Kevin.\n\n\nWarm regards,\n" <>
-            desc <>
-            " CRINGE FAKE CHANNEL!!!:\nhttps://www.youtube.com/channel/UCmTTgL4AolBts0ETnlWx3ow\n\nWe Finally...",
-        "duration" => 639.0,
-        "title" => "I’ve Had Enough.",
+          "WE DID IT REDDIT\n\nLove,\nUncle Farmer Dad Ben 👨🏻‍🌾\n\nSUBSCRIMBO TO GORTS MUKBANG CHANNEL: \nhttps://www.youtube.com/channel/UCmTTgL4AolBts0ETnlWx3ow\n\nWe Finally Have DRIPPY Merch Again!...",
+        "duration" => 635.0,
+        "thumbnail" => %{"aspect_ratio" => 1.7872340425531914},
+        "title" => "Big Ounce Goes to the Gym (Drowns at Bass Pro Shops)",
         "type" => "video",
         "uploaded_at" => nil,
-        "view_count" => 510_271,
-        "youtube_id" => "9HO61id2TTQ",
-        "youtube_url" => "https://www.youtube.com/watch?v=9HO61id2TTQ",
-        "thumbnail" => %{"aspect_ratio" => 1.7872340425531914}
+        "view_count" => 349_643,
+        "youtube_id" => "3Al_s6Uk_Dg",
+        "youtube_url" => "https://www.youtube.com/watch?v=3Al_s6Uk_Dg"
       }
     )
 
