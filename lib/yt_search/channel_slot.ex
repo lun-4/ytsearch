@@ -26,6 +26,8 @@ defmodule YtSearch.ChannelSlot do
     Repo.one(query)
   end
 
+  def from(nil), do: nil
+
   @spec from(String.t()) :: Slot.t()
   def from(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s

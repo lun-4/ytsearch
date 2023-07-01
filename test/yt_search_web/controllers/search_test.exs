@@ -9,10 +9,21 @@ defmodule YtSearchWeb.SearchTest do
   @test_output "#{@channel_data}\n#{@video_data}\n#{@video_data_2}"
   @channel_test_output "#{@video_data_3}"
 
+  defp assert_int_or_null(nil), do: nil
+
+  defp assert_int_or_null(value) do
+    {_, ""} = Integer.parse(value)
+  end
+
   defp verify_single_result(given, expected) do
+    # validate they're integers at least
+    assert_int_or_null(given["slot_id"])
+    assert_int_or_null(given["channel_slot"])
+
     given_without_slot_id =
       given
       |> Map.delete("slot_id")
+      |> Map.delete("channel_slot")
 
     assert given_without_slot_id == expected
   end
