@@ -87,6 +87,7 @@ defmodule YtSearchWeb.Playlist do
             uploaded_at: ytdlp_data["timestamp"],
             view_count: ytdlp_data["view_count"],
             thumbnail: thumbnail_metadata,
+            channel_slot: "#{slot.id}",
             slot_id: "#{slot.id}"
           }
 
