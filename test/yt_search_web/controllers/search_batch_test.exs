@@ -4,6 +4,7 @@ defmodule YtSearchWeb.SearchBatchTest do
   import Mock
 
   @test_cases [
+    "agirisan_search.json",
     "bigclivedotcom_search.json",
     "bigclivedotcom_channel.json"
   ]
