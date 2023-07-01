@@ -27,7 +27,7 @@ defmodule YtSearchWeb.ChannelSlotController do
           |> SearchSlot.from_playlist()
 
         conn
-        |> json(%{search_results: results, slot_id: search_slot.id})
+        |> json(%{search_results: results, slot_id: "#{search_slot.id}"})
     end
   end
 end
