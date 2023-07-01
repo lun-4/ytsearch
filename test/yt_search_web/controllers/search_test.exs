@@ -54,7 +54,7 @@ defmodule YtSearchWeb.SearchTest do
       "description" => nil,
       "uploaded_at" => nil,
       "view_count" => 1_245_513,
-      "thumbnail" => %{"aspect_ratio" => 0.5611111111111111}
+      "thumbnail" => %{"aspect_ratio" => 1.7821782178217822}
     })
 
     verify_single_result(
@@ -69,7 +69,7 @@ defmodule YtSearchWeb.SearchTest do
         "description" => nil,
         "uploaded_at" => nil,
         "view_count" => 1_245_513,
-        "thumbnail" => %{"aspect_ratio" => 0.5611111111111111}
+        "thumbnail" => %{"aspect_ratio" => 1.7821782178217822}
       }
     )
 
@@ -96,7 +96,7 @@ defmodule YtSearchWeb.SearchTest do
         "view_count" => 510_271,
         "youtube_id" => "9HO61id2TTQ",
         "youtube_url" => "https://www.youtube.com/watch?v=9HO61id2TTQ",
-        "thumbnail" => %{"aspect_ratio" => 0.5595238095238095}
+        "thumbnail" => %{"aspect_ratio" => 1.7872340425531914}
       }
     )
 
