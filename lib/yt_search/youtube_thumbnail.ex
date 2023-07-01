@@ -10,18 +10,23 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   def fetch_in_background(ytdlp_data) do
     # TODO better algorithm for thumbnail selection
-    selected_thumbnail_metadata =
-      ytdlp_data["thumbnails"]
-      |> Enum.at(0)
+    if ytdlp_data["thumbnails"] != nil do
+      selected_thumbnail_metadata =
+        ytdlp_data["thumbnails"]
+        |> Enum.at(0)
 
-    # TODO supervisor?
-    spawn(fn ->
-      maybe_download_thumbnail(ytdlp_data["id"], selected_thumbnail_metadata["url"])
-    end)
+      # TODO supervisor?
+      spawn(fn ->
+        maybe_download_thumbnail(ytdlp_data["id"], selected_thumbnail_metadata["url"])
+      end)
 
-    %ThumbnailMetadata{
-      aspect_ratio: selected_thumbnail_metadata["width"] / selected_thumbnail_metadata["height"]
-    }
+      %ThumbnailMetadata{
+        aspect_ratio: selected_thumbnail_metadata["width"] / selected_thumbnail_metadata["height"]
+      }
+    else
+      Logger.warning("id #{ytdlp_data["id"]} does not provide thumbnail")
+      nil
+    end
   end
 
   # same idea as Mp4Link.maybe_fetch_upstream
