@@ -3,6 +3,11 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   alias YtSearch.Thumbnail
 
+  defmodule ThumbnailMetadata do
+    @derive Jason.Encoder
+    defstruct [:aspect_ratio]
+  end
+
   def fetch_in_background(ytdlp_data) do
     # TODO better algorithm for thumbnail selection
     selected_thumbnail_metadata =
@@ -13,6 +18,10 @@ defmodule YtSearch.Youtube.Thumbnail do
     spawn(fn ->
       maybe_download_thumbnail(ytdlp_data["id"], selected_thumbnail_metadata["url"])
     end)
+
+    %ThumbnailMetadata{
+      aspect_ratio: selected_thumbnail_metadata["height"] / selected_thumbnail_metadata["width"]
+    }
   end
 
   # same idea as Mp4Link.maybe_fetch_upstream
@@ -44,7 +53,17 @@ defmodule YtSearch.Youtube.Thumbnail do
   @thumbnail_size 128
 
   defp do_download_thumbnail(youtube_id, url) do
-    {:ok, response} = Finch.build(:get, url) |> Finch.request(YtSearch.Finch)
+    {:ok, response} =
+      Finch.build(
+        :get,
+        # youtube channels give urls without scheme for some reason
+        if String.starts_with?(url, "//") do
+          "http:#{url}"
+        else
+          url
+        end
+      )
+      |> Finch.request(YtSearch.Finch)
 
     if response.status == 200 do
       content_type = response.headers[:"content-type"]

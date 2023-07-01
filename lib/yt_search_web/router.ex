@@ -12,6 +12,7 @@ defmodule YtSearchWeb.Router do
   scope "/api/v1", YtSearchWeb do
     get("/search", SearchController, :search)
     get("/s/:slot_id", SlotController, :fetch_video)
+    get("/c/:channel_slot_id", ChannelSlotController, :fetch)
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
   end
@@ -23,6 +24,7 @@ defmodule YtSearchWeb.Router do
   scope "/a/1", YtSearchWeb do
     get("/s", SearchController, :search)
     get("/at/:search_slot_id", AtlasController, :fetch)
+    get("/c/:channel_slot_id", ChannelSlotController, :fetch)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

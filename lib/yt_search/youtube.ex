@@ -7,10 +7,22 @@ defmodule YtSearch.Youtube do
   end
 
   def search(query) do
-    escaped_query = query |> URI.encode()
+    escaped_query =
+      query
+      |> URI.encode()
 
+    "https://www.youtube.com/results?search_query=#{escaped_query}"
+    |> playlist_from_url
+  end
+
+  def channel_search(url) do
+    url
+    |> playlist_from_url
+  end
+
+  def playlist_from_url(url) do
     case System.cmd(ytdlp(), [
-           "https://www.youtube.com/results?search_query=#{escaped_query}",
+           url,
            "--dump-json",
            "--flat-playlist",
            "--playlist-end",
