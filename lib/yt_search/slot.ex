@@ -5,6 +5,7 @@ defmodule YtSearch.Slot do
   import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
   alias YtSearch.TTL
+  alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
 
@@ -15,10 +16,10 @@ defmodule YtSearch.Slot do
     timestamps()
   end
 
-  @spec from(Integer.t()) :: Slot.t()
+  @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
-    Repo.one(query)
+    Repo.one!(query)
   end
 
   @spec from(String.t()) :: Slot.t()
@@ -43,38 +44,8 @@ defmodule YtSearch.Slot do
   # this number must be synced with the world build
   @urls 100_000
 
+  @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
   defp find_available_id() do
-    find_available_id(0)
+    SlotUtilities.find_available_slot_id(__MODULE__, @urls, @ttl, @max_id_retries)
   end
-
-  @spec find_available_id(Integer.t()) :: {:ok, Integer.t()} | {:error, :no_available_id}
-  defp find_available_id(retries) do
-    # generate id, check if 
-
-    random_id = :rand.uniform(@urls)
-    query = from s in __MODULE__, where: s.id == ^random_id, select: s
-
-    case Repo.one(query) do
-      nil ->
-        {:ok, random_id}
-
-      slot ->
-        # already existing from id, check if it needs to be
-        # refreshed
-        if TTL.expired?(slot, @ttl) do
-          Repo.delete!(slot)
-          {:ok, random_id}
-        else
-          if retries > @max_id_retries do
-            {:error, :no_available_id}
-          else
-            find_available_id(retries + 1)
-          end
-        end
-    end
-  end
-
-  # slot system
-  # 100 k
-  # {...}
 end

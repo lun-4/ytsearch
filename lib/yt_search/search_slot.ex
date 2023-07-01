@@ -4,6 +4,7 @@ defmodule YtSearch.SearchSlot do
   import Ecto.Query
   import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
+  alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
 
@@ -11,16 +12,19 @@ defmodule YtSearch.SearchSlot do
 
   # this number must be synced with the world build
   @urls 100_000
+  @max_id_retries 20
+  # 20 minutes
+  @ttl 20 * 60
 
   schema "search_slots" do
     field(:slots_json, :string)
     timestamps()
   end
 
-  @spec fetch_by_id(Integer.t()) :: SearchSlot.t()
+  @spec fetch_by_id(Integer.t()) :: SearchSlot.t() | nil
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
-    Repo.one(query)
+    Repo.one!(query)
   end
 
   def video_slots(search_slot) do
@@ -28,38 +32,27 @@ defmodule YtSearch.SearchSlot do
     |> Jason.decode!()
   end
 
+  def from_playlist(playlist) do
+    playlist
+    |> Enum.map(fn r ->
+      {numeric, _fractional} = Integer.parse(r.slot_id)
+      numeric
+    end)
+    |> Jason.encode!()
+    # conflicts with Ecto.Query
+    |> __MODULE__.from()
+  end
+
   @spec from(String.t()) :: SearchSlot.t()
   def from(slots_json) do
-    %__MODULE__{slots_json: slots_json, id: find_available_id()}
+    {:ok, new_id} = find_available_id()
+
+    %__MODULE__{slots_json: slots_json, id: new_id}
     |> Repo.insert!()
   end
 
+  @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
   defp find_available_id() do
-    query = from s in __MODULE__, select: max(s.id)
-
-    max_id =
-      case Repo.one(query) do
-        nil -> 0
-        v -> v
-      end
-
-    possible_available_id = max_id + 1
-
-    if possible_available_id > @urls do
-      # delete lowest id
-      query = from s in __MODULE__, select: min(s.id)
-      min_id = Repo.one!(query)
-      delete_query = from s in __MODULE__, where: s.id == ^min_id
-      Repo.delete!(delete_query)
-
-      # min_id is now an available id 
-      min_id
-    else
-      possible_available_id
-    end
+    SlotUtilities.find_available_slot_id(__MODULE__, @urls, @ttl, @max_id_retries)
   end
-
-  # slot system
-  # 100 k
-  # {...}
 end
