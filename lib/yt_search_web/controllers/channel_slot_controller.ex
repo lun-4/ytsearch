@@ -15,7 +15,8 @@ defmodule YtSearchWeb.ChannelSlotController do
 
       slot ->
         {:ok, ytdlp_data} =
-          "https://www.youtube.com/channel/#{slot.youtube_id}/videos"
+          slot
+          |> ChannelSlot.as_youtube_url()
           |> Youtube.channel_search()
 
         results =

@@ -46,4 +46,14 @@ defmodule YtSearch.ChannelSlot do
   defp find_available_id() do
     SlotUtilities.find_available_slot_id(__MODULE__, @urls, @ttl, @max_id_retries)
   end
+
+  def as_youtube_url(slot) do
+    case slot.youtube_id do
+      "@" <> _rest ->
+        "https://www.youtube.com/#{slot.youtube_id}/videos"
+
+      youtube_id ->
+        "https://www.youtube.com/channel/#{youtube_id}/videos"
+    end
+  end
 end
