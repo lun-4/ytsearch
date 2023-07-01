@@ -60,7 +60,12 @@ defmodule YtSearchWeb.Playlist do
             youtube_url: ytdlp_data["url"],
             duration: ytdlp_data["duration"],
             channel_name: channel_name,
-            channel_slot: "#{channel_slot.id}",
+            channel_slot:
+              if channel_slot != nil do
+                "#{channel_slot.id}"
+              else
+                nil
+              end,
             description: ytdlp_data["description"],
             uploaded_at: ytdlp_data["timestamp"],
             view_count: ytdlp_data["view_count"],
