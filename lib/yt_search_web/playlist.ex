@@ -51,7 +51,7 @@ defmodule YtSearchWeb.Playlist do
                 end
             end
 
-          channel_name = ytdlp_data["channel"] || ytdlp_data["playlist_uploader_name"]
+          channel_name = ytdlp_data["channel"] || ytdlp_data["playlist_uploader"]
 
           %{
             type: entity_type,
