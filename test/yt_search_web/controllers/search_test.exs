@@ -84,7 +84,7 @@ defmodule YtSearchWeb.SearchTest do
     verify_single_result(
       json_response["search_results"] |> Enum.at(0),
       %{
-        "channel_name" => nil,
+        "channel_name" => "The Urban Rescue Ranch",
         "description" =>
           "I have eaten Kevin.\n\n\nWarm regards,\n" <>
             desc <>
