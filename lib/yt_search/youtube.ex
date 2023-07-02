@@ -76,8 +76,6 @@ defmodule YtSearch.Youtube do
            # TODO do we want cache-dir??
            "--no-cache-dir",
            "--rm-cache-dir",
-           "-f",
-           "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
            "--get-url",
            YtSearch.Youtube.Util.to_watch_url(youtube_id)
          ]) do
