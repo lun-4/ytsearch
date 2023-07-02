@@ -18,7 +18,11 @@ defmodule YtSearchWeb.Playlist do
             if String.contains?(ytdlp_data["url"], "/shorts/") do
               :short
             else
-              :video
+              if ytdlp_data["live_status"] == "is_live" do
+                :livestream
+              else
+                :video
+              end
             end
         end
 
@@ -34,7 +38,7 @@ defmodule YtSearchWeb.Playlist do
       Logger.debug("parsing #{inspect(ytdlp_data)}")
 
       case entity_type do
-        t when t == :video or t == :short ->
+        t when t in [:video, :short, :livestream] ->
           slot = YtSearch.Slot.from(ytdlp_data["id"])
 
           # when using /channel/videos, channel_id is null, so
@@ -43,7 +47,7 @@ defmodule YtSearchWeb.Playlist do
 
           channel_slot =
             case entity_type do
-              :video ->
+              t when t in [:video, :livestream] ->
                 # full videos should provide channel metadata
                 # from/1 will crash if its nil
                 YtSearch.ChannelSlot.from(channel_id)

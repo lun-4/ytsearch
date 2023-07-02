@@ -6,7 +6,8 @@ defmodule YtSearchWeb.SearchBatchTest do
   @test_cases [
     "agirisan_search.json",
     "bigclivedotcom_search.json",
-    "bigclivedotcom_channel.json"
+    "bigclivedotcom_channel.json",
+    "lofi_search.json"
   ]
 
   @test_cases
