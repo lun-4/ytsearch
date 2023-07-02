@@ -44,18 +44,54 @@ defmodule YtSearch.Youtube do
   end
 
   def fetch_mp4_link(youtube_id) do
-    {output, exit_status} =
-      System.cmd(ytdlp(), [
-        "--no-check-certificate",
-        # TODO do we want cache-dir??
-        "--no-cache-dir",
-        "--rm-cache-dir",
-        "-f",
-        "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-        "--get-url",
-        YtSearch.Youtube.Util.to_watch_url(youtube_id)
-      ])
+    case System.cmd(ytdlp(), [
+           "--no-check-certificate",
+           # TODO do we want cache-dir??
+           "--no-cache-dir",
+           "--rm-cache-dir",
+           "-f",
+           "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
+           "--get-url",
+           YtSearch.Youtube.Util.to_watch_url(youtube_id)
+         ]) do
+      {stdout, 0} ->
+        trimmed = String.trim(stdout)
 
-    String.trim(output)
+        if trimmed == "" do
+          fetch_any_video_link(youtube_id)
+        else
+          {:ok, trimmed}
+        end
+
+      {stdout, other_error_code} ->
+        Logger.error("fetch_mp4_link stdout: #{stdout} #{other_error_code}")
+        Logger.error("fallbacking to any video link")
+        fetch_any_video_link(youtube_id)
+    end
+  end
+
+  defp fetch_any_video_link(youtube_id) do
+    case System.cmd(ytdlp(), [
+           "--no-check-certificate",
+           # TODO do we want cache-dir??
+           "--no-cache-dir",
+           "--rm-cache-dir",
+           "-f",
+           "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
+           "--get-url",
+           YtSearch.Youtube.Util.to_watch_url(youtube_id)
+         ]) do
+      {stdout, 0} ->
+        url =
+          stdout
+          |> String.split("\n", trim: true)
+          |> Enum.at(0)
+
+        {:ok, url}
+
+      {stdout, other_error_code} ->
+        Logger.error("fetch_any_video_link stdout: #{stdout} #{other_error_code}")
+        {:error, {:invalid_error_code, other_error_code}}
+    end
   end
 end

@@ -8,7 +8,7 @@ defmodule YtSearchWeb.SlotTest do
   test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn} do
     with_mock(
       YtSearch.Youtube,
-      fetch_mp4_link: [in_series([@youtube_id], ["mp4.com", "mp5.com"])]
+      fetch_mp4_link: [in_series([@youtube_id], [{:ok, "mp4.com"}, {:ok, "mp5.com"}])]
     ) do
       slot = Slot.from(@youtube_id)
 

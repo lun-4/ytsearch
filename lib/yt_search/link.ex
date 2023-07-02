@@ -60,7 +60,7 @@ defmodule YtSearch.Mp4Link do
       case fetch_by_id(youtube_id) do
         nil ->
           # get mp4 from ytdlp
-          new_mp4_link = Youtube.fetch_mp4_link(youtube_id)
+          {:ok, new_mp4_link} = Youtube.fetch_mp4_link(youtube_id)
           insert(youtube_id, new_mp4_link)
           new_mp4_link
 
