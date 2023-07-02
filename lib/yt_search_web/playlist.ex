@@ -80,7 +80,12 @@ defmodule YtSearchWeb.Playlist do
               end,
             description: ytdlp_data["description"],
             uploaded_at: ytdlp_data["timestamp"],
-            view_count: ytdlp_data["view_count"],
+            view_count:
+              if entity_type == :livestream do
+                ytdlp_data["concurrent_view_count"]
+              else
+                ytdlp_data["view_count"]
+              end,
             thumbnail: thumbnail_metadata,
             slot_id: "#{slot.id}"
           }
