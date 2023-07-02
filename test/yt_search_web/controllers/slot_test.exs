@@ -34,4 +34,36 @@ defmodule YtSearchWeb.SlotTest do
       assert get_resp_header(conn, "location") == ["mp5.com"]
     end
   end
+
+  test "subtitles work", %{conn: conn, slot: slot} do
+    with_mocks([
+      {System, [:passthrough],
+       cmd: fn _, args, _ ->
+         output = File.read!("test/support/files/ytdlp_subtitle_output.txt")
+         {output, 0}
+       end},
+      {File, [:passthrough],
+       read: fn path ->
+         cond do
+           String.contains?(path, "Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt") ->
+             {:ok, "Among Us"}
+
+           String.contains?(path, "Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt") ->
+             {:ok, "Among Us 2"}
+
+           true ->
+             passthrough([path])
+         end
+       end}
+    ]) do
+      conn =
+        conn
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/api/v1/s/#{slot.id}")
+
+      resp = json_response(conn, 200)
+
+      assert resp["subtitle_data"] != nil
+    end
+  end
 end
