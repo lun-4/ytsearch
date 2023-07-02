@@ -2,6 +2,7 @@ defmodule YtSearchWeb.SlotController do
   use YtSearchWeb, :controller
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
+  alias YtSearch.Youtube
   alias YtSearchWeb.UserAgent
 
   def fetch_video(conn, %{"slot_id" => slot_id_query}) do
@@ -15,14 +16,23 @@ defmodule YtSearchWeb.SlotController do
       slot ->
         youtube_url = "https://youtube.com/watch?v=#{slot.youtube_id}"
 
-        if UserAgent.is_quest_two(conn) do
-          mp4_url = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
+        case UserAgent.for(conn) do
+          :quest ->
+            mp4_url = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
 
-          conn
-          |> redirect(external: mp4_url)
-        else
-          conn
-          |> redirect(external: youtube_url)
+            conn
+            |> redirect(external: mp4_url)
+
+          :unity ->
+            # for now, just find subtitles, but this can return future metadata
+            {:ok, subtitle_data} = Youtube.fetch_subtitles(youtube_url)
+
+            conn
+            |> json(%{subtitle_data: subtitle_data})
+
+          _ ->
+            conn
+            |> redirect(external: youtube_url)
         end
     end
   end

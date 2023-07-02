@@ -92,4 +92,49 @@ defmodule YtSearch.Youtube do
         {:error, {:invalid_error_code, other_error_code}}
     end
   end
+
+  def fetch_subtitles(youtube_url) do
+    {:ok, temp_path} = Temp.mkdir("yts-subtitles")
+
+    case System.cmd(
+           ytdlp(),
+           [
+             "--skip-download",
+             "--write-subs",
+             "--write-auto-subs",
+             "--sub-format",
+             "vtt",
+             "--sub-langs",
+             "en-orig,en",
+             youtube_url
+           ],
+           cd: temp_path,
+           stderr_to_stdout: true
+         ) do
+      {stdout, 0} ->
+        {filename, {:ok, subtitle_data}} =
+          Regex.scan(~r/Destination: (.+)$/m, stdout)
+          |> Enum.map(fn match ->
+            filename = Enum.at(match, 1)
+            {filename, File.read(temp_path <> "/" <> filename)}
+          end)
+          |> Enum.filter(fn {filename, result} ->
+            case result do
+              {:ok, data} ->
+                true
+
+              _ ->
+                Logger.error("expected #{filename} to work, got #{inspect(result)}")
+                false
+            end
+          end)
+          |> Enum.at(0)
+
+        {:ok, subtitle_data}
+
+      {stdout, other_error_code} ->
+        Logger.error("fetch_subtitles stdout: #{stdout} #{other_error_code}")
+        {:error, {:invalid_exit_code, other_error_code}}
+    end
+  end
 end

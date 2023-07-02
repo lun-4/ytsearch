@@ -1,0 +1,13 @@
+[youtube] Extracting URL: https://www.youtube.com/watch?v=yI7fV88T8A0
+[youtube] yI7fV88T8A0: Downloading webpage
+[youtube] yI7fV88T8A0: Downloading android player API JSON
+[info] yI7fV88T8A0: Downloading subtitles: en-orig, en
+[info] yI7fV88T8A0: Downloading 1 format(s): 313+251
+Deleting existing file Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt
+[info] Writing video subtitles to: Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt
+[download] Destination: Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt
+[download] 100% of  152.64KiB in 00:00:00 at 180.24KiB/s
+Deleting existing file Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt
+[info] Writing video subtitles to: Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt
+[download] Destination: Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt
+[download] 100% of  152.64KiB in 00:00:00 at 177.35KiB/s
