@@ -30,7 +30,7 @@ defmodule YtSearch.Thumbnail.Atlas do
           ["channel", slot_id] ->
             ChannelSlot.fetch(slot_id)
 
-          [typ, slot_id] when typ == "video" or typ == "short" ->
+          [typ, slot_id] when typ in ["video", "short", "livestream"] ->
             Slot.fetch_by_id(slot_id)
 
           _ ->
