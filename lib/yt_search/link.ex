@@ -37,20 +37,37 @@ defmodule YtSearch.Mp4Link do
     end
   end
 
-  @spec insert(String.t(), String.t()) :: Mp4Link.t()
-  def insert(youtube_id, mp4_link) do
+  @spec insert(String.t(), String.t(), Integer.t() | nil) :: Mp4Link.t()
+  def insert(youtube_id, mp4_link, expires_at) do
     %__MODULE__{youtube_id: youtube_id, mp4_link: mp4_link}
+    |> then(fn value ->
+      case expires_at do
+        nil ->
+          value
+
+        # if youtube gives expiry timestamp, use it so that
+        # (inserted_at + @ttl) = expiry
+        # guaranteeding we expire it at the same time youtube expires it
+        expires ->
+          value
+          |> Ecto.Changeset.change(
+            inserted_at:
+              NaiveDateTime.add(~N[1970-01-01 00:00:00], expires_at)
+              |> NaiveDateTime.add(@ttl, :second)
+          )
+      end
+    end)
     |> Repo.insert!()
   end
 
-  @spec maybe_fetch_upstream(String.t(), String.t()) :: String.t()
+  @spec maybe_fetch_upstream(String.t(), String.t()) :: {:ok, String.t()}
   def maybe_fetch_upstream(youtube_id, youtube_url) do
     case fetch_by_id(youtube_id) do
       nil ->
         fetch_mp4_link(youtube_id, youtube_url)
 
       data ->
-        data.mp4_link
+        {:ok, data.mp4_link}
     end
   end
 
@@ -60,12 +77,12 @@ defmodule YtSearch.Mp4Link do
       case fetch_by_id(youtube_id) do
         nil ->
           # get mp4 from ytdlp
-          {:ok, new_mp4_link} = Youtube.fetch_mp4_link(youtube_id)
-          insert(youtube_id, new_mp4_link)
-          new_mp4_link
+          {:ok, {link_string, expires_at_unix_timestamp}} = Youtube.fetch_mp4_link(youtube_id)
+          insert(youtube_id, link_string, expires_at_unix_timestamp)
+          {:ok, link_string}
 
         link ->
-          link.mp4_link
+          {:ok, link.mp4_link}
       end
     end)
   end

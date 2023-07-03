@@ -18,7 +18,7 @@ defmodule YtSearchWeb.SlotController do
 
         case UserAgent.for(conn) do
           :quest ->
-            mp4_url = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
+            {:ok, mp4_url} = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
 
             conn
             |> redirect(external: mp4_url)

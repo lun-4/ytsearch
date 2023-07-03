@@ -43,30 +43,54 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
   def fetch_mp4_link(youtube_id) do
-    case System.cmd(ytdlp(), [
-           "--no-check-certificate",
-           # TODO do we want cache-dir??
-           "--no-cache-dir",
-           "--rm-cache-dir",
-           "-f",
-           "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-           "--get-url",
-           YtSearch.Youtube.Util.to_watch_url(youtube_id)
-         ]) do
-      {stdout, 0} ->
-        trimmed = String.trim(stdout)
+    url_result =
+      case System.cmd(ytdlp(), [
+             "--no-check-certificate",
+             # TODO do we want cache-dir??
+             "--no-cache-dir",
+             "--rm-cache-dir",
+             "-f",
+             "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
+             "--get-url",
+             YtSearch.Youtube.Util.to_watch_url(youtube_id)
+           ]) do
+        {stdout, 0} ->
+          trimmed = String.trim(stdout)
 
-        if trimmed == "" do
+          if trimmed == "" do
+            fetch_any_video_link(youtube_id)
+          else
+            {:ok, trimmed}
+          end
+
+        {stdout, other_error_code} ->
+          Logger.error("fetch_mp4_link stdout: #{stdout} #{other_error_code}")
+          Logger.error("fallbacking to any video link")
           fetch_any_video_link(youtube_id)
-        else
-          {:ok, trimmed}
-        end
+      end
 
-      {stdout, other_error_code} ->
-        Logger.error("fetch_mp4_link stdout: #{stdout} #{other_error_code}")
-        Logger.error("fallbacking to any video link")
-        fetch_any_video_link(youtube_id)
+    case url_result do
+      {:ok, url} ->
+        uri = url |> URI.parse()
+
+        {expires, ""} =
+          case uri.query do
+            nil ->
+              {nil, ""}
+
+            value ->
+              value
+              |> URI.decode_query()
+              |> Map.get("expire")
+              |> Integer.parse()
+          end
+
+        {:ok, {url, expires}}
+
+      any ->
+        any
     end
   end
 
