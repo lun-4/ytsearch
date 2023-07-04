@@ -5,6 +5,11 @@ defmodule YtSearchWeb.SlotTest do
 
   @youtube_id "Jouh2mdt1fI"
 
+  setup_all do
+    ets = :ets.new(:mock_call_counter, [:public])
+    %{ets_table: ets}
+  end
+
   setup do
     slot = Slot.from(@youtube_id)
     %{slot: slot}
@@ -50,35 +55,61 @@ defmodule YtSearchWeb.SlotTest do
     end
   end
 
-  test "subtitles work", %{conn: conn, slot: slot} do
+  test "subtitles work and are only fetched once", %{conn: conn, slot: slot, ets_table: table} do
     with_mocks([
       {System, [:passthrough],
+       cmd: fn _, _ ->
+         {"", 0}
+       end,
        cmd: fn _, _, _ ->
-         output = File.read!("test/support/files/ytdlp_subtitle_output.txt")
-         {output, 0}
+         calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
+
+         if calls > 1 do
+           {"called mock too much", 1}
+         else
+           output = File.read!("test/support/files/ytdlp_subtitle_output.txt")
+           {output, 0}
+         end
+       end},
+      {Path, [:passthrough],
+       wildcard: fn "/tmp/yts-subtitles/#{@youtube_id}" <> stuff ->
+         [
+           "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt",
+           "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt"
+         ]
        end},
       {File, [:passthrough],
        read: fn path ->
-         cond do
-           String.contains?(path, "Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt") ->
-             {:ok, "Among Us"}
+         ytdlp_calls = :ets.lookup(table, :ytdlp_cmd)
 
-           String.contains?(path, "Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt") ->
-             {:ok, "Among Us 2"}
+         if ytdlp_calls < 1 do
+           {:error, :didnt_call_ytdlp}
+         else
+           case path do
+             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt" ->
+               {:ok, "Among Us"}
 
-           true ->
-             passthrough([path])
+             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt" ->
+               {:ok, "Among Us 2"}
+
+             _ ->
+               {:error, :enoent}
+           end
          end
        end}
     ]) do
-      conn =
-        conn
-        |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v1/s/#{slot.id}")
+      1..10
+      |> Enum.map(fn _ ->
+        conn =
+          conn
+          |> put_req_header("user-agent", "UnityWebRequest")
+          |> get(~p"/api/v1/s/#{slot.id}")
 
-      resp = json_response(conn, 200)
+        resp = json_response(conn, 200)
 
-      assert resp["subtitle_data"] != nil
+        assert resp["subtitle_data"] != nil
+        assert resp["subtitle_data"] == "Among Us"
+      end)
     end
   end
 end

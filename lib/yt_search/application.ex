@@ -24,6 +24,10 @@ defmodule YtSearch.Application do
       %{
         id: ThumbnailMutex,
         start: {Mutex, :start_link, [[name: ThumbnailMutex]]}
+      },
+      %{
+        id: SubtitleMutex,
+        start: {Mutex, :start_link, [[name: SubtitleMutex]]}
       }
     ]
 

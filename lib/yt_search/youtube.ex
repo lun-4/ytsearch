@@ -118,7 +118,21 @@ defmodule YtSearch.Youtube do
   end
 
   def fetch_subtitles(youtube_url) do
-    {:ok, temp_path} = Temp.mkdir("yts-subtitles")
+    uri = youtube_url |> URI.parse()
+
+    id =
+      case uri.query do
+        nil ->
+          "any"
+
+        value ->
+          value
+          |> URI.decode_query()
+          |> Map.get("v")
+      end
+
+    subtitle_folder = "/tmp/yts-subtitles/" <> id
+    File.mkdir_p!(subtitle_folder)
 
     case System.cmd(
            ytdlp(),
@@ -132,29 +146,11 @@ defmodule YtSearch.Youtube do
              "en-orig,en",
              youtube_url
            ],
-           cd: temp_path,
+           cd: subtitle_folder,
            stderr_to_stdout: true
          ) do
       {stdout, 0} ->
-        {filename, {:ok, subtitle_data}} =
-          Regex.scan(~r/Destination: (.+)$/m, stdout)
-          |> Enum.map(fn match ->
-            filename = Enum.at(match, 1)
-            {filename, File.read(temp_path <> "/" <> filename)}
-          end)
-          |> Enum.filter(fn {filename, result} ->
-            case result do
-              {:ok, data} ->
-                true
-
-              _ ->
-                Logger.error("expected #{filename} to work, got #{inspect(result)}")
-                false
-            end
-          end)
-          |> Enum.at(0)
-
-        {:ok, subtitle_data}
+        :ok
 
       {stdout, other_error_code} ->
         Logger.error("fetch_subtitles stdout: #{stdout} #{other_error_code}")
