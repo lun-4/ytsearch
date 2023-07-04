@@ -134,6 +134,8 @@ defmodule YtSearch.Youtube do
     subtitle_folder = "/tmp/yts-subtitles/" <> id
     File.mkdir_p!(subtitle_folder)
 
+    Logger.debug("outputting to #{subtitle_folder}")
+
     case System.cmd(
            ytdlp(),
            [

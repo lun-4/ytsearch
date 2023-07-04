@@ -45,7 +45,7 @@ defmodule YtSearchWeb.SlotController do
     subtitles_directory = "/tmp/yts-subtitles/#{slot.youtube_id}"
 
     result =
-      Path.wildcard(subtitles_directory <> "*#{slot.youtube_id}*en*.vtt")
+      Path.wildcard(subtitles_directory <> "/*#{slot.youtube_id}*en*.vtt")
       |> Enum.map(fn child_path ->
         {child_path, File.read(child_path)}
       end)
@@ -80,13 +80,13 @@ defmodule YtSearchWeb.SlotController do
             nil ->
               :ok = Youtube.fetch_subtitles(youtube_url)
               # it should not be nil here
-              result = subtitles_for(slot)
+              case subtitles_for(slot) do
+                nil ->
+                  raise "subtitles must be available after fetching"
 
-              if result == nil do
-                raise "subtitles must be available after fetching"
+                v ->
+                  v
               end
-
-              result
 
             data ->
               data

@@ -72,7 +72,7 @@ defmodule YtSearchWeb.SlotTest do
          end
        end},
       {Path, [:passthrough],
-       wildcard: fn "/tmp/yts-subtitles/#{@youtube_id}" <> stuff ->
+       wildcard: fn "/tmp/yts-subtitles/#{@youtube_id}/*#{@youtube_id}*en*.vtt" ->
          [
            "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt",
            "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt"
