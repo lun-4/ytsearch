@@ -1,5 +1,6 @@
 defmodule YtSearchWeb.SlotController do
   use YtSearchWeb, :controller
+  require Logger
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
   alias YtSearch.Youtube
