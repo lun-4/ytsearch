@@ -24,8 +24,8 @@ defmodule YtSearchWeb.ErrorJSON do
               assigns.stack
               |> Enum.map(fn {module, function, arity, location} ->
                 %{
-                  where: "#{inspect(module)}.#{inspect(function)}/#{arity}",
-                  location: inspect(location)
+                  # where: "#{inspect(module)}.#{inspect(function)}/#{arity}"
+                  # location: inspect(location)
                 }
               end)
           }

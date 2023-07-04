@@ -10,9 +10,10 @@ defmodule YtSearchWeb.Router do
   end
 
   scope "/api/v1", YtSearchWeb do
-    get("/search", SearchController, :search)
+    get("/search", SearchController, :search_by_text)
+    get("/c/:channel_slot_id", SearchController, :fetch_channel)
+    get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
     get("/s/:slot_id", SlotController, :fetch_video)
-    get("/c/:channel_slot_id", ChannelSlotController, :fetch)
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
   end
@@ -22,9 +23,10 @@ defmodule YtSearchWeb.Router do
   # - quest vrchat keyboard not actually scrolling properly when link is too long
   # - world url map has less bytes per url, which helps on overall world size
   scope "/a/1", YtSearchWeb do
-    get("/s", SearchController, :search)
+    get("/s", SearchController, :search_by_text)
+    get("/c/:channel_slot_id", SearchController, :fetch_channel)
+    get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
     get("/at/:search_slot_id", AtlasController, :fetch)
-    get("/c/:channel_slot_id", ChannelSlotController, :fetch)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

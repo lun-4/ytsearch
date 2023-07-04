@@ -28,18 +28,21 @@ defmodule YtSearchWeb.Playlist do
 
       {entity_type, ytdlp_data}
     end)
-    # TODO actually support playlist slots
-    |> Enum.filter(fn {entity_type, data} ->
-      entity_type != :playlist
-    end)
     |> Enum.map(fn {entity_type, ytdlp_data} ->
       thumbnail_metadata = Youtube.Thumbnail.fetch_in_background(ytdlp_data)
 
       Logger.debug("parsing #{inspect(ytdlp_data)}")
 
       case entity_type do
-        t when t in [:video, :short, :livestream] ->
-          slot = YtSearch.Slot.from(ytdlp_data["id"])
+        t when t in [:video, :short, :livestream, :playlist] ->
+          slot =
+            case t do
+              :playlist ->
+                YtSearch.PlaylistSlot.from(ytdlp_data["id"])
+
+              _ ->
+                YtSearch.Slot.from(ytdlp_data["id"])
+            end
 
           # when using /channel/videos, channel_id is null, so
           # fallback to playlist_uploader_id in these cases
@@ -52,7 +55,7 @@ defmodule YtSearchWeb.Playlist do
                 # from/1 will crash if its nil
                 YtSearch.ChannelSlot.from(channel_id)
 
-              :short ->
+              t when t in [:short, :playlist] ->
                 # shorts dont give proper metadata about themselves at all
                 # fuck shorts
                 # make it optional
@@ -106,24 +109,6 @@ defmodule YtSearchWeb.Playlist do
             thumbnail: thumbnail_metadata,
             channel_slot: "#{slot.id}",
             slot_id: "#{slot.id}"
-          }
-
-        :playlist ->
-          # slot = YtSearch.PlaylistSlot.from(ytdlp_data["id"])
-
-          %{
-            type: :playlist,
-            title: ytdlp_data["title"],
-            youtube_id: ytdlp_data["id"],
-            youtube_url: ytdlp_data["url"],
-            duration: ytdlp_data["duration"],
-            channel_name: ytdlp_data["channel"],
-            description: ytdlp_data["description"],
-            uploaded_at: ytdlp_data["timestamp"],
-            view_count: ytdlp_data["view_count"],
-            thumbnail: thumbnail_metadata,
-            channel_slot: nil,
-            slot_id: nil
           }
 
         _ ->
