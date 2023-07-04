@@ -5,6 +5,7 @@ defmodule YtSearch.Thumbnail.Atlas do
   alias YtSearch.SearchSlot
   alias YtSearch.Slot
   alias YtSearch.ChannelSlot
+  alias YtSearch.PlaylistSlot
   alias Mogrify.Draw
 
   @spec assemble(String.t()) ::
@@ -29,6 +30,9 @@ defmodule YtSearch.Thumbnail.Atlas do
         case entry do
           ["channel", slot_id] ->
             ChannelSlot.fetch(slot_id)
+
+          ["playlist", slot_id] ->
+            PlaylistSlot.fetch(slot_id)
 
           [typ, slot_id] when typ in ["video", "short", "livestream"] ->
             Slot.fetch_by_id(slot_id)

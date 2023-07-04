@@ -8,7 +8,7 @@ defmodule YtSearch.Youtube.Thumbnail do
     defstruct [:aspect_ratio]
   end
 
-  def fetch_in_background(ytdlp_data) do
+  def fetch_in_background(entity_type, ytdlp_data) do
     # TODO better algorithm for thumbnail selection
     if ytdlp_data["thumbnails"] != nil do
       selected_thumbnail_metadata =

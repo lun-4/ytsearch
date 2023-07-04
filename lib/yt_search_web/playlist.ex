@@ -29,7 +29,7 @@ defmodule YtSearchWeb.Playlist do
       {entity_type, ytdlp_data}
     end)
     |> Enum.map(fn {entity_type, ytdlp_data} ->
-      thumbnail_metadata = Youtube.Thumbnail.fetch_in_background(ytdlp_data)
+      thumbnail_metadata = Youtube.Thumbnail.fetch_in_background(entity_type, ytdlp_data)
 
       Logger.debug("parsing #{inspect(ytdlp_data)}")
 
