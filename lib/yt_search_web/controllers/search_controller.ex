@@ -22,26 +22,18 @@ defmodule YtSearchWeb.SearchController do
   @type entity_type :: :channel | :short | :video
 
   def do_search(conn, search_query) do
-    {:ok, youtube_json_results} = Youtube.search(search_query)
+    escaped_query =
+      search_query
+      |> URI.encode()
 
-    results = youtube_json_results |> Playlist.from_ytdlp_data()
-    search_slot = SearchSlot.from_playlist(results)
-
-    conn
-    |> json(%{
-      search_results: results,
-      slot_id: "#{search_slot.id}"
-    })
+    "https://www.youtube.com/results?search_query=#{escaped_query}"
+    |> search_from_any_youtube_url(conn)
   end
 
   def search_from_any_youtube_url(youtube_url, conn) do
     {:ok, ytdlp_data} =
       youtube_url
-      # channel_search works for playlists
-      # as well because both are just "from this url give more stuff"
-      # (which is also kind of how normal text search goes too...)
-      # (TODO put all search cli calls into single pipeline)
-      |> Youtube.channel_search()
+      |> Youtube.search_from_url()
 
     results =
       ytdlp_data
