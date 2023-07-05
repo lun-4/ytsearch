@@ -131,7 +131,7 @@ defmodule YtSearch.Youtube do
              "--sub-format",
              "vtt",
              "--sub-langs",
-             "en-orig,en",
+             "en-orig,en,en-US",
              youtube_url
            ],
            cd: subtitle_folder,
