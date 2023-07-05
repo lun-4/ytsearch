@@ -45,46 +45,62 @@ defmodule YtSearchWeb.SlotController do
   defp subtitles_for(slot) do
     subtitles_directory = "/tmp/yts-subtitles/#{slot.youtube_id}"
 
-    result =
-      Path.wildcard(subtitles_directory <> "/*#{slot.youtube_id}*en*.vtt")
-      |> Enum.map(fn child_path ->
-        {child_path, File.read(child_path)}
-      end)
-      |> Enum.filter(fn {path, result} ->
-        case result do
-          {:ok, data} ->
-            true
+    if File.dir?(subtitles_directory) do
+      result =
+        Path.wildcard(subtitles_directory <> "/*#{slot.youtube_id}*en*.vtt")
+        |> Enum.map(fn child_path ->
+          {child_path, File.read(child_path)}
+        end)
+        |> Enum.filter(fn {path, result} ->
+          case result do
+            {:ok, data} ->
+              true
 
-          _ ->
-            Logger.error("expected #{path} to work, got #{inspect(result)}")
-            false
-        end
-      end)
-      |> Enum.at(0)
+            _ ->
+              Logger.error("expected #{path} to work, got #{inspect(result)}")
+              false
+          end
+        end)
+        |> Enum.at(0)
 
-    case result do
-      nil -> nil
-      {path, {:ok, data}} -> data
+      case result do
+        nil -> :no_available_subtitles
+        {path, {:ok, data}} -> data
+      end
+    else
+      :no_requested_subtitles
     end
   end
 
-  defp do_subtitles(slot, youtube_url) do
+  defp do_subtitles(slot, youtube_url, recursing \\ false) do
     # 1. fetch once, to see if we dont need to acquire the mutex
     # 2. fetch again inside the mutex, in the case another process was
     # already fetching the subtitles
     # 3. fetch after requesting a fetch, for the process that did the
     # hard job of calling youtube
     case subtitles_for(slot) do
-      nil ->
+      :no_requested_subtitles ->
         Mutex.under(SubtitleMutex, youtube_url, fn ->
           case subtitles_for(slot) do
-            nil ->
-              :ok = Youtube.fetch_subtitles(youtube_url)
+            :no_requested_subtitles ->
+              if recursing do
+                Logger.warn("should not recurse twice into requesting subtitles")
+                nil
+              else
+                :ok = Youtube.fetch_subtitles(youtube_url)
+                do_subtitles(slot, youtube_url, true)
+              end
+
+            :no_available_subtitles ->
+              nil
 
             data ->
               data
           end
         end)
+
+      :no_available_subtitles ->
+        nil
 
       data ->
         data
