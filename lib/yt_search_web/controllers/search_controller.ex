@@ -34,6 +34,27 @@ defmodule YtSearchWeb.SearchController do
     })
   end
 
+  def search_from_any_youtube_url(youtube_url, conn) do
+    {:ok, ytdlp_data} =
+      youtube_url
+      # channel_search works for playlists
+      # as well because both are just "from this url give more stuff"
+      # (which is also kind of how normal text search goes too...)
+      # (TODO put all search cli calls into single pipeline)
+      |> Youtube.channel_search()
+
+    results =
+      ytdlp_data
+      |> Playlist.from_ytdlp_data()
+
+    search_slot =
+      results
+      |> SearchSlot.from_playlist()
+
+    conn
+    |> json(%{search_results: results, slot_id: "#{search_slot.id}"})
+  end
+
   @spec fetch_youtube_entity(Plug.Conn.t(), atom(), String.t()) :: nil
   defp fetch_youtube_entity(conn, entity, id) do
     {slot_id, _} = id |> Integer.parse()
@@ -44,25 +65,9 @@ defmodule YtSearchWeb.SearchController do
         |> put_status(404)
 
       slot ->
-        {:ok, ytdlp_data} =
-          slot
-          |> entity.as_youtube_url()
-          # channel_search works for playlists
-          # as well because both are just "from this url give more stuff"
-          # (which is also kind of how normal text search goes too...)
-          # (TODO put all search cli calls into single pipeline)
-          |> Youtube.channel_search()
-
-        results =
-          ytdlp_data
-          |> Playlist.from_ytdlp_data()
-
-        search_slot =
-          results
-          |> SearchSlot.from_playlist()
-
-        conn
-        |> json(%{search_results: results, slot_id: "#{search_slot.id}"})
+        slot
+        |> entity.as_youtube_url()
+        |> search_from_any_youtube_url(conn)
     end
   end
 

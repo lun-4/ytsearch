@@ -11,19 +11,7 @@ defmodule YtSearchWeb.HelloController do
   end
 
   def trending_tab(conn, _params) do
-    {:ok, ytdlp_data} =
-      "https://www.youtube.com/feed/trending"
-      |> Youtube.channel_search()
-
-    results =
-      ytdlp_data
-      |> Playlist.from_ytdlp_data()
-
-    search_slot =
-      results
-      |> SearchSlot.from_playlist()
-
-    conn
-    |> json(%{search_results: results, slot_id: "#{search_slot.id}"})
+    "https://www.youtube.com/feed/trending"
+    |> YtSearchWeb.SearchController.search_from_any_youtube_url(conn)
   end
 end
