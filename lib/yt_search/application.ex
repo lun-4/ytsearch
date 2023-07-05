@@ -28,7 +28,8 @@ defmodule YtSearch.Application do
       %{
         id: SubtitleMutex,
         start: {Mutex, :start_link, [[name: SubtitleMutex]]}
-      }
+      },
+      {Cachex, name: :tabs}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
