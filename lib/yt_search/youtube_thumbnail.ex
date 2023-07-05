@@ -24,7 +24,7 @@ defmodule YtSearch.Youtube.Thumbnail do
         aspect_ratio: selected_thumbnail_metadata["width"] / selected_thumbnail_metadata["height"]
       }
     else
-      Logger.warning("id #{ytdlp_data["id"]} does not provide thumbnail")
+      Logger.warning("id '#{ytdlp_data["id"]}' does not provide thumbnail")
       nil
     end
   end

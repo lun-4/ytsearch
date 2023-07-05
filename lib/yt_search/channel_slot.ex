@@ -28,6 +28,10 @@ defmodule YtSearch.ChannelSlot do
 
   @spec from(String.t()) :: Slot.t()
   def from(youtube_id) do
+    if String.length(youtube_id) == 0 do
+      raise "invalid youtube id"
+    end
+
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
     case Repo.one(query) do
