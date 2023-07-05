@@ -80,14 +80,6 @@ defmodule YtSearchWeb.SlotController do
           case subtitles_for(slot) do
             nil ->
               :ok = Youtube.fetch_subtitles(youtube_url)
-              # it should not be nil here
-              case subtitles_for(slot) do
-                nil ->
-                  raise "subtitles must be available after fetching"
-
-                v ->
-                  v
-              end
 
             data ->
               data
