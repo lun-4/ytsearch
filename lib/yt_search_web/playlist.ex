@@ -24,6 +24,25 @@ defmodule YtSearchWeb.Playlist do
                 :video
               end
             end
+
+          nil ->
+            # this is a fallback for the trending tab
+            :channel
+        end
+
+      ytdlp_data =
+        case ytdlp_data["ie_key"] do
+          nil ->
+            # infer some data when ie_key is nil
+            # happens on trending tab
+            url = ytdlp_data["url"] |> URI.parse()
+            channel_id = url.path |> Path.basename()
+
+            ytdlp_data
+            |> Map.put("id", channel_id)
+
+          _other ->
+            ytdlp_data
         end
 
       {entity_type, ytdlp_data}
