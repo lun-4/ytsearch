@@ -30,7 +30,7 @@ defmodule YtSearchWeb.SearchController do
     |> search_from_any_youtube_url(conn)
   end
 
-  def search_from_any_youtube_url(youtube_url, conn) do
+  def search_from_any_youtube_url(youtube_url) do
     {:ok, ytdlp_data} =
       youtube_url
       |> Youtube.search_from_url()
@@ -43,8 +43,14 @@ defmodule YtSearchWeb.SearchController do
       results
       |> SearchSlot.from_playlist()
 
+    %{search_results: results, slot_id: "#{search_slot.id}"}
+  end
+
+  def search_from_any_youtube_url(youtube_url, conn) do
+    jsondata = search_from_any_youtube_url(youtube_url)
+
     conn
-    |> json(%{search_results: results, slot_id: "#{search_slot.id}"})
+    |> json(jsondata)
   end
 
   @spec fetch_youtube_entity(Plug.Conn.t(), atom(), String.t()) :: nil

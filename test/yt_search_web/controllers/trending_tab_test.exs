@@ -14,10 +14,10 @@ defmodule YtSearchWeb.TrendingTabTest do
     ) do
       conn =
         conn
-        |> get(~p"/api/v1/trending")
+        |> get(~p"/api/v1/hello")
 
       resp_json = json_response(conn, 200)
-      results = resp_json["search_results"]
+      results = resp_json["trending_tab"]["search_results"]
       assert results |> Enum.at(0) |> Map.get("youtube_id") == "0GhMlekKPgo"
       assert results |> Enum.at(3) |> Map.get("youtube_id") == "qOXv-cPYd4g"
     end

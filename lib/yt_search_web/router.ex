@@ -16,7 +16,6 @@ defmodule YtSearchWeb.Router do
     get("/s/:slot_id", SlotController, :fetch_video)
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
-    get("/trending", HelloController, :trending_tab)
   end
 
   # smaller url version of the api, this is a bodge for
