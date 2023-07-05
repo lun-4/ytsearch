@@ -7,7 +7,7 @@ import Config
 # Run `mix help test` for more information.
 config :yt_search, YtSearch.Repo,
   database: Path.expand("../yt_search_test.db", Path.dirname(__ENV__.file)),
-  pool_size: 5,
+  pool_size: 1,
   pool: Ecto.Adapters.SQL.Sandbox
 
 # We don't run a server during test. If one is required,

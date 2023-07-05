@@ -3,7 +3,7 @@ import Config
 # Configure your database
 config :yt_search, YtSearch.Repo,
   database: Path.expand("../yt_search_dev.db", Path.dirname(__ENV__.file)),
-  pool_size: 5,
+  pool_size: 1,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true
 
