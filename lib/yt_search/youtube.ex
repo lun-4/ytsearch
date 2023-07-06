@@ -6,6 +6,14 @@ defmodule YtSearch.Youtube do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
   end
 
+  # vrcjson does not support unbalanced braces inside strings
+  # this has been reported to vrchat already
+  #
+  # https://feedback.vrchat.com/vrchat-udon-closed-alpha-bugs/p/braces-inside-strings-in-vrcjson-can-fail-to-deserialize
+  #
+  # workaround for now is to strip off any brace character. we could write a balancer and strip
+  # off the edge case, but i dont think i care enough to do that just for vrchat.
+
   defp vrcjson_workaround(incoming_data) do
     case incoming_data do
       data when is_map(data) ->
