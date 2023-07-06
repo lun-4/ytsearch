@@ -6,6 +6,33 @@ defmodule YtSearch.Youtube do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
   end
 
+  defp vrcjson_workaround(incoming_data) do
+    case incoming_data do
+      data when is_map(data) ->
+        data
+        |> Map.keys()
+        |> Enum.map(fn key ->
+          value =
+            case Map.get(data, key) do
+              v when is_bitstring(v) ->
+                v
+                |> String.replace(~r/[\[\]{}]/, "")
+                |> String.trim(" ")
+
+              any ->
+                any
+            end
+
+          {key, value}
+        end)
+        |> Map.new()
+
+      data when is_list(data) ->
+        data
+        |> Enum.map(&vrcjson_workaround/1)
+    end
+  end
+
   def search_from_url(url) do
     case System.cmd(ytdlp(), [
            url,
@@ -21,7 +48,8 @@ defmodule YtSearch.Youtube do
         {:ok,
          stdout
          |> String.split("\n", trim: true)
-         |> Enum.map(&Jason.decode!/1)}
+         |> Enum.map(&Jason.decode!/1)
+         |> vrcjson_workaround}
 
       {stdout, other_error_code} ->
         Logger.error("stdout: #{stdout}")
