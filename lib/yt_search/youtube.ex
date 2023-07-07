@@ -153,7 +153,7 @@ defmodule YtSearch.Youtube do
           |> Map.get("v")
       end
 
-    subtitle_folder = "/tmp/yts-subtitles/" <> id
+    subtitle_folder = "/tmp/yts-subtitles/#{id}"
     File.mkdir_p!(subtitle_folder)
 
     Logger.debug("outputting to #{subtitle_folder}")
@@ -174,7 +174,37 @@ defmodule YtSearch.Youtube do
            stderr_to_stdout: true
          ) do
       {stdout, 0} ->
-        :ok
+        subtitles =
+          Path.wildcard(subtitle_folder <> "/*#{id}*en*.vtt")
+          |> Enum.map(fn child_path ->
+            {child_path, File.read(child_path)}
+          end)
+          |> Enum.filter(fn {path, result} ->
+            case result do
+              {:ok, data} ->
+                true
+
+              _ ->
+                Logger.error("expected #{path} to work, got #{inspect(result)}")
+                false
+            end
+          end)
+          |> Enum.map(fn {path, {:ok, data}} ->
+            path
+            |> Path.basename()
+            |> String.split(".")
+            |> Enum.at(-2)
+            |> then(fn language ->
+              YtSearch.Subtitle.insert(id, language, data)
+            end)
+          end)
+
+        if length(subtitles) == 0 do
+          YtSearch.Subtitle.insert(id, "notfound", nil)
+          nil
+        else
+          :ok
+        end
 
       {stdout, other_error_code} ->
         Logger.error("fetch_subtitles stdout: #{stdout} #{other_error_code}")

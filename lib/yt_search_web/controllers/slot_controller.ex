@@ -3,6 +3,7 @@ defmodule YtSearchWeb.SlotController do
   require Logger
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
+  alias YtSearch.Subtitle
   alias YtSearch.Youtube
   alias YtSearchWeb.UserAgent
 
@@ -43,32 +44,22 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp subtitles_for(slot) do
-    subtitles_directory = "/tmp/yts-subtitles/#{slot.youtube_id}"
+    subtitles = Subtitle.fetch(slot.youtube_id)
 
-    if File.dir?(subtitles_directory) do
-      result =
-        Path.wildcard(subtitles_directory <> "/*#{slot.youtube_id}*en*.vtt")
-        |> Enum.map(fn child_path ->
-          {child_path, File.read(child_path)}
-        end)
-        |> Enum.filter(fn {path, result} ->
-          case result do
-            {:ok, data} ->
-              true
-
-            _ ->
-              Logger.error("expected #{path} to work, got #{inspect(result)}")
-              false
-          end
+    if length(subtitles) == 0 do
+      :no_requested_subtitles
+    else
+      selected =
+        subtitles
+        |> Enum.filter(fn sub ->
+          sub.language != "notfound"
         end)
         |> Enum.at(0)
 
-      case result do
-        nil -> :no_available_subtitles
-        {path, {:ok, data}} -> data
+      case selected do
+        nil -> :no_subtitles_found
+        subtitle -> subtitle.subtitle_data
       end
-    else
-      :no_requested_subtitles
     end
   end
 

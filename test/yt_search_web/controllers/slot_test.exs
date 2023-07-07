@@ -62,6 +62,7 @@ defmodule YtSearchWeb.SlotTest do
          {"", 0}
        end,
        cmd: fn _, _, _ ->
+         :timer.sleep(100)
          calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
 
          if calls > 1 do
@@ -73,14 +74,20 @@ defmodule YtSearchWeb.SlotTest do
        end},
       {Path, [:passthrough],
        wildcard: fn "/tmp/yts-subtitles/#{@youtube_id}/*#{@youtube_id}*en*.vtt" ->
-         [
-           "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt",
-           "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt"
-         ]
+         ytdlp_calls = :ets.lookup(table, :ytdlp_cmd) |> Keyword.get(:ytdlp_cmd) || 0
+
+         if ytdlp_calls > 0 do
+           [
+             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt",
+             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt"
+           ]
+         else
+           []
+         end
        end},
       {File, [:passthrough],
        read: fn path ->
-         ytdlp_calls = :ets.lookup(table, :ytdlp_cmd)
+         [ytdlp_cmd: ytdlp_calls] = :ets.lookup(table, :ytdlp_cmd)
 
          if ytdlp_calls < 1 do
            {:error, :didnt_call_ytdlp}
@@ -100,14 +107,23 @@ defmodule YtSearchWeb.SlotTest do
     ]) do
       1..10
       |> Enum.map(fn _ ->
+        {:ok, agent} =
+          Agent.start(fn ->
+            Phoenix.ConnTest.build_conn()
+            |> put_req_header("user-agent", "UnityWebRequest")
+            |> get(~p"/api/v1/s/#{slot.id}")
+          end)
+
+        agent
+      end)
+      |> Enum.map(fn agent ->
         conn =
-          conn
-          |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/api/v1/s/#{slot.id}")
+          Agent.get(agent, fn conn ->
+            conn
+          end)
 
         resp = json_response(conn, 200)
-
-        assert resp["subtitle_data"] != nil
+        IO.inspect(resp)
         assert resp["subtitle_data"] == "Among Us"
       end)
     end

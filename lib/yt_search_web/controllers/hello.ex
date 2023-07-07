@@ -9,7 +9,6 @@ defmodule YtSearchWeb.HelloController do
     trending_tab =
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
-          # TODO cache this
           data =
             "https://www.youtube.com/feed/trending"
             |> YtSearchWeb.SearchController.search_from_any_youtube_url()
