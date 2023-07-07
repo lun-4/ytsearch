@@ -107,23 +107,15 @@ defmodule YtSearchWeb.SlotTest do
     ]) do
       1..10
       |> Enum.map(fn _ ->
-        {:ok, agent} =
-          Agent.start(fn ->
-            Phoenix.ConnTest.build_conn()
-            |> put_req_header("user-agent", "UnityWebRequest")
-            |> get(~p"/api/v1/s/#{slot.id}")
-          end)
-
-        agent
+        Task.async(fn ->
+          Phoenix.ConnTest.build_conn()
+          |> put_req_header("user-agent", "UnityWebRequest")
+          |> get(~p"/api/v1/s/#{slot.id}")
+        end)
       end)
-      |> Enum.map(fn agent ->
-        conn =
-          Agent.get(agent, fn conn ->
-            conn
-          end)
-
+      |> Enum.map(fn task ->
+        conn = Task.await(task)
         resp = json_response(conn, 200)
-        IO.inspect(resp)
         assert resp["subtitle_data"] == "Among Us"
       end)
     end
