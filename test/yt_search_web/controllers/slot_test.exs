@@ -62,7 +62,7 @@ defmodule YtSearchWeb.SlotTest do
          {"", 0}
        end,
        cmd: fn _, _, _ ->
-         :timer.sleep(100)
+         :timer.sleep(50)
          calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
 
          if calls > 1 do

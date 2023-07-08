@@ -41,13 +41,13 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  def search_from_url(url) do
+  def search_from_url(url, playlist_end \\ 15) do
     case System.cmd(ytdlp(), [
            url,
            "--dump-json",
            "--flat-playlist",
            "--playlist-end",
-           "15",
+           to_string(playlist_end),
            "--extractor-args",
            "youtubetab:approximate_metadata"
          ]) do
