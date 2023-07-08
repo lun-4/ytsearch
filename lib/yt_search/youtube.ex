@@ -41,7 +41,7 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  def search_from_url(url, playlist_end \\ 15) do
+  def search_from_url(url, playlist_end \\ 30) do
     case System.cmd(ytdlp(), [
            url,
            "--dump-json",

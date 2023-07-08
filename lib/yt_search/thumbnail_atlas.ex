@@ -75,7 +75,7 @@ defmodule YtSearch.Thumbnail.Atlas do
     {_, 0} =
       System.cmd(
         "montage",
-        ["-tile", "4x4", "-geometry", "128x128!", "-background", "#000000"] ++
+        ["-tile", "8x4", "-geometry", "128x128!", "-background", "#000000"] ++
           thumbnail_paths ++ [atlas_image_path]
       )
 
