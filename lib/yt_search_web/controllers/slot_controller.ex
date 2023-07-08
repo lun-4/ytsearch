@@ -78,7 +78,7 @@ defmodule YtSearchWeb.SlotController do
                 Logger.warn("should not recurse twice into requesting subtitles")
                 nil
               else
-                :ok = Youtube.fetch_subtitles(youtube_url)
+                Youtube.fetch_subtitles(youtube_url)
                 do_subtitles(slot, youtube_url, true)
               end
 
