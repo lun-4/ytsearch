@@ -9,11 +9,13 @@ defmodule YtSearch.PlaylistSlot do
 
   @type t :: %__MODULE__{}
   @primary_key {:id, :integer, autogenerate: false}
-  @max_id_retries 20
+
+  # 20 times to retry
+  def max_id_retries, do: 20
   # 12 hours
-  @ttl 12 * 60 * 60
+  def ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
-  @urls 100_000
+  def urls, do: 100_000
 
   schema "playlist_slots" do
     field(:youtube_id, :string)
@@ -44,7 +46,7 @@ defmodule YtSearch.PlaylistSlot do
 
   @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
   defp find_available_id() do
-    SlotUtilities.find_available_slot_id(__MODULE__, @urls, @ttl, @max_id_retries)
+    SlotUtilities.find_available_slot_id(__MODULE__)
   end
 
   def as_youtube_url(slot) do
