@@ -4,24 +4,31 @@ defmodule YtSearch.SlotUtilities do
   alias YtSearch.TTL
 
   def find_available_slot_id(module) do
-    find_available_slot_id(module, 0)
+    find_available_slot_id(module, 1)
   end
 
   defmodule RerollCounter do
     use Prometheus.Metric
 
     def setup() do
-      Counter.declare(
+      Histogram.declare(
         name: :yts_slot_reroll_count,
-        help: "Total times we rerolled an ID for a given slot",
-        labels: [:type]
+        help: "(THIS METRIC IS BROKEN FOR NOW) Total times we rerolled an ID for a given slot",
+        labels: [:type],
+        # TODO everyone is on 20 right now, but in the future that might change?
+        buckets: 0..20 |> Enum.to_list()
       )
     end
 
-    def inc(type) do
-      Counter.inc(
-        name: :yts_slot_reroll_count,
-        labels: [to_string(type)]
+    def register(type, amount_of_tries) do
+      Histogram.observe(
+        [
+          name: :yts_slot_reroll_count,
+          labels: [
+            type |> to_string |> String.split(".") |> Enum.at(-1)
+          ]
+        ],
+        amount_of_tries
       )
     end
   end
@@ -36,6 +43,7 @@ defmodule YtSearch.SlotUtilities do
 
     case Repo.one(query) do
       nil ->
+        RerollCounter.register(module, current_retry)
         {:ok, random_id}
 
       slot ->
@@ -43,10 +51,9 @@ defmodule YtSearch.SlotUtilities do
         # refreshed
         if TTL.expired?(slot, module.ttl) do
           Repo.delete!(slot)
+          RerollCounter.register(module, current_retry)
           {:ok, random_id}
         else
-          Counter.inc(module)
-
           if current_retry > module.max_retries do
             {:error, :no_available_id}
           else
