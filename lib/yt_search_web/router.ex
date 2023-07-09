@@ -28,6 +28,7 @@ defmodule YtSearchWeb.Router do
     get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
     get("/at/:search_slot_id", AtlasController, :fetch)
     get("/sl/:slot_id", SlotController, :fetch_video)
+    get("/sl/:slot_id/index.m3u8", SlotController, :fetch_video)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
