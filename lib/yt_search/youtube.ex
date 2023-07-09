@@ -6,6 +6,27 @@ defmodule YtSearch.Youtube do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
   end
 
+  defmodule CallCounter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_ytdlp_call_count,
+        help: "Total times we requested the ytdlp path for calling ytdlp",
+        labels: [:type]
+      )
+    end
+
+    def inc(type) do
+      IO.puts("inc #{type}")
+
+      Counter.inc(
+        name: :yts_ytdlp_call_count,
+        labels: [to_string(type)]
+      )
+    end
+  end
+
   # vrcjson does not support unbalanced braces inside strings
   # this has been reported to vrchat already
   #
@@ -42,6 +63,8 @@ defmodule YtSearch.Youtube do
   end
 
   def search_from_url(url, playlist_end \\ 30) do
+    CallCounter.inc(:search)
+
     case System.cmd(ytdlp(), [
            url,
            "--dump-json",
@@ -67,6 +90,8 @@ defmodule YtSearch.Youtube do
 
   @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
   def fetch_mp4_link(youtube_id) do
+    CallCounter.inc(:mp4_link)
+
     url_result =
       case System.cmd(ytdlp(), [
              "--no-check-certificate",
@@ -117,6 +142,8 @@ defmodule YtSearch.Youtube do
   end
 
   defp fetch_any_video_link(youtube_id) do
+    CallCounter.inc(:any_link)
+
     case System.cmd(ytdlp(), [
            "--no-check-certificate",
            # TODO do we want cache-dir??
@@ -157,6 +184,8 @@ defmodule YtSearch.Youtube do
     File.mkdir_p!(subtitle_folder)
 
     Logger.debug("outputting to #{subtitle_folder}")
+
+    CallCounter.inc(:subtitles)
 
     case System.cmd(
            ytdlp(),

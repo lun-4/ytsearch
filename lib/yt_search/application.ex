@@ -57,6 +57,7 @@ defmodule YtSearch.Application do
 
     YtSearchWeb.Endpoint.MetricsExporter.setup()
     YtSearchWeb.Endpoint.PipelineInstrumenter.setup()
+    YtSearch.Youtube.CallCounter.setup()
 
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()
