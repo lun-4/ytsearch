@@ -7,6 +7,25 @@ defmodule YtSearch.SlotUtilities do
     find_available_slot_id(module, url_slots, ttl, max_retries, 0)
   end
 
+  defmodule RerollCounter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_slot_reroll_count,
+        help: "Total times we rerolled an ID for a given slot",
+        labels: [:type]
+      )
+    end
+
+    def inc(type) do
+      Counter.inc(
+        name: :yts_slot_reroll_count,
+        labels: [to_string(type)]
+      )
+    end
+  end
+
   @spec find_available_slot_id(atom(), Integer.t(), Integer.t(), Integer.t()) ::
           {:ok, Integer.t()} | {:error, :no_available_id}
   def find_available_slot_id(module, url_slots, ttl, max_retries, current_retry) do
@@ -26,6 +45,8 @@ defmodule YtSearch.SlotUtilities do
           Repo.delete!(slot)
           {:ok, random_id}
         else
+          Counter.inc(module)
+
           if current_retry > max_retries do
             {:error, :no_available_id}
           else

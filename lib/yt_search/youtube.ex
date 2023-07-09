@@ -18,8 +18,6 @@ defmodule YtSearch.Youtube do
     end
 
     def inc(type) do
-      IO.puts("inc #{type}")
-
       Counter.inc(
         name: :yts_ytdlp_call_count,
         labels: [to_string(type)]
