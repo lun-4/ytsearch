@@ -29,7 +29,8 @@ defmodule YtSearch.Application do
         id: SubtitleMutex,
         start: {Mutex, :start_link, [[name: SubtitleMutex]]}
       },
-      {Cachex, name: :tabs}
+      {Cachex, name: :tabs},
+      YtSearch.SlotUtilities.UsageMeter
     ]
 
     start_telemetry
@@ -59,6 +60,7 @@ defmodule YtSearch.Application do
     YtSearchWeb.Endpoint.PipelineInstrumenter.setup()
     YtSearch.Youtube.CallCounter.setup()
     YtSearch.SlotUtilities.RerollCounter.setup()
+    YtSearch.SlotUtilities.UsageMeter.Gauge.setup()
 
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()
