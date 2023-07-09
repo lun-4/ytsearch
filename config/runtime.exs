@@ -22,6 +22,8 @@ end
 
 config :yt_search, YtSearch.Youtube, ytdlp_path: System.get_env("YTDLP_PATH") || "yt-dlp"
 
+config :yt_search, YtSearch.Repo, telemetry_event: [YtSearch.Repo.Instrumenter]
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||

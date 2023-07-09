@@ -48,7 +48,19 @@ defmodule YtSearch.MixProject do
       {:mutex, "~>1.3"},
       {:mogrify, "~> 0.9.3"},
       {:temp, "~> 0.4"},
-      {:cachex, "~> 3.6"}
+      {:cachex, "~> 3.6"},
+      {:prometheus, "~> 4.6"},
+      {:prometheus_ex,
+       git: "https://github.com/lanodan/prometheus.ex.git",
+       branch: "fix/elixir-1.14",
+       override: true},
+      {:prometheus_plugs, "~> 1.1"},
+      {:prometheus_phoenix, "~> 1.3"},
+      # Note: once `prometheus_phx` is integrated into `prometheus_phoenix`, remove the former:
+      {:prometheus_phx,
+       git: "https://git.pleroma.social/pleroma/elixir-libraries/prometheus-phx.git",
+       branch: "no-logging"},
+      {:prometheus_ecto, "~> 1.4"}
     ]
   end
 

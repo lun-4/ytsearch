@@ -32,10 +32,35 @@ defmodule YtSearch.Application do
       {Cachex, name: :tabs}
     ]
 
+    start_telemetry
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: YtSearch.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp start_telemetry do
+    require Prometheus.Registry
+
+    if Application.get_env(:prometheus, YtSearch.Repo.Instrumenter) do
+      :ok =
+        :telemetry.attach(
+          "prometheus-ecto",
+          [:pleroma, :repo, :query],
+          &YtSearch.Repo.Instrumenter.handle_event/4,
+          %{}
+        )
+
+      YtSearch.Repo.Instrumenter.setup()
+    end
+
+    YtSearchWeb.Endpoint.MetricsExporter.setup()
+    YtSearchWeb.Endpoint.PipelineInstrumenter.setup()
+
+    # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
+    # YtSearchWeb.Endpoint.Instrumenter.setup()
+    PrometheusPhx.setup()
   end
 
   # Tell Phoenix to update the endpoint configuration
