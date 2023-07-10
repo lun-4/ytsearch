@@ -24,6 +24,7 @@ defmodule YtSearchWeb.SearchController do
   def do_search(conn, search_query) do
     escaped_query =
       search_query
+      |> String.trim()
       |> URI.encode()
 
     "https://www.youtube.com/results?search_query=#{escaped_query}"
