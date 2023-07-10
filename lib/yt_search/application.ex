@@ -15,7 +15,7 @@ defmodule YtSearch.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: YtSearch.PubSub},
       # Start Finch
-      {Finch, name: YtSearch.Finch},
+      # {Finch, name: YtSearch.Finch},
       # Start the Endpoint (http/https)
       YtSearchWeb.Endpoint,
       # Start a worker by calling: YtSearch.Worker.start_link(arg)

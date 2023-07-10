@@ -12,17 +12,14 @@ defmodule YtSearchWeb.ThumbnailTest do
 
   test "correctly thumbnails a youtube thumbnail", %{conn: conn} do
     with_mock(
-      Finch,
-      [:passthrough],
-      request: fn _, YtSearch.Finch ->
-        {:ok,
-         %Finch.Response{
-           body: png_data(),
-           headers: [{"content-type", "image/png"}],
-           status: 200
-         }}
-      end,
-      build: fn a, b, c, d -> passthrough([a, b, c, d]) end
+      HTTPoison,
+      get!: fn _ ->
+        %HTTPoison.Response{
+          body: png_data(),
+          headers: [{"content-type", "image/png"}],
+          status_code: 200
+        }
+      end
     ) do
       {:ok, thumb} = Youtube.Thumbnail.maybe_download_thumbnail("a", "http://youtube.com")
       assert thumb.id == "a"

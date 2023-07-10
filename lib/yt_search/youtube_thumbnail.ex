@@ -60,19 +60,16 @@ defmodule YtSearch.Youtube.Thumbnail do
   defp do_download_thumbnail(youtube_id, url) do
     Logger.debug("thumbnail requesting #{url}")
 
-    {:ok, response} =
-      Finch.build(
-        :get,
-        # youtube channels give urls without scheme for some reason
-        if String.starts_with?(url, "//") do
-          "https:#{url}"
-        else
-          url
-        end
-      )
-      |> Finch.request(YtSearch.Finch)
+    # youtube channels give urls without scheme for some reason
+    response =
+      if String.starts_with?(url, "//") do
+        "https:#{url}"
+      else
+        url
+      end
+      |> HTTPoison.get!()
 
-    if response.status == 200 do
+    if response.status_code == 200 do
       content_type = response.headers[:"content-type"]
       body = response.body
 
@@ -88,10 +85,10 @@ defmodule YtSearch.Youtube.Thumbnail do
       {:ok, Thumbnail.insert(youtube_id, content_type, final_body)}
     else
       Logger.error(
-        "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"
+        "thumbnail request. expected 200, got #{inspect(response.status_code)} #{inspect(response.body)}"
       )
 
-      {:error, {:http_response, response.status, response.headers, response.body}}
+      {:error, {:http_response, response.status_code, response.headers, response.body}}
     end
   end
 end
