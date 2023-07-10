@@ -8,7 +8,7 @@ defmodule YtSearchWeb.TrendingTabTest do
     with_mock(
       System,
       [:passthrough],
-      cmd: fn _, args ->
+      cmd: fn _, _args ->
         {@test_output, 0}
       end
     ) do

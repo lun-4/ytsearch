@@ -1,7 +1,6 @@
 defmodule YtSearchWeb.PlaylistSlotTest do
   use YtSearchWeb.ConnCase, async: false
   import Mock
-  alias YtSearch.Slot
 
   @expected_playlist_id "PLnVSKQeK_aPbUZnaViFxSoLZy3-9WqgYz"
   @expected_youtube_id "8wo6sNbzlYk"

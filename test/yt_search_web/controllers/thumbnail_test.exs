@@ -10,7 +10,7 @@ defmodule YtSearchWeb.ThumbnailTest do
     |> Base.decode64!()
   end
 
-  test "correctly thumbnails a youtube thumbnail", %{conn: conn} do
+  test "correctly thumbnails a youtube thumbnail" do
     with_mock(
       HTTPoison,
       get!: fn _ ->

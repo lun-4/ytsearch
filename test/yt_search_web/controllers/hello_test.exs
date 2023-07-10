@@ -16,7 +16,7 @@ defmodule YtSearchWeb.HelloTest do
       with_mock(
         System,
         [:passthrough],
-        cmd: fn _, args ->
+        cmd: fn _, _args ->
           {unquote(file_data), 0}
         end
       ) do

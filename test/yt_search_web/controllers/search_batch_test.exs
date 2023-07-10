@@ -19,7 +19,7 @@ defmodule YtSearchWeb.SearchBatchTest do
       with_mock(
         System,
         [:passthrough],
-        cmd: fn _, args ->
+        cmd: fn _, _args ->
           {unquote(file_data), 0}
         end
       ) do
@@ -27,7 +27,7 @@ defmodule YtSearchWeb.SearchBatchTest do
           conn
           |> get(~p"/api/v1/search?search=whatever")
 
-        resp_json = json_response(conn, 200)
+        json_response(conn, 200)
       end
     end
   end)
