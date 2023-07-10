@@ -1,9 +1,6 @@
 defmodule YtSearchWeb.HelloController do
   use YtSearchWeb, :controller
-
-  alias YtSearch.Youtube
-  alias YtSearch.SearchSlot
-  alias YtSearchWeb.Playlist
+  require Logger
 
   def hello(conn, _params) do
     trending_tab =
@@ -13,7 +10,7 @@ defmodule YtSearchWeb.HelloController do
             "https://www.youtube.com/feed/trending"
             |> YtSearchWeb.SearchController.search_from_any_youtube_url()
 
-          Cachex.set(
+          Cachex.put(
             :tabs,
             "trending",
             case data do

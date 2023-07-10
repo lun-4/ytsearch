@@ -33,7 +33,7 @@ defmodule YtSearch.Application do
       YtSearch.SlotUtilities.UsageMeter
     ]
 
-    start_telemetry
+    start_telemetry()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

@@ -58,8 +58,60 @@ defmodule YtSearchWeb.Endpoint do
     use Prometheus.PlugExporter
   end
 
+  defmodule JSONRequestIDSetter do
+    import Plug.Conn
+    @behaviour Plug
+
+    def init(options) do
+      options
+    end
+
+    defp do_call(conn) do
+      values = get_resp_header(conn, "content-type")
+      [x_request_id] = get_resp_header(conn, "x-request-id")
+
+      case values do
+        [type] ->
+          case type do
+            "application/json" <> _whatever ->
+              new_body =
+                case conn.resp_body
+                     |> Jason.decode() do
+                  {:ok, body} ->
+                    cond do
+                      is_map(body) ->
+                        body
+                        |> Map.put("__x_request_id", x_request_id)
+
+                      true ->
+                        body
+                    end
+                    |> Jason.encode!()
+
+                  _ ->
+                    conn.resp_body
+                end
+
+              conn
+              |> resp(conn.status, new_body)
+
+            _ ->
+              conn
+          end
+
+        _ ->
+          conn
+      end
+    end
+
+    def call(conn, _opts) do
+      register_before_send(conn, &do_call/1)
+    end
+  end
+
   plug(PipelineInstrumenter)
   plug(MetricsExporter)
+  plug(JSONRequestIDSetter)
 
   plug YtSearchWeb.Router
 end

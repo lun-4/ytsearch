@@ -26,6 +26,7 @@ defmodule YtSearchWeb.HelloTest do
 
         resp_json = json_response(conn, 200)
         assert resp_json["online"] == true
+        assert is_bitstring(resp_json["__x_request_id"])
       end
     end
   end)
