@@ -54,7 +54,7 @@ defmodule YtSearch.SlotUtilities do
           RerollCounter.register(module, current_retry)
           {:ok, random_id}
         else
-          if current_retry > module.max_retries do
+          if current_retry > module.max_id_retries do
             {:error, :no_available_id}
           else
             find_available_slot_id(module, current_retry + 1)
