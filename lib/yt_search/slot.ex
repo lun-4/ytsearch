@@ -25,16 +25,16 @@ defmodule YtSearch.Slot do
   @spec from(String.t()) :: Slot.t()
   def from(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    # TODO proper ttl checking on fetch/1 and from/1
+    case Repo.all(query) do
+      [slot | _rest] ->
+        slot
 
-    case Repo.one(query) do
-      nil ->
+      [] ->
         {:ok, new_id} = find_available_id()
 
         %__MODULE__{youtube_id: youtube_id, id: new_id}
         |> Repo.insert!()
-
-      slot ->
-        slot
     end
   end
 
