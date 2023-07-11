@@ -2,6 +2,9 @@ defmodule YtSearchWeb.SlotTest do
   use YtSearchWeb.ConnCase, async: false
   import Mock
   alias YtSearch.Slot
+  alias YtSearch.Subtitle
+  alias YtSearch.Repo
+  import Ecto.Query
 
   @youtube_id "Jouh2mdt1fI"
 
@@ -119,5 +122,22 @@ defmodule YtSearchWeb.SlotTest do
         assert resp["subtitle_data"] == "Among Us"
       end)
     end
+  end
+
+  @another_youtube_id "k2RuprlsXng"
+  @even_another_youtube_id "D6enSGlTJYA"
+
+  test "correctly rerolls ids" do
+    :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
+
+    slot = Slot.from(@another_youtube_id)
+    assert slot.id == 71186
+
+    # go with the same seed, causing it to go down the reroll route
+
+    :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
+
+    slot = Slot.from(@even_another_youtube_id)
+    assert slot.id == 47635
   end
 end

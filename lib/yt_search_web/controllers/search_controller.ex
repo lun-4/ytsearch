@@ -22,6 +22,10 @@ defmodule YtSearchWeb.SearchController do
         end
 
       _ ->
+        # if search is given to a video player in vrchat, you now have a
+        # morbillion players requesting the same search route.
+
+        # that's an invalid use of the world and the api.
         conn
         |> put_status(400)
         |> json(%{error: true, message: "only unity should request this route"})
