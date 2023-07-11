@@ -11,7 +11,7 @@ defmodule YtSearchWeb.UserAgent do
 
     cond do
       String.contains?(agent, "stagefright") or String.contains?(agent, "AVProMobileVideo") ->
-        :quest
+        :quest_video
 
       String.contains?(agent, "UnityWebRequest") ->
         :unity

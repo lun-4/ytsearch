@@ -6,16 +6,25 @@ defmodule YtSearchWeb.SearchController do
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
   alias YtSearchWeb.Playlist
+  alias YtSearchWeb.UserAgent
 
   def search_by_text(conn, _params) do
-    case conn.query_params["search"] || conn.query_params["q"] do
-      nil ->
+    case UserAgent.for(conn) do
+      :unity ->
+        case conn.query_params["search"] || conn.query_params["q"] do
+          nil ->
+            conn
+            |> put_status(400)
+            |> json(%{error: true, message: "need search param fam"})
+
+          search_query ->
+            do_search(conn, search_query)
+        end
+
+      _ ->
         conn
         |> put_status(400)
-        |> json(%{error: true, message: "need search param fam"})
-
-      search_query ->
-        do_search(conn, search_query)
+        |> json(%{error: true, message: "only unity should request this route"})
     end
   end
 

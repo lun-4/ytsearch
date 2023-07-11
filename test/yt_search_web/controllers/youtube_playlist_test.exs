@@ -16,6 +16,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     ) do
       conn =
         conn
+        |> put_req_header("user-agent", "UnityWebRequest")
         |> get(~p"/a/1/s?q=anything")
 
       rjson = json_response(conn, 200)

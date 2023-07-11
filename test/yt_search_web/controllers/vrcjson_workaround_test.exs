@@ -16,6 +16,7 @@ defmodule YtSearchWeb.VRCJSONWorkaroundTest do
     ) do
       conn =
         conn
+        |> put_req_header("user-agent", "UnityWebRequest")
         |> get(~p"/api/v1/search?search=anything")
 
       resp_json = json_response(conn, 200)

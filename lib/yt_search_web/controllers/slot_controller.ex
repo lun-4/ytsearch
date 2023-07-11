@@ -19,7 +19,7 @@ defmodule YtSearchWeb.SlotController do
         youtube_url = "https://youtube.com/watch?v=#{slot.youtube_id}"
 
         case UserAgent.for(conn) do
-          :quest ->
+          :quest_video ->
             {:ok, mp4_url} = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
 
             conn

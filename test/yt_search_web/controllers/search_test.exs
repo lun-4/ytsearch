@@ -113,6 +113,7 @@ defmodule YtSearchWeb.SearchTest do
     ) do
       conn =
         conn
+        |> put_req_header("user-agent", "UnityWebRequest")
         |> get(~p"/api/v1/search?search=urban+rescue+ranch")
 
       resp_json = json_response(conn, 200)
@@ -147,9 +148,19 @@ defmodule YtSearchWeb.SearchTest do
     ) do
       conn =
         conn
+        |> put_req_header("user-agent", "UnityWebRequest")
         |> get(~p"/a/1/s?q=urban+rescue+ranch")
 
       assert verify_search_results(json_response(conn, 200))
     end
+  end
+
+  test "fails on non-UnityWebRequest", %{conn: conn} do
+    conn =
+      conn
+      |> get(~p"/a/1/s?q=urban+rescue+ranch")
+
+    rjson = json_response(conn, 400)
+    assert rjson["error"]
   end
 end
