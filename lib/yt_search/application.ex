@@ -31,6 +31,7 @@ defmodule YtSearch.Application do
       },
       {Cachex, name: :tabs},
       YtSearch.SlotUtilities.UsageMeter
+      YtSearch.Subtitle.Cleaner
     ]
 
     start_telemetry()

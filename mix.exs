@@ -37,6 +37,7 @@ defmodule YtSearch.MixProject do
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, ">= 0.0.0"},
       {:phoenix_live_dashboard, "~> 0.8.0"},
+      {:finch, "~> 0.8"},
       {:swoosh, "~> 1.3"},
       {:httpoison, "~> 2.0"},
       {:telemetry_metrics, "~> 0.6"},

@@ -58,6 +58,25 @@ defmodule YtSearchWeb.SlotTest do
     end
   end
 
+  test "subtitles are cleaned when theyre too old", %{slot: slot} do
+    subtitle = Subtitle.insert(@youtube_id, "latin-1", "lorem ipsum listen to jungle now")
+
+    from(s in Subtitle, where: s.youtube_id == ^subtitle.youtube_id, select: s)
+    |> Repo.update_all(
+      set: [
+        inserted_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-Subtitle.ttl_seconds() - 30_000_000)
+      ]
+    )
+
+    [fetched | []] = Subtitle.fetch(@youtube_id)
+    assert fetched.subtitle_data == subtitle.subtitle_data
+    Subtitle.Cleaner.do_clean_subtitles()
+    # should be empty now
+    [] = Subtitle.fetch(@youtube_id)
+  end
+
   test "subtitles work and are only fetched once", %{conn: conn, slot: slot, ets_table: table} do
     with_mocks([
       {System, [:passthrough],
