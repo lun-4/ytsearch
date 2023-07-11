@@ -1,4 +1,6 @@
 defmodule YtSearchWeb.ErrorJSON do
+  require Logger
+
   # If you want to customize a particular status code,
   # you may add your own clauses, such as:
   #
@@ -18,17 +20,20 @@ defmodule YtSearchWeb.ErrorJSON do
           nil
 
         reason ->
-          %{
+          map = %{
             reason: inspect(reason),
             stack:
               assigns.stack
               |> Enum.map(fn {module, function, arity, location} ->
                 %{
                   # where: "#{inspect(module)}.#{inspect(function)}/#{arity}"
-                  # location: inspect(location)
+                  location: inspect(location)
                 }
               end)
           }
+
+          Logger.error("an error happened while handling the request: #{inspect(map)}")
+          map
       end
 
     %{
