@@ -10,9 +10,10 @@ defmodule YtSearchWeb.PlaylistSlotTest do
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn} do
     with_mock(
-      System,
-      [:passthrough],
-      cmd: [in_series([:_, :_], [{@search_data, 0}, {@playlist_data, 0}])]
+      :exec,
+      run: [
+        in_series([:_, :_], [{:ok, [stdout: [@search_data]]}, {:ok, [stdout: [@playlist_data]]}])
+      ]
     ) do
       conn =
         conn

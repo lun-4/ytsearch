@@ -3,7 +3,27 @@ defmodule YtSearch.Youtube do
 
   @spec ytdlp() :: String.t()
   defp ytdlp() do
-    Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
+    ytdlp_path = Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
+
+    if String.starts_with?(ytdlp_path, "/") do
+      ytdlp_path
+    else
+      # find it manually in path
+      {path, _} =
+        System.fetch_env!("PATH")
+        |> String.split(":")
+        |> Enum.map(fn path_directory ->
+          joined_path =
+            path_directory
+            |> Path.join(ytdlp_path)
+
+          {joined_path, File.exists?(joined_path)}
+        end)
+        |> Enum.filter(fn {_, exists?} -> exists? end)
+        |> Enum.at(0)
+
+      path
+    end
   end
 
   defmodule CallCounter do
@@ -60,29 +80,72 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  defp run_ytdlp(args, opts \\ []) do
+    {status, result} =
+      :exec.run(
+        [ytdlp()] ++ args,
+        [:sync, :stdout, :stderr] ++ opts
+      )
+
+    stdout = result |> Keyword.get(:stdout) || [""]
+    stderr = result |> Keyword.get(:stderr) || [""]
+
+    exit_status =
+      case status do
+        :ok -> 0
+        _ -> result |> Keyword.get(:exit_status)
+      end
+
+    {status,
+     result
+     # i can't trust the library splits exactly at line breaks
+     # so i join them back here
+     |> Keyword.put(
+       :stdout,
+       stdout |> Enum.reduce("", fn x, acc -> acc <> x end)
+     )
+     |> Keyword.put(
+       :stderr,
+       stderr |> Enum.reduce("", fn x, acc -> acc <> x end)
+     )
+     |> Keyword.put(:exit_status, exit_status)}
+  end
+
+  defp from_result(result) do
+    {
+      result |> Keyword.get(:stdout),
+      result |> Keyword.get(:stderr),
+      result |> Keyword.get(:exit_status)
+    }
+  end
+
   def search_from_url(url, playlist_end \\ 30) do
     CallCounter.inc(:search)
 
-    case System.cmd(ytdlp(), [
-           url,
-           "--dump-json",
-           "--flat-playlist",
-           "--playlist-end",
-           to_string(playlist_end),
-           "--extractor-args",
-           "youtubetab:approximate_metadata"
-         ]) do
-      {stdout, 0} ->
-        # is good
+    {status, result} =
+      run_ytdlp([
+        url,
+        "--dump-json",
+        "--flat-playlist",
+        "--playlist-end",
+        to_string(playlist_end),
+        "--extractor-args",
+        "youtubetab:approximate_metadata"
+      ])
+
+    {stdout, stderr, exit_status} = from_result(result)
+
+    case status do
+      :ok ->
         {:ok,
          stdout
          |> String.split("\n", trim: true)
          |> Enum.map(&Jason.decode!/1)
          |> vrcjson_workaround}
 
-      {stdout, other_error_code} ->
-        Logger.error("stdout: #{stdout}")
-        {:error, {:invalid_error_code, other_error_code}}
+      :error ->
+        Logger.error("stdout: #{stdout} #{stderr}")
+        {:error, {:invalid_error_code, exit_status, stderr}}
     end
   end
 
@@ -90,28 +153,34 @@ defmodule YtSearch.Youtube do
   def fetch_mp4_link(youtube_id) do
     CallCounter.inc(:mp4_link)
 
+    {status, result} =
+      run_ytdlp([
+        "--no-check-certificate",
+        # TODO do we want cache-dir??
+        "--no-cache-dir",
+        "--rm-cache-dir",
+        "-f",
+        "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
+        "--get-url",
+        YtSearch.Youtube.Util.to_watch_url(youtube_id)
+      ])
+
+    {stdout, stderr, exit_status} = from_result(result)
+
     url_result =
-      case System.cmd(ytdlp(), [
-             "--no-check-certificate",
-             # TODO do we want cache-dir??
-             "--no-cache-dir",
-             "--rm-cache-dir",
-             "-f",
-             "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-             "--get-url",
-             YtSearch.Youtube.Util.to_watch_url(youtube_id)
-           ]) do
-        {stdout, 0} ->
+      case status do
+        :ok ->
           trimmed = String.trim(stdout)
 
           if trimmed == "" do
+            Logger.error("fetch_mp4_link fail. no url given, fallbacking...")
             fetch_any_video_link(youtube_id)
           else
             {:ok, trimmed}
           end
 
-        {stdout, other_error_code} ->
-          Logger.error("fetch_mp4_link stdout: #{stdout} #{other_error_code}")
+        :error ->
+          Logger.error("fetch_mp4_link fail. #{exit_status} stdout: #{stdout} stderr: #{stderr}")
           Logger.error("fallbacking to any video link")
           fetch_any_video_link(youtube_id)
       end
@@ -142,15 +211,20 @@ defmodule YtSearch.Youtube do
   defp fetch_any_video_link(youtube_id) do
     CallCounter.inc(:any_link)
 
-    case System.cmd(ytdlp(), [
-           "--no-check-certificate",
-           # TODO do we want cache-dir??
-           "--no-cache-dir",
-           "--rm-cache-dir",
-           "--get-url",
-           YtSearch.Youtube.Util.to_watch_url(youtube_id)
-         ]) do
-      {stdout, 0} ->
+    {status, result} =
+      run_ytdlp([
+        "--no-check-certificate",
+        # TODO do we want cache-dir??
+        "--no-cache-dir",
+        "--rm-cache-dir",
+        "--get-url",
+        YtSearch.Youtube.Util.to_watch_url(youtube_id)
+      ])
+
+    {stdout, stderr, exit_status} = from_result(result)
+
+    case status do
+      :ok ->
         url =
           stdout
           |> String.split("\n", trim: true)
@@ -158,9 +232,9 @@ defmodule YtSearch.Youtube do
 
         {:ok, url}
 
-      {stdout, other_error_code} ->
-        Logger.error("fetch_any_video_link stdout: #{stdout} #{other_error_code}")
-        {:error, {:invalid_error_code, other_error_code}}
+      :error ->
+        Logger.error("fetch_any_video_link #{exit_status} stdout: #{stdout} stderr: #{stderr}")
+        {:error, {:invalid_error_code, exit_status}}
     end
   end
 
@@ -185,22 +259,25 @@ defmodule YtSearch.Youtube do
 
     CallCounter.inc(:subtitles)
 
-    case System.cmd(
-           ytdlp(),
-           [
-             "--skip-download",
-             "--write-subs",
-             "--write-auto-subs",
-             "--sub-format",
-             "vtt",
-             "--sub-langs",
-             "en-orig,en,en-US",
-             youtube_url
-           ],
-           cd: subtitle_folder,
-           stderr_to_stdout: true
-         ) do
-      {stdout, 0} ->
+    {status, result} =
+      run_ytdlp(
+        [
+          "--skip-download",
+          "--write-subs",
+          "--write-auto-subs",
+          "--sub-format",
+          "vtt",
+          "--sub-langs",
+          "en-orig,en,en-US",
+          youtube_url
+        ],
+        cd: subtitle_folder
+      )
+
+    {stdout, stderr, exit_status} = from_result(result)
+
+    case status do
+      :ok ->
         subtitles =
           Path.wildcard(subtitle_folder <> "/*#{id}*en*.vtt")
           |> Enum.map(fn child_path ->
@@ -233,9 +310,9 @@ defmodule YtSearch.Youtube do
           :ok
         end
 
-      {stdout, other_error_code} ->
-        Logger.error("fetch_subtitles stdout: #{stdout} #{other_error_code}")
-        {:error, {:invalid_exit_code, other_error_code}}
+      :error ->
+        Logger.error("fetch_subtitles #{exit_status} stdout: #{stdout} stderr: #{stderr}")
+        {:error, {:invalid_exit_code, exit_status}}
     end
   end
 end

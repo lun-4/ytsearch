@@ -8,10 +8,9 @@ defmodule YtSearchWeb.VRCJSONWorkaroundTest do
 
   test "it does the thing", %{conn: conn} do
     with_mock(
-      System,
-      [:passthrough],
-      cmd: fn _, args ->
-        {@test_output, 0}
+      :exec,
+      run: fn _, _ ->
+        {:ok, [stdout: [@test_output]]}
       end
     ) do
       conn =

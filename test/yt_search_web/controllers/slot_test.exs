@@ -27,9 +27,10 @@ defmodule YtSearchWeb.SlotTest do
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn, slot: slot} do
     with_mock(
-      System,
-      [:passthrough],
-      cmd: [in_series([:_, :_], [{@run1, 0}, {@run2, 0}])]
+      :exec,
+      run: [
+        in_series([:_, :_], [{:ok, [stdout: [@run1]]}, {:ok, [stdout: [@run2]]}])
+      ]
     ) do
       conn =
         conn
@@ -79,21 +80,21 @@ defmodule YtSearchWeb.SlotTest do
 
   test "subtitles work and are only fetched once", %{conn: conn, slot: slot, ets_table: table} do
     with_mocks([
-      {System, [:passthrough],
-       cmd: fn _, _ ->
-         {"", 0}
-       end,
-       cmd: fn _, _, _ ->
-         :timer.sleep(50)
-         calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
+      {
+        :exec,
+        [],
+        run: fn _, _ ->
+          :timer.sleep(50)
+          calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
 
-         if calls > 1 do
-           {"called mock too much", 1}
-         else
-           output = File.read!("test/support/files/ytdlp_subtitle_output.txt")
-           {output, 0}
-         end
-       end},
+          if calls > 1 do
+            {:error, [stdout: ["called mock too much"]]}
+          else
+            output = File.read!("test/support/files/ytdlp_subtitle_output.txt")
+            {:ok, [stdout: [output]]}
+          end
+        end
+      },
       {Path, [:passthrough],
        wildcard: fn "/tmp/yts-subtitles/#{@youtube_id}/*#{@youtube_id}*en*.vtt" ->
          ytdlp_calls = :ets.lookup(table, :ytdlp_cmd) |> Keyword.get(:ytdlp_cmd) || 0

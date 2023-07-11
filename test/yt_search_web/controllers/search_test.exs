@@ -99,15 +99,14 @@ defmodule YtSearchWeb.SearchTest do
 
   test "it does the thing", %{conn: conn} do
     with_mock(
-      System,
-      [:passthrough],
-      cmd: fn _, args ->
-        search_term = args |> Enum.at(0)
+      :exec,
+      run: fn args, opts ->
+        search_term = args |> Enum.at(1)
 
         if String.contains?(search_term, "/channel/") do
-          {@channel_test_output, 0}
+          {:ok, [stdout: [@channel_test_output]]}
         else
-          {@test_output, 0}
+          {:ok, [stdout: [@test_output]]}
         end
       end
     ) do
@@ -140,10 +139,9 @@ defmodule YtSearchWeb.SearchTest do
 
   test "small route", %{conn: conn} do
     with_mock(
-      System,
-      [:passthrough],
-      cmd: fn _, _ ->
-        {@test_output, 0}
+      :exec,
+      run: fn _, _ ->
+        {:ok, [stdout: [@test_output]]}
       end
     ) do
       conn =

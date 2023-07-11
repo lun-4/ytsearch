@@ -61,7 +61,8 @@ defmodule YtSearch.MixProject do
       {:prometheus_phx,
        git: "https://git.pleroma.social/pleroma/elixir-libraries/prometheus-phx.git",
        branch: "no-logging"},
-      {:prometheus_ecto, "~> 1.4"}
+      {:prometheus_ecto, "~> 1.4"},
+      {:erlexec, "~> 2.0"}
     ]
   end
 

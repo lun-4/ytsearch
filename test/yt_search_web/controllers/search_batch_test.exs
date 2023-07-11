@@ -17,10 +17,9 @@ defmodule YtSearchWeb.SearchBatchTest do
   |> Enum.each(fn {path, file_data} ->
     test "it works on " <> path, %{conn: conn} do
       with_mock(
-        System,
-        [:passthrough],
-        cmd: fn _, _args ->
-          {unquote(file_data), 0}
+        :exec,
+        run: fn _, _ ->
+          {:ok, [stdout: [unquote(file_data)]]}
         end
       ) do
         conn =

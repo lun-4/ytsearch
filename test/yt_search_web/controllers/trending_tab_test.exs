@@ -6,10 +6,9 @@ defmodule YtSearchWeb.TrendingTabTest do
 
   test "trending tab works", %{conn: conn} do
     with_mock(
-      System,
-      [:passthrough],
-      cmd: fn _, _args ->
-        {@test_output, 0}
+      :exec,
+      run: fn _, _ ->
+        {:ok, [stdout: [@test_output]]}
       end
     ) do
       conn =
