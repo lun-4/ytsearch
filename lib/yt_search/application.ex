@@ -29,6 +29,10 @@ defmodule YtSearch.Application do
         id: SubtitleMutex,
         start: {Mutex, :start_link, [[name: SubtitleMutex]]}
       },
+      %{
+        id: SearchMutex,
+        start: {Mutex, :start_link, [[name: SearchMutex]]}
+      },
       {Cachex, name: :tabs},
       YtSearch.SlotUtilities.UsageMeter,
       YtSearch.Subtitle.Cleaner
