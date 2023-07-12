@@ -72,13 +72,29 @@ defmodule YtSearch.Thumbnail.Atlas do
     # directly
     # https://superuser.com/questions/290656/vertically-stack-multiple-images-using-imagemagick
 
+    paths_to_montage = thumbnail_paths ++ [atlas_image_path]
+
     {_, 0} =
       System.cmd(
         "montage",
         ["-tile", "8x4", "-geometry", "128x128!", "-background", "#000000"] ++
-          thumbnail_paths ++ [atlas_image_path]
+          paths_to_montage
       )
 
-    {:ok, "image/png", File.read!(atlas_image_path)}
+    result = {:ok, "image/png", File.read!(atlas_image_path)}
+
+    # clean everything up afterwards
+    paths_to_montage
+    |> Enum.each(fn path ->
+      case File.rm(path) do
+        :ok ->
+          nil
+
+        error ->
+          Logger.error("failed to delete #{path}: #{inspect(error)}, ignoring")
+      end
+    end)
+
+    result
   end
 end
