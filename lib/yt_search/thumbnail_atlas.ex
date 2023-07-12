@@ -21,6 +21,7 @@ defmodule YtSearch.Thumbnail.Atlas do
   end
 
   @atlas_size 512
+  @invalid_thumbnail_path "priv/static/invalid_thumbnail.png"
 
   def do_assemble(search_slot) do
     thumbnail_paths =
@@ -54,10 +55,10 @@ defmodule YtSearch.Thumbnail.Atlas do
         case maybe_thumbnail do
           nil ->
             # give it blank image
-
+            #
             # TODO use util method to get priv/static
             # instead of relying on CWD
-            "priv/static/invalid_thumbnail.png"
+            @invalid_thumbnail_path
 
           thumbnail ->
             temporary_path = Temp.path!()
@@ -78,13 +79,15 @@ defmodule YtSearch.Thumbnail.Atlas do
       System.cmd(
         "montage",
         ["-tile", "8x4", "-geometry", "128x128!", "-background", "#000000"] ++
-          paths_to_montage
+          paths_to_montage,
+        stderr_to_stdout: true
       )
 
     result = {:ok, "image/png", File.read!(atlas_image_path)}
 
     # clean everything up afterwards
     paths_to_montage
+    |> Enum.filter(fn path -> path != @invalid_thumbnail_path end)
     |> Enum.each(fn path ->
       case File.rm(path) do
         :ok ->
