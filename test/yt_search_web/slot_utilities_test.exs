@@ -18,7 +18,15 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     |> Enum.each(fn batch ->
       batch
       |> Enum.map(fn num ->
+        prev = System.monotonic_time()
         YtSearch.Slot.from(random_yt_id())
+        next = System.monotonic_time()
+        diff = next - prev
+        ms = diff |> System.convert_time_unit(:native, :millisecond)
+
+        if ms > 8 do
+          IO.puts("#{ms}ms")
+        end
       end)
 
       IO.puts("processed #{length(batch)} ids #{batch |> Enum.at(-1)}")

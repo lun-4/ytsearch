@@ -14,6 +14,17 @@ defmodule YtSearch.Slot do
   schema "slots_v2" do
     field(:youtube_id, :string)
     timestamps()
+
+    timestamps(
+      inserted_at: :inserted_at_v2,
+      updated_at: false,
+      type: :integer,
+      autogenerate: {__MODULE__, :gen_inserted_v2, []}
+    )
+  end
+
+  def gen_inserted_v2() do
+    DateTime.to_unix(DateTime.utc_now())
   end
 
   @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
@@ -42,6 +53,7 @@ defmodule YtSearch.Slot do
         # by setting inserted_at to current timestamp
         maybe_slot
         |> Ecto.Changeset.change(inserted_at: NaiveDateTime.local_now())
+        |> Ecto.Changeset.change(inserted_at_v2: DateTime.to_unix(DateTime.utc_now()))
         |> YtSearch.Repo.update!()
       else
         maybe_slot
