@@ -61,8 +61,7 @@ defmodule YtSearch.Slot do
     end
   end
 
-  # TODO delete old slots when genning new slots instead of this hack
-  def max_id_retries, do: 70
+  def max_id_retries, do: 15
   # 12 hours
   def ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
