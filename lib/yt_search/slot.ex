@@ -11,7 +11,7 @@ defmodule YtSearch.Slot do
 
   @primary_key {:id, :integer, autogenerate: false}
 
-  schema "slots" do
+  schema "slots_v2" do
     field(:youtube_id, :string)
     timestamps()
   end
