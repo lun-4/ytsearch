@@ -59,16 +59,20 @@ defmodule YtSearchWeb.SlotTest do
     end
   end
 
-  test "it gives 404 on unknown slot ids", %{conn: conn} do
+  test "it gives 404 on unknown slot ids", %{conn: conn, slot: slot} do
+    # i really dont want this test to fail because the generated test
+    # slot clashes with a hardcoded one here
+    {:ok, unknown_id} = YtSearch.SlotUtilities.find_available_slot_id(YtSearch.Slot)
+
     conn =
       conn
-      |> get(~p"/a/1/s/55134")
+      |> get(~p"/a/1/s/#{unknown_id}")
 
     assert conn.status == 404
 
     conn =
       conn
-      |> get(~p"/a/1/sl/55134")
+      |> get(~p"/a/1/sl/#{unknown_id}")
 
     assert conn.status == 404
   end
