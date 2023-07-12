@@ -5,4 +5,12 @@ defmodule YtSearch.TTL do
     lifetime = DateTime.diff(now, inserted_at, :second)
     lifetime > entity_ttl
   end
+
+  def maybe?(entity, entity_module) do
+    cond do
+      entity == nil -> nil
+      expired?(entity, entity_module.ttl()) -> nil
+      true -> entity
+    end
+  end
 end

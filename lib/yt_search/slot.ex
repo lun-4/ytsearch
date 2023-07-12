@@ -19,22 +19,26 @@ defmodule YtSearch.Slot do
   @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
-    Repo.one!(query)
+
+    Repo.one(query)
+    |> TTL.maybe?(__MODULE__)
   end
 
   @spec from(String.t()) :: Slot.t()
   def from(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-    # TODO proper ttl checking on fetch/1 and from/1
-    case Repo.all(query) do
-      [slot | _rest] ->
-        slot
 
-      [] ->
-        {:ok, new_id} = find_available_id()
+    maybe_slot =
+      Repo.one(query)
+      |> TTL.maybe?(__MODULE__)
 
-        %__MODULE__{youtube_id: youtube_id, id: new_id}
-        |> Repo.insert!()
+    if maybe_slot == nil do
+      {:ok, new_id} = find_available_id()
+
+      %__MODULE__{youtube_id: youtube_id, id: new_id}
+      |> Repo.insert!()
+    else
+      maybe_slot
     end
   end
 
