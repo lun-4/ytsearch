@@ -28,9 +28,7 @@ defmodule YtSearch.Slot do
   def from(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    maybe_slot =
-      Repo.one(query)
-      |> TTL.maybe?(__MODULE__)
+    maybe_slot = Repo.one(query)
 
     if maybe_slot == nil do
       {:ok, new_id} = find_available_id()
@@ -38,7 +36,16 @@ defmodule YtSearch.Slot do
       %__MODULE__{youtube_id: youtube_id, id: new_id}
       |> Repo.insert!()
     else
-      maybe_slot
+      if TTL.expired?(maybe_slot, ttl()) do
+        # we want this youtube id created, but the slot for it is expired...
+        # instead of deleting it or generating a new one, renew it
+        # by setting inserted_at to current timestamp
+        maybe_slot
+        |> Ecto.Changeset.change(inserted_at: NaiveDateTime.local_now())
+        |> YtSearch.Repo.update!()
+      else
+        maybe_slot
+      end
     end
   end
 
