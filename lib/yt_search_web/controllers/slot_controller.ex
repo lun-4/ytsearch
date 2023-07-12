@@ -14,6 +14,8 @@ defmodule YtSearchWeb.SlotController do
       nil ->
         conn
         |> put_status(404)
+        |> assign(:slot, nil)
+        |> render("slot.json")
 
       slot ->
         youtube_url = "https://youtube.com/watch?v=#{slot.youtube_id}"

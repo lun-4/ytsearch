@@ -59,6 +59,20 @@ defmodule YtSearchWeb.SlotTest do
     end
   end
 
+  test "it gives 404 on unknown slot ids", %{conn: conn} do
+    conn =
+      conn
+      |> get(~p"/a/1/s/55134")
+
+    assert conn.status == 404
+
+    conn =
+      conn
+      |> get(~p"/a/1/sl/55134")
+
+    assert conn.status == 404
+  end
+
   test "subtitles are cleaned when theyre too old", %{slot: slot} do
     subtitle = Subtitle.insert(@youtube_id, "latin-1", "lorem ipsum listen to jungle now")
 
