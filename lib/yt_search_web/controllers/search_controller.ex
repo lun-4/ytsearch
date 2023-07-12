@@ -44,7 +44,7 @@ defmodule YtSearchWeb.SearchController do
     |> search_from_any_youtube_url(conn)
   end
 
-  def search_from_any_youtube_url(youtube_url, playlist_end \\ 30)
+  def search_from_any_youtube_url(youtube_url, playlist_end \\ 20)
       when is_integer(playlist_end) do
     {:ok, ytdlp_data} =
       youtube_url

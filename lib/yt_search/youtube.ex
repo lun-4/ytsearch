@@ -119,7 +119,7 @@ defmodule YtSearch.Youtube do
     }
   end
 
-  def search_from_url(url, playlist_end \\ 30) do
+  def search_from_url(url, playlist_end \\ 20) do
     CallCounter.inc(:search)
 
     {status, result} =
