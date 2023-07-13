@@ -38,7 +38,7 @@ defmodule YtSearch.SlotUtilities do
   def find_available_slot_id(module, current_retry) do
     # generate id, check if 
 
-    random_id = :rand.uniform(module.urls)
+    random_id = :rand.uniform(module.urls())
     query = from s in module, where: s.id == ^random_id, select: s
 
     case Repo.one(query) do
@@ -63,7 +63,7 @@ defmodule YtSearch.SlotUtilities do
           RerollCounter.register(module, current_retry)
           {:ok, random_id}
         else
-          if current_retry > module.max_id_retries do
+          if current_retry > module.max_id_retries() do
             case module do
               %YtSearch.Slot{} ->
                 use_last_slot_assumes_v2(module)

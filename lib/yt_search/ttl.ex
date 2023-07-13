@@ -13,8 +13,8 @@ defmodule YtSearch.TTL do
 
     entity_ttl =
       case slot.video_duration do
-        nil -> module.default_ttl
-        value -> max(module.min_ttl, min((4 * value) |> trunc, module.max_ttl))
+        nil -> module.default_ttl()
+        value -> max(module.min_ttl(), min((4 * value) |> trunc, module.max_ttl()))
       end
 
     lifetime > entity_ttl
