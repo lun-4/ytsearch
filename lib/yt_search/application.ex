@@ -38,7 +38,8 @@ defmodule YtSearch.Application do
       # (decrease boilerplate of GenServer)
       YtSearch.SlotUtilities.UsageMeter,
       YtSearch.Slot.Janitor,
-      YtSearch.Subtitle.Cleaner
+      YtSearch.Subtitle.Cleaner,
+      YtSearchWeb.HelloController.Refresher
     ]
 
     start_telemetry()

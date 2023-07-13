@@ -57,4 +57,77 @@ defmodule YtSearchWeb.HelloController do
       end
     end)
   end
+
+  defmodule Refresher do
+    use GenServer
+    require Logger
+
+    alias YtSearch.Repo
+    alias YtSearch.Subtitle
+
+    import Ecto.Query
+
+    def start_link(arg) do
+      GenServer.start_link(__MODULE__, arg)
+    end
+
+    @impl true
+    def init(_arg) do
+      schedule_work()
+      {:ok, %{}}
+    end
+
+    def handle_info(:work, state) do
+      do_refresh()
+      schedule_work()
+      {:noreply, state}
+    end
+
+    def do_refresh() do
+      Logger.info("refreshing trending tab slots...")
+
+      case Cachex.get(:tabs, "trending") do
+        {:ok, nil} ->
+          nil
+
+        {:ok, :nothing} ->
+          nil
+
+        {:ok, data} ->
+          data["search_results"]
+          |> Enum.each(fn search_result ->
+            {slot_id, ""} = search_result["slot_id"] |> Integer.parse()
+
+            case search_result["type"] do
+              "video" ->
+                slot = Slot.fetch_by_id(slot_id)
+                # recreate it, effectively refreshing the slot id
+                new_slot = Slot.create(slot.youtube_id, slot.video_duration)
+
+                if new_slot.id != slot.id do
+                  Logger.warning(
+                    "trending tab refresher: new slot (#{new_slot.id}) created instead of (#{slot.id}), thumbnails will be broken"
+                  )
+                end
+
+              _ ->
+                nil
+            end
+          end)
+      end
+
+      Logger.info("trending tab refresher complete")
+    end
+
+    defp schedule_work() do
+      # every 10 minutes, with a jitter of -2..2m
+      next_tick =
+        case Mix.env() do
+          :prod -> 10 * 60 * 1000 + Enum.random((-2 * 60 * 1000)..(2 * 60 * 1000))
+          _ -> 10000
+        end
+
+      Process.send_after(self(), :work, next_tick)
+    end
+  end
 end
