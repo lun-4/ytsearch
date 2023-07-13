@@ -13,6 +13,7 @@ defmodule YtSearch.Slot do
 
   schema "slots_v2" do
     field(:youtube_id, :string)
+    field(:video_duration, :integer)
     timestamps()
 
     timestamps(
@@ -35,8 +36,8 @@ defmodule YtSearch.Slot do
     |> TTL.maybe?(__MODULE__)
   end
 
-  @spec from(String.t()) :: Slot.t()
-  def from(youtube_id) do
+  @spec create(String.t(), Integer.t() | nil) :: Slot.t()
+  def create(youtube_id, video_duration) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
     maybe_slot = Repo.one(query)
@@ -44,7 +45,15 @@ defmodule YtSearch.Slot do
     if maybe_slot == nil do
       {:ok, new_id} = find_available_id()
 
-      %__MODULE__{youtube_id: youtube_id, id: new_id}
+      %__MODULE__{
+        youtube_id: youtube_id,
+        id: new_id,
+        video_duration:
+          case video_duration do
+            nil -> default_ttl()
+            duration -> duration |> trunc
+          end
+      }
       |> Repo.insert!()
     else
       if TTL.expired?(maybe_slot, ttl()) do
@@ -64,6 +73,7 @@ defmodule YtSearch.Slot do
   def max_id_retries, do: 15
   # 12 hours
   def ttl, do: 12 * 60 * 60
+  def default_ttl, do: 60 * 60
   # this number must be synced with the world build
   def urls, do: 100_000
 

@@ -60,7 +60,7 @@ defmodule YtSearchWeb.Playlist do
                 YtSearch.PlaylistSlot.from(ytdlp_data["id"])
 
               _ ->
-                YtSearch.Slot.from(ytdlp_data["id"])
+                YtSearch.Slot.create(ytdlp_data["id"], ytdlp_data["duration"])
             end
 
           # when using /channel/videos, channel_id is null, so

@@ -14,7 +14,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   setup do
-    slot = Slot.from(@youtube_id)
+    slot = Slot.create(@youtube_id, 3600)
     %{slot: slot}
   end
 
@@ -168,14 +168,14 @@ defmodule YtSearchWeb.SlotTest do
   test "correctly rerolls ids" do
     :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
 
-    slot = Slot.from(@another_youtube_id)
+    slot = Slot.create(@another_youtube_id, 3600)
     assert slot.id == 71186
 
     # go with the same seed, causing it to go down the reroll route
 
     :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
 
-    slot = Slot.from(@even_another_youtube_id)
+    slot = Slot.create(@even_another_youtube_id, 3600)
     assert slot.id == 47635
   end
 end
