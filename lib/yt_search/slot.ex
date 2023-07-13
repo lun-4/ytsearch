@@ -85,4 +85,62 @@ defmodule YtSearch.Slot do
   defp find_available_id() do
     SlotUtilities.find_available_slot_id(__MODULE__)
   end
+
+  defmodule Janitor do
+    use GenServer
+    require Logger
+
+    alias YtSearch.Repo
+    alias YtSearch.Subtitle
+
+    import Ecto.Query
+
+    def start_link(arg) do
+      GenServer.start_link(__MODULE__, arg)
+    end
+
+    @impl true
+    def init(_arg) do
+      schedule_work()
+      {:ok, %{}}
+    end
+
+    def handle_info(:work, state) do
+      do_janitor()
+      schedule_work()
+      {:noreply, state}
+    end
+
+    def do_janitor() do
+      Logger.debug("cleaning expired slots...")
+
+      expired_slots =
+        from(s in YtSearch.Slot, select: s)
+        |> Repo.all()
+        |> Enum.to_list()
+        |> Enum.map(fn slot ->
+          {slot, YtSearch.TTL.expired_video?(slot, YtSearch.Slot)}
+        end)
+        |> Enum.filter(fn {slot, expired?} -> expired? end)
+        |> Enum.map(fn {expired_slot, true} ->
+          Repo.delete(expired_slot)
+        end)
+
+      deleted_count = length(expired_slots)
+
+      Logger.info("deleted #{deleted_count} slots")
+    end
+
+    defp schedule_work() do
+      # every minute, with a jitter of -10..30s (to prevent a constant load on the server)
+      # it's not really a problem to make this run every minute, but i am thinking webscale.
+      next_tick =
+        case Mix.env() do
+          :prod -> 60 * 1000 + Enum.random((-10 * 1000)..(30 * 1000))
+          _ -> 10000
+        end
+
+      Process.send_after(self(), :work, next_tick)
+    end
+  end
 end

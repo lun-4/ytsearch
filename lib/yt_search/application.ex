@@ -34,7 +34,10 @@ defmodule YtSearch.Application do
         start: {Mutex, :start_link, [[name: SearchMutex]]}
       },
       {Cachex, name: :tabs},
+      # TODO move periodic processes to a cronjob-syntaxish
+      # (decrease boilerplate of GenServer)
       YtSearch.SlotUtilities.UsageMeter,
+      YtSearch.Slot.Janitor,
       YtSearch.Subtitle.Cleaner
     ]
 

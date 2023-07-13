@@ -178,4 +178,22 @@ defmodule YtSearchWeb.SlotTest do
     slot = Slot.create(@even_another_youtube_id, 3600)
     assert slot.id == 47635
   end
+
+  test "it removes slots from db that are already expired", %{slot: slot} do
+    slot
+    |> Ecto.Changeset.change(
+      inserted_at: slot.inserted_at |> NaiveDateTime.add(-Slot.max_ttl(), :second),
+      inserted_at_v2: slot.inserted_at_v2 - Slot.max_ttl()
+    )
+    |> Repo.update!()
+
+    assert Slot.fetch_by_id(slot.id) == nil
+
+    # assert its still on db
+    from_db = Repo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
+    assert from_db.id == slot.id
+
+    YtSearch.Slot.Janitor.do_janitor()
+    assert Repo.one(from s in Slot, where: s.id == ^slot.id, select: s) == nil
+  end
 end
