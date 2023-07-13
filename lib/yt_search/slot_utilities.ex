@@ -49,7 +49,16 @@ defmodule YtSearch.SlotUtilities do
       slot ->
         # already existing from id, check if it needs to be
         # refreshed
-        if TTL.expired?(slot, module.ttl) do
+        is_expired =
+          case slot do
+            %YtSearch.Slot{} ->
+              TTL.expired_video?(slot, module)
+
+            _ ->
+              TTL.expired?(slot, module.ttl())
+          end
+
+        if is_expired do
           Repo.delete!(slot)
           RerollCounter.register(module, current_retry)
           {:ok, random_id}

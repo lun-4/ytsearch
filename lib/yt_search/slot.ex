@@ -33,7 +33,7 @@ defmodule YtSearch.Slot do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    |> TTL.maybe_video?(__MODULE__)
   end
 
   @spec create(String.t(), Integer.t() | nil) :: Slot.t()
@@ -56,12 +56,14 @@ defmodule YtSearch.Slot do
       }
       |> Repo.insert!()
     else
-      if TTL.expired?(maybe_slot, ttl()) do
+      if TTL.expired_video?(maybe_slot, __MODULE__) do
         # we want this youtube id created, but the slot for it is expired...
         # instead of deleting it or generating a new one, renew it
         # by setting inserted_at to current timestamp
         maybe_slot
-        |> Ecto.Changeset.change(inserted_at: NaiveDateTime.local_now())
+        |> Ecto.Changeset.change(
+          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+        )
         |> Ecto.Changeset.change(inserted_at_v2: DateTime.to_unix(DateTime.utc_now()))
         |> YtSearch.Repo.update!()
       else
@@ -71,9 +73,11 @@ defmodule YtSearch.Slot do
   end
 
   def max_id_retries, do: 15
-  # 12 hours
-  def ttl, do: 12 * 60 * 60
+  # 10 minutes to 12 hours
+  # defaults to 1h for slots without duration
+  def min_ttl, do: 10 * 60
   def default_ttl, do: 60 * 60
+  def max_ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
   def urls, do: 100_000
 
