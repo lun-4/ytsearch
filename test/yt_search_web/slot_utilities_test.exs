@@ -68,7 +68,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
         |> Enum.map(fn num ->
           prev = System.monotonic_time()
 
-          YtSearch.Slot.from(random_yt_id())
+          YtSearch.Slot.create(random_yt_id(), 3600)
 
           next = System.monotonic_time()
           diff = next - prev
