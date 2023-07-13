@@ -1,6 +1,7 @@
 defmodule YtSearchWeb.HelloController do
   use YtSearchWeb, :controller
   require Logger
+  alias YtSearch.Slot
 
   def hello(conn, _params) do
     trending_tab = fetch_trending_tab()
@@ -94,26 +95,32 @@ defmodule YtSearchWeb.HelloController do
           nil
 
         {:ok, data} ->
-          data["search_results"]
-          |> Enum.each(fn search_result ->
-            {slot_id, ""} = search_result["slot_id"] |> Integer.parse()
+          case data["search_results"] do
+            nil ->
+              nil
 
-            case search_result["type"] do
-              "video" ->
-                slot = Slot.fetch_by_id(slot_id)
-                # recreate it, effectively refreshing the slot id
-                new_slot = Slot.create(slot.youtube_id, slot.video_duration)
+            results ->
+              results
+              |> Enum.each(fn search_result ->
+                {slot_id, ""} = search_result["slot_id"] |> Integer.parse()
 
-                if new_slot.id != slot.id do
-                  Logger.warning(
-                    "trending tab refresher: new slot (#{new_slot.id}) created instead of (#{slot.id}), thumbnails will be broken"
-                  )
+                case search_result["type"] do
+                  "video" ->
+                    slot = Slot.fetch_by_id(slot_id)
+                    # recreate it, effectively refreshing the slot id
+                    new_slot = Slot.create(slot.youtube_id, slot.video_duration)
+
+                    if new_slot.id != slot.id do
+                      Logger.warning(
+                        "trending tab refresher: new slot (#{new_slot.id}) created instead of (#{slot.id}), thumbnails will be broken"
+                      )
+                    end
+
+                  _ ->
+                    nil
                 end
-
-              _ ->
-                nil
-            end
-          end)
+              end)
+          end
       end
 
       Logger.info("trending tab refresher complete")

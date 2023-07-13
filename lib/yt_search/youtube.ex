@@ -301,7 +301,7 @@ defmodule YtSearch.Youtube do
           end)
           |> Enum.filter(fn {path, result} ->
             case result do
-              {:ok, data} ->
+              {:ok, _data} ->
                 true
 
               _ ->
