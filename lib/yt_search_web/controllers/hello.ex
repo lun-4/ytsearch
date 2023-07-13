@@ -120,10 +120,10 @@ defmodule YtSearchWeb.HelloController do
     end
 
     defp schedule_work() do
-      # every 10 minutes, with a jitter of -2..2m
+      # every 7 minutes, with a jitter of -2..2m
       next_tick =
         case Mix.env() do
-          :prod -> 10 * 60 * 1000 + Enum.random((-2 * 60 * 1000)..(2 * 60 * 1000))
+          :prod -> 7 * 60 * 1000 + Enum.random((-2 * 60 * 1000)..(2 * 60 * 1000))
           _ -> 10000
         end
 
