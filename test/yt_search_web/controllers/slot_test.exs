@@ -66,7 +66,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/a/1/s/#{unknown_id}")
+      |> get(~p"/a/1/sl/#{unknown_id}")
 
     assert conn.status == 404
 
