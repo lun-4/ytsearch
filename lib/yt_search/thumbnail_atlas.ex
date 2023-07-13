@@ -47,9 +47,13 @@ defmodule YtSearch.Thumbnail.Atlas do
         # theres thumbnails still being downloaded, we wait for
         # them all before assembling atlas
 
-        Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
-          Thumbnail.fetch(slot.youtube_id)
-        end)
+        if slot != nil do
+          Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
+            Thumbnail.fetch(slot.youtube_id)
+          end)
+        else
+          nil
+        end
       end)
       |> Enum.map(fn maybe_thumbnail ->
         case maybe_thumbnail do
