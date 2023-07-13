@@ -120,7 +120,7 @@ defmodule YtSearch.Youtube do
   end
 
   def search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
-    case Hammer.check_rate("ytdlp:search_call", 3 * 1000, 5) do
+    case Hammer.check_rate("ytdlp:search_call", 4 * 1000, 2) do
       {:allow, _count} ->
         do_search_from_url(url, playlist_end)
 
