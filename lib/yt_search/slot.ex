@@ -132,11 +132,10 @@ defmodule YtSearch.Slot do
     end
 
     defp schedule_work() do
-      # every minute, with a jitter of -10..30s (to prevent a constant load on the server)
-      # it's not really a problem to make this run every minute, but i am thinking webscale.
+      # every 10 minutes, with a jitter of -10..10m
       next_tick =
         case Mix.env() do
-          :prod -> 60 * 1000 + Enum.random((-10 * 1000)..(30 * 1000))
+          :prod -> 10 * 60 * 1000 + Enum.random((-10 * 60 * 1000)..(10 * 60 * 1000))
           _ -> 10000
         end
 
