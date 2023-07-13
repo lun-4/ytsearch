@@ -33,6 +33,10 @@ defmodule YtSearch.Application do
         id: SearchMutex,
         start: {Mutex, :start_link, [[name: SearchMutex]]}
       },
+      %{
+        id: PlaylistEntryCreatorMutex,
+        start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
+      },
       {Cachex, name: :tabs},
       # TODO move periodic processes to a cronjob-syntaxish
       # (decrease boilerplate of GenServer)
