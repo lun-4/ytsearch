@@ -46,26 +46,34 @@ defmodule YtSearchWeb.SearchController do
 
   def search_from_any_youtube_url(youtube_url, playlist_end \\ 20)
       when is_integer(playlist_end) do
-    {:ok, ytdlp_data} =
-      youtube_url
-      |> Youtube.search_from_url(playlist_end)
+    case youtube_url |> Youtube.search_from_url(playlist_end) do
+      {:ok, ytdlp_data} ->
+        results =
+          ytdlp_data
+          |> Playlist.from_ytdlp_data()
 
-    results =
-      ytdlp_data
-      |> Playlist.from_ytdlp_data()
+        search_slot =
+          results
+          |> SearchSlot.from_playlist()
 
-    search_slot =
-      results
-      |> SearchSlot.from_playlist()
+        {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
-    %{search_results: results, slot_id: "#{search_slot.id}"}
+      {:error, :overloaded_ytdlp_seats} ->
+        {:error, :overloaded_ytdlp_seats}
+    end
   end
 
   def search_from_any_youtube_url(youtube_url, conn) do
-    jsondata = search_from_any_youtube_url(youtube_url)
+    case search_from_any_youtube_url(youtube_url) do
+      {:ok, jsondata} ->
+        conn
+        |> json(jsondata)
 
-    conn
-    |> json(jsondata)
+      {:error, :overloaded_ytdlp_seats} ->
+        conn
+        |> put_status(429)
+        |> json(%{error: true, detail: "server overloaded"})
+    end
   end
 
   @spec fetch_youtube_entity(Plug.Conn.t(), atom(), String.t()) :: nil

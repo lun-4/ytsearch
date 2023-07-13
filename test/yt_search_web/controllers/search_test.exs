@@ -11,6 +11,11 @@ defmodule YtSearchWeb.SearchTest do
     {_, ""} = Integer.parse(value)
   end
 
+  setup do
+    Hammer.delete_buckets("ytdlp:search_call")
+    :ok
+  end
+
   defp verify_single_result(given, expected) do
     # validate they're integers at least
     {_, ""} = Integer.parse(given["slot_id"])
@@ -32,7 +37,6 @@ defmodule YtSearchWeb.SearchTest do
         "I bought a crackhouse and dump and turned it into a Certified wildlife rehabilitation facility and farm sanctuary for exotic (hunted) ...",
       "duration" => nil,
       "title" => "The Urban Rescue Ranch",
-      "type" => "channel",
       "uploaded_at" => nil,
       "view_count" => nil,
       "youtube_id" => "UCv3mh2P-q3UCtR9-2q8B-ZA",
@@ -160,5 +164,33 @@ defmodule YtSearchWeb.SearchTest do
 
     rjson = json_response(conn, 400)
     assert rjson["error"]
+  end
+
+  test "ytdlp ratelimiting works" do
+    with_mock(
+      :exec,
+      run: fn _, _ ->
+        # synthetic load
+        Process.sleep(2)
+        {:ok, [stdout: [@test_output]]}
+      end
+    ) do
+      ratelimited_requests =
+        1..20
+        |> Enum.map(fn _ ->
+          Task.async(fn ->
+            Phoenix.ConnTest.build_conn()
+            |> put_req_header("user-agent", "UnityWebRequest")
+            |> get(~p"/a/1/s?q=urban+rescue+ranch")
+          end)
+        end)
+        |> Enum.map(fn task ->
+          conn = Task.await(task)
+          conn.status
+        end)
+        |> Enum.filter(fn status -> status == 429 end)
+
+      assert length(ratelimited_requests) > 0
+    end
   end
 end

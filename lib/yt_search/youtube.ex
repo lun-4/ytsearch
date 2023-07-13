@@ -119,7 +119,23 @@ defmodule YtSearch.Youtube do
     }
   end
 
-  def search_from_url(url, playlist_end \\ 20) do
+  def search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
+    case Hammer.check_rate("ytdlp:search_call", 3 * 1000, 5) do
+      {:allow, _count} ->
+        do_search_from_url(url, playlist_end)
+
+      {:deny, _limit} ->
+        if retry_limit do
+          {:error, :overloaded_ytdlp_seats}
+        else
+          Process.sleep(1)
+          # attempt again, if that fails again it'll 500
+          search_from_url(url, playlist_end, true)
+        end
+    end
+  end
+
+  def do_search_from_url(url, playlist_end) do
     CallCounter.inc(:search)
 
     {status, result} =

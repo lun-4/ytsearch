@@ -36,7 +36,7 @@ defmodule YtSearchWeb.HelloController do
     Mutex.under(SearchMutex, url, fn ->
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
-          data =
+          {:ok, data} =
             url
             |> YtSearchWeb.SearchController.search_from_any_youtube_url()
 
