@@ -310,13 +310,17 @@ defmodule YtSearch.Youtube do
             end
           end)
           |> Enum.map(fn {path, {:ok, data}} ->
-            path
-            |> Path.basename()
-            |> String.split(".")
-            |> Enum.at(-2)
-            |> then(fn language ->
-              YtSearch.Subtitle.insert(id, language, data)
-            end)
+            subtitle =
+              path
+              |> Path.basename()
+              |> String.split(".")
+              |> Enum.at(-2)
+              |> then(fn language ->
+                YtSearch.Subtitle.insert(id, language, data)
+              end)
+
+            File.rm(path)
+            subtitle
           end)
 
         if length(subtitles) == 0 do
