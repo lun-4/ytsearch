@@ -82,6 +82,7 @@ defmodule YtSearch.Youtube.Thumbnail do
       |> Mogrify.save(in_place: true)
 
       final_body = File.read!(temporary_path)
+      File.rm(temporary_path)
       {:ok, Thumbnail.insert(youtube_id, content_type, final_body)}
     else
       Logger.error(
