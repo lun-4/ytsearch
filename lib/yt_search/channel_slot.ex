@@ -12,8 +12,8 @@ defmodule YtSearch.ChannelSlot do
 
   # 20 times to retry
   def max_id_retries, do: 20
-  # 12 hours
-  def ttl, do: 12 * 60 * 60
+  # 4 hours
+  def ttl, do: 4 * 60 * 60
   # this number must be synced with the world build
   def urls, do: 100_000
 
