@@ -123,7 +123,7 @@ defmodule YtSearch.Youtube do
     if String.contains?(url, "/results?") do
       # at the moment, only apply rate limiting to text searches
       # channels and playlists are exempt
-      case Hammer.check_rate("ytdlp:search_text_call", 4 * 1000, 2) do
+      case Hammer.check_rate("ytdlp:search_call", 4 * 1000, 2) do
         {:allow, _count} ->
           do_search_from_url(url, playlist_end)
 
