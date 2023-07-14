@@ -7,6 +7,10 @@ defmodule YtSearchWeb.PlaylistSlotTest do
 
   @search_data File.read!("test/support/files/rez_infinite_search.json")
   @playlist_data File.read!("test/support/files/rez_infinite_playlist.json")
+  setup do
+    Hammer.delete_buckets("ytdlp:search_call")
+    :ok
+  end
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn} do
     with_mock(
