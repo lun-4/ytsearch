@@ -22,10 +22,20 @@ defmodule YtSearchWeb.SlotController do
 
         case UserAgent.for(conn) do
           :quest_video ->
-            {:ok, mp4_url} = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
+            {:ok, link} = Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url)
 
-            conn
-            |> redirect(external: mp4_url)
+            case link |> Mp4Link.meta() |> Map.get("age_limit") do
+              0 ->
+                conn
+                |> redirect(external: link.mp4_link)
+
+              age_limit ->
+                Logger.warn("age restricted video. #{age_limit}")
+
+                conn
+                |> put_status(404)
+                |> text("age restricted video (#{age_limit})")
+            end
 
           :unity ->
             do_slot_metadata(conn, slot, youtube_url)

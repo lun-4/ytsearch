@@ -244,4 +244,26 @@ defmodule YtSearchWeb.SlotTest do
     YtSearch.Slot.Janitor.do_janitor()
     assert Repo.one(from s in Slot, where: s.id == ^slot.id, select: s) == nil
   end
+
+  test "it does not fetch age restricted videos", %{conn: conn, slot: slot} do
+    with_mock(
+      :exec,
+      run: [
+        in_series([:_, :_], [{:ok, [stdout: [@run1_r18]]}])
+      ]
+    ) do
+      conn =
+        conn
+        |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+        |> get(~p"/api/v1/s/#{slot.id}")
+
+      assert conn.status == 404
+      assert conn.resp_body == "age restricted video (18)"
+
+      link = YtSearch.Mp4Link.fetch_by_id(@youtube_id)
+      assert link != nil
+
+      assert link |> YtSearch.Mp4Link.meta() |> Map.get("age_limit") == 18
+    end
+  end
 end
