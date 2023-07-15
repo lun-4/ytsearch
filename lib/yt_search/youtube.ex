@@ -143,6 +143,8 @@ defmodule YtSearch.Youtube do
         url,
         "--dump-json",
         "--flat-playlist",
+        "--add-headers",
+        "YouTube-Restrict:Moderate",
         "--playlist-end",
         to_string(playlist_end),
         "--extractor-args",
