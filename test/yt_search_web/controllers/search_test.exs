@@ -194,4 +194,23 @@ defmodule YtSearchWeb.SearchTest do
       Application.put_env(:yt_search, YtSearch.Ratelimit, original_limits)
     end
   end
+
+  @topic_channel File.read!("test/support/files/search_for_topic_channel.json")
+
+  test "it doesn't provide topic channel results", %{conn: conn} do
+    with_mock(
+      :exec,
+      run: fn _, _ ->
+        {:ok, [stdout: [@topic_channel]]}
+      end
+    ) do
+      conn =
+        conn
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/a/1/s?q=whatever")
+
+      rjson = json_response(conn, 200)
+      assert length(rjson["search_results"]) == 0
+    end
+  end
 end

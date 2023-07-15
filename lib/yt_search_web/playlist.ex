@@ -47,6 +47,12 @@ defmodule YtSearchWeb.Playlist do
 
       {entity_type, ytdlp_data}
     end)
+    |> Enum.filter(fn {entity_type, ytdlp_data} ->
+      cond do
+        entity_type == :channel and String.ends_with?(ytdlp_data["title"], " - Topic") -> false
+        true -> true
+      end
+    end)
     |> Enum.map(fn {entity_type, ytdlp_data} ->
       thumbnail_metadata = Youtube.Thumbnail.fetch_in_background(entity_type, ytdlp_data)
 
