@@ -130,7 +130,7 @@ defmodule YtSearchWeb.HelloController do
       # every 7 minutes, with a jitter of -2..2m
       next_tick =
         case Mix.env() do
-          :prod -> 7 * 60 * 1000 + Enum.random((-2 * 60 * 1000)..(2 * 60 * 1000))
+          :prod -> 4 * 60 * 1000 + Enum.random((-2 * 60 * 1000)..(2 * 60 * 1000))
           _ -> 10000
         end
 
