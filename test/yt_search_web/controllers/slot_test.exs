@@ -210,6 +210,23 @@ defmodule YtSearchWeb.SlotTest do
     assert slot.id == 47635
   end
 
+  test "it removes links from db that are already expired", %{slot: slot} do
+    link =
+      Mp4Link.insert(
+        "abcdef",
+        "https://freeeee--mp5.net",
+        DateTime.to_unix(DateTime.utc_now()) - Mp4Link.ttl_seconds() - 1,
+        %{}
+      )
+
+    # assert its still on db
+    from_db = Repo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    assert from_db.youtube_id == link.youtube_id
+
+    YtSearch.Mp4Link.Janitor.do_janitor()
+    assert Repo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) == nil
+  end
+
   test "it removes slots from db that are already expired", %{slot: slot} do
     slot
     |> Ecto.Changeset.change(

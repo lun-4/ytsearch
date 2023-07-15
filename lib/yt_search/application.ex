@@ -43,6 +43,7 @@ defmodule YtSearch.Application do
       YtSearch.SlotUtilities.UsageMeter,
       YtSearch.Slot.Janitor,
       YtSearch.Subtitle.Cleaner,
+      YtSearch.Mp4Link.Janitor,
       YtSearchWeb.HelloController.Refresher
     ]
 
