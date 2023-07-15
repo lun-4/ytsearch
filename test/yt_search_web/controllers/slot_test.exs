@@ -3,6 +3,7 @@ defmodule YtSearchWeb.SlotTest do
   import Mock
   alias YtSearch.Slot
   alias YtSearch.Subtitle
+  alias YtSearch.Mp4Link
   alias YtSearch.Repo
   import Ecto.Query
 
@@ -20,10 +21,14 @@ defmodule YtSearchWeb.SlotTest do
 
   @custom_expire (System.os_time(:second) + 3_600) |> to_string
 
-  @run1 File.read!("test/support/files/stdout_ytdlp_geturl_dumpjson.txt")
-        |> String.replace("1688360198", @custom_expire)
-  @run1_url_result "https://rr2---sn-oxunxg8pjvn-gxjl.googlevideo.com/videoplayback?expire=#{@custom_expire}&ei=pgCiZNDVBe2pobIPiq6pqA8&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1003&id=o-ANdnakoQKlSGp-uvkmjmZa5oqJUed6hsUz7eS-e_g320&itag=22&source=youtube&requiressl=yes&mh=A0&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7kn7r&ms=au%2Crdu&mv=m&mvi=2&pl=52&initcwndbps=478750&spc=Ul2SqzJcCc2KHSrHFBWlfSlG7kQZPSM&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=339.057&lmt=1673716310924231&mt=1688338410&fvip=2&fexp=24007246%2C24363393%2C51000014&c=ANDROID&txp=5432434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRQIgYoYhyrDOKJLsyS1SzRqXRRM6Z4rkRE0RU6kWNwFqY38CIQCPdGAN2OCTyzj_AZdc7s5PyS9JjQqZFnSopbKbS6itpw%3D%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRQIhALdIfWCgI3dyh6OyJaUp_Qx7P4-sAW8iVTHaC7dobJw8AiBGIcUd6UtnawUTDsDrjyn9yB8DPoJycpeuF-ZRDqB7Yw%3D%3D"
-  @run2 @run1 |> String.replace(@run1_url_result, "https://mp5.com")
+  @run1 File.read!("test/support/files/youtube_video_url_dumpjson.json")
+        |> String.replace("1689377943", @custom_expire)
+  @expected_run1_url "https://rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com/videoplayback?expire=#{@custom_expire}&ei=N4ixZIvVI5K-wgTpnZnABQ&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1000&id=o-AG7Gp8Ck3IiSrq01gTvGOSgGEQXSgK4fIfRhUbEN6bG0&itag=22&source=youtube&requiressl=yes&mh=xI&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7knee&ms=au%2Crdu&mv=m&mvi=1&pl=48&initcwndbps=1032500&spc=Ul2Sqylj0XRoYEDnWvXXBHgndotsGrA&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=666.435&lmt=1689203297962924&mt=1689355996&fvip=2&fexp=24007246&c=ANDROID&txp=4432434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRQIgNOCrI8Fh8Mgn2alrFGPSW5CwMJBhZ1BPkVCoQwI_r3cCIQDOqaJpe0hHBly0McJUbXuJdmsSC4lzz0rDYJI_1BgLcQ%3D%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRgIhAMWZANXrZcmTWWbhCR83utfBM0K6gNMIm1QBL5hyHbqWAiEAoWhLkZ-7_Kiz__PWYbNch_fd69oUM68v18YJ-OEkiy4%3D"
+  @run2 @run1 |> String.replace(@expected_run1_url, "https://mp5.com")
+
+  @run1_r18 File.read!("test/support/files/youtube_video_url_dumpjson.json")
+            |> String.replace("1689377943", @custom_expire)
+            |> String.replace("\"age_limit\": 0", "\"age_limit\": 18")
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn, slot: slot} do
     with_mock(
@@ -37,8 +42,10 @@ defmodule YtSearchWeb.SlotTest do
         |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
         |> get(~p"/api/v1/s/#{slot.id}")
 
+      assert conn.status == 302
+
       assert get_resp_header(conn, "location") == [
-               @run1_url_result
+               @expected_run1_url
              ]
 
       link = YtSearch.Mp4Link.fetch_by_id(@youtube_id)
@@ -56,6 +63,30 @@ defmodule YtSearchWeb.SlotTest do
         |> get(~p"/api/v1/s/#{slot.id}")
 
       assert get_resp_header(conn, "location") == ["https://mp5.com"]
+    end
+  end
+
+  @run_stream File.read!("test/support/files/lofi_stream.json")
+              |> String.replace("1689378318", @custom_expire)
+  @expected_run_stream_url "https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/#{@custom_expire}/ei/romxZLXCOoOF1sQPn9qkoAc/ip/2804:14d:5492:8fe8::1000/id/jfKfPfyJRdk.2/itag/96/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D137/hls_chunk_host/rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com/playlist_duration/30/manifest_duration/30/spc/Ul2Sq66okm6aYvjhYIzLhVAacySq1KM/vprv/1/playlist_type/DVR/initcwndbps/1015000/mh/rr/mm/44/mn/sn-oxunxg8pjvn-gxjl/ms/lva/mv/m/mvi/1/pl/48/dover/11/pacing/0/keepalive/yes/fexp/24007246/beids/24350018/mt/1689356439/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,playlist_duration,manifest_duration,spc,vprv,playlist_type/sig/AOq0QJ8wRgIhAObgGmA9jBsVLvxoQWsTgf5UnFnYaqHKv-oh5aXe_N7MAiEArz89GleotjzGD3A8PElTj_2pGP9HN6AIkZDJeo2nwnI%3D/lsparams/hls_chunk_host,initcwndbps,mh,mm,mn,ms,mv,mvi,pl/lsig/AG3C_xAwRQIhAN2uSS_Z-NVkxLcSm2iWnuS9sd6_rZ3SHBy_uni7rERHAiAyUvULpqCSKBKbGp5bJXYF5eSkfrnRw9UyAzgawfwbqw%3D%3D/playlist/index.m3u8"
+
+  test "it gets m3u8 url on streams", %{conn: conn, slot: slot} do
+    with_mock(
+      :exec,
+      run: [
+        in_series([:_, :_], [{:ok, [stdout: [@run_stream]]}])
+      ]
+    ) do
+      conn =
+        conn
+        |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+        |> get(~p"/api/v1/s/#{slot.id}")
+
+      assert conn.status == 302
+
+      assert get_resp_header(conn, "location") == [
+               @expected_run_stream_url
+             ]
     end
   end
 

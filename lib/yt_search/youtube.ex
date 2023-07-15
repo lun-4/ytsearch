@@ -177,7 +177,7 @@ defmodule YtSearch.Youtube do
         "--rm-cache-dir",
         "-f",
         "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-        "--get-url",
+        "--dump-json",
         YtSearch.Youtube.Util.to_watch_url(youtube_id)
       ])
 
@@ -186,72 +186,73 @@ defmodule YtSearch.Youtube do
     url_result =
       case status do
         :ok ->
-          trimmed = String.trim(stdout)
+          youtube_metadata =
+            stdout
+            |> Jason.decode!()
 
-          if trimmed == "" do
-            Logger.error("fetch_mp4_link fail. no url given, fallbacking...")
-            fetch_any_video_link(youtube_id)
-          else
-            {:ok, trimmed}
-          end
+          {:ok, {youtube_metadata["url"], youtube_metadata}}
 
         :error ->
           Logger.error("fetch_mp4_link fail. #{exit_status} stdout: #{stdout} stderr: #{stderr}")
-          Logger.error("fallbacking to any video link")
-          fetch_any_video_link(youtube_id)
+          {:error, :invalid_error_code, exit_status}
       end
 
     case url_result do
-      {:ok, url} ->
+      {:ok, {url, meta}} ->
         uri = url |> URI.parse()
 
-        {expires, ""} =
-          case uri.query do
-            nil ->
-              {nil, ""}
+        expiry_timestamp = expiry_from_uri(uri)
 
-            value ->
-              value
-              |> URI.decode_query()
-              |> Map.get("expire")
-              |> Integer.parse()
-          end
-
-        {:ok, {url, expires}}
+        {:ok, {url, expiry_timestamp, meta}}
 
       any ->
         any
     end
   end
 
-  defp fetch_any_video_link(youtube_id) do
-    CallCounter.inc(:any_link)
-
-    {status, result} =
-      run_ytdlp([
-        "--no-check-certificate",
-        # TODO do we want cache-dir??
-        "--no-cache-dir",
-        "--rm-cache-dir",
-        "--get-url",
-        YtSearch.Youtube.Util.to_watch_url(youtube_id)
-      ])
-
-    {stdout, stderr, exit_status} = from_result(result)
-
-    case status do
-      :ok ->
-        url =
-          stdout
-          |> String.split("\n", trim: true)
-          |> Enum.at(0)
-
-        {:ok, url}
-
-      :error ->
-        Logger.error("fetch_any_video_link #{exit_status} stdout: #{stdout} stderr: #{stderr}")
-        {:error, {:invalid_error_code, exit_status}}
+  defp expiry_from_query(uri) do
+    if uri.query == nil do
+      nil
+    else
+      uri.query
+      |> URI.decode_query()
+      |> Map.get("expire")
+      |> then(fn maybe_expiry ->
+        if maybe_expiry == nil do
+          nil
+        else
+          {value, ""} = Integer.parse(maybe_expiry)
+          value
+        end
+      end)
     end
+  end
+
+  defp expiry_from_path(uri) do
+    maybe_expiry_value =
+      uri.path
+      |> then(fn path ->
+        if path == nil do
+          ""
+        else
+          path
+        end
+      end)
+      |> String.split("/")
+      |> Enum.at(5)
+
+    if maybe_expiry_value == nil do
+      nil
+    else
+      case Integer.parse(maybe_expiry_value) do
+        :error -> nil
+        {expiry, _anything} -> expiry
+      end
+    end
+  end
+
+  defp expiry_from_uri(uri) do
+    expiry_from_query(uri) || expiry_from_path(uri)
   end
 
   def fetch_subtitles(youtube_url) do

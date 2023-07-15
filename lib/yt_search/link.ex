@@ -12,10 +12,11 @@ defmodule YtSearch.Mp4Link do
   @primary_key {:youtube_id, :string, autogenerate: false}
 
   # 30 minutes ttl for mp4 link
-  @ttl 30 * 60
+  def ttl_seconds, do: 30 * 60
 
   schema "links" do
     field(:mp4_link, :string)
+    field(:youtube_metadata, :string)
     timestamps()
   end
 
@@ -28,7 +29,7 @@ defmodule YtSearch.Mp4Link do
         nil
 
       link ->
-        if TTL.expired?(link, @ttl) do
+        if TTL.expired?(link, ttl_seconds()) do
           Repo.delete!(link)
           nil
         else
@@ -37,9 +38,13 @@ defmodule YtSearch.Mp4Link do
     end
   end
 
-  @spec insert(String.t(), String.t(), Integer.t() | nil) :: Mp4Link.t()
-  def insert(youtube_id, mp4_link, expires_at) do
-    %__MODULE__{youtube_id: youtube_id, mp4_link: mp4_link}
+  @spec insert(String.t(), String.t(), Integer.t() | nil, String.t()) :: Mp4Link.t()
+  def insert(youtube_id, mp4_link, expires_at, youtube_metadata) do
+    %__MODULE__{
+      youtube_id: youtube_id,
+      youtube_metadata: youtube_metadata |> Jason.encode!(),
+      mp4_link: mp4_link
+    }
     |> then(fn value ->
       case expires_at do
         nil ->
@@ -51,23 +56,28 @@ defmodule YtSearch.Mp4Link do
         expires ->
           value
           |> Ecto.Changeset.change(
-            inserted_at:
-              NaiveDateTime.add(~N[1970-01-01 00:00:00], expires_at)
-              |> NaiveDateTime.add(@ttl, :second)
+            inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
           )
       end
     end)
     |> Repo.insert!()
   end
 
-  @spec maybe_fetch_upstream(String.t(), String.t()) :: {:ok, String.t()}
+  @spec maybe_fetch_upstream(String.t(), String.t()) :: {:ok, __MODULE__.t()}
   def maybe_fetch_upstream(youtube_id, youtube_url) do
     case fetch_by_id(youtube_id) do
       nil ->
         fetch_mp4_link(youtube_id, youtube_url)
 
       data ->
-        {:ok, data.mp4_link}
+        {:ok, data}
+    end
+  end
+
+  def meta(link) do
+    case link.youtube_metadata do
+      nil -> %{"age_limit" => 0}
+      v -> v |> Jason.decode!()
     end
   end
 
@@ -77,12 +87,13 @@ defmodule YtSearch.Mp4Link do
       case fetch_by_id(youtube_id) do
         nil ->
           # get mp4 from ytdlp
-          {:ok, {link_string, expires_at_unix_timestamp}} = Youtube.fetch_mp4_link(youtube_id)
-          insert(youtube_id, link_string, expires_at_unix_timestamp)
-          {:ok, link_string}
+          {:ok, {link_string, expires_at_unix_timestamp, meta}} =
+            Youtube.fetch_mp4_link(youtube_id)
+
+          {:ok, insert(youtube_id, link_string, expires_at_unix_timestamp, meta)}
 
         link ->
-          {:ok, link.mp4_link}
+          {:ok, link}
       end
     end)
   end
