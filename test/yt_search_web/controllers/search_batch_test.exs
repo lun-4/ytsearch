@@ -11,11 +11,6 @@ defmodule YtSearchWeb.SearchBatchTest do
     "rez_infinite_search.json"
   ]
 
-  setup do
-    Hammer.delete_buckets("ytdlp:search_call")
-    :ok
-  end
-
   @test_cases
   |> Enum.map(fn path -> "test/support/files/#{path}" end)
   |> Enum.map(fn path -> {path, File.read!(path)} end)

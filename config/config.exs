@@ -42,6 +42,8 @@ config :yt_search, YtSearch.Youtube, ytdlp_path: "yt-dlp"
 config :hammer,
   backend: {Hammer.Backend.ETS, [expiry_ms: 60_000 * 60 * 4, cleanup_interval_ms: 60_000 * 10]}
 
+config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

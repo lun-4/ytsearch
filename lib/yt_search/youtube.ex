@@ -1,6 +1,8 @@
 defmodule YtSearch.Youtube do
   require Logger
 
+  alias YtSearch.Youtube.Ratelimit
+
   @spec ytdlp() :: String.t()
   defp ytdlp() do
     ytdlp_path = Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
@@ -121,20 +123,12 @@ defmodule YtSearch.Youtube do
 
   def search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
     if String.contains?(url, "/results?") do
-      # at the moment, only apply rate limiting to text searches
-      # channels and playlists are exempt
-      case Hammer.check_rate("ytdlp:search_call", 4 * 1000, 2) do
-        {:allow, _count} ->
+      case Ratelimit.for_text_search() do
+        :ok ->
           do_search_from_url(url, playlist_end)
 
-        {:deny, _limit} ->
-          if retry_limit do
-            {:error, :overloaded_ytdlp_seats}
-          else
-            Process.sleep(1)
-            # attempt again, if that fails again it'll 500
-            search_from_url(url, playlist_end, true)
-          end
+        :deny ->
+          {:error, :overloaded_ytdlp_seats}
       end
     else
       do_search_from_url(url, playlist_end)

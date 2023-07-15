@@ -11,11 +11,6 @@ defmodule YtSearchWeb.SearchTest do
     {_, ""} = Integer.parse(value)
   end
 
-  setup do
-    Hammer.delete_buckets("ytdlp:search_call")
-    :ok
-  end
-
   defp verify_single_result(given, expected) do
     # validate they're integers at least
     {_, ""} = Integer.parse(given["slot_id"])
@@ -175,6 +170,10 @@ defmodule YtSearchWeb.SearchTest do
         {:ok, [stdout: [@test_output]]}
       end
     ) do
+      # setup
+      original_limits = Application.fetch_env!(:yt_search, YtSearch.Ratelimit)
+      Application.put_env(:yt_search, YtSearch.Ratelimit, ytdlp_search: {2, 4})
+
       ratelimited_requests =
         1..20
         |> Enum.map(fn _ ->
@@ -191,6 +190,8 @@ defmodule YtSearchWeb.SearchTest do
         |> Enum.filter(fn status -> status == 429 end)
 
       assert length(ratelimited_requests) > 0
+
+      Application.put_env(:yt_search, YtSearch.Ratelimit, original_limits)
     end
   end
 end
