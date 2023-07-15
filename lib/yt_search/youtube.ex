@@ -196,7 +196,7 @@ defmodule YtSearch.Youtube do
 
         :error ->
           Logger.error("fetch_mp4_link fail. #{exit_status} stdout: #{stdout} stderr: #{stderr}")
-          {:error, :invalid_error_code, exit_status}
+          handle_ytdlp_error(exit_status, stdout, stderr)
       end
 
     case url_result do
@@ -334,7 +334,18 @@ defmodule YtSearch.Youtube do
         end
 
       :error ->
-        Logger.error("fetch_subtitles #{exit_status} stdout: #{stdout} stderr: #{stderr}")
+        Logger.error("ytdlp gave #{exit_status}. stdout: #{stdout}. stderr: #{stderr}.")
+        handle_ytdlp_error(exit_status, stdout, stderr)
+    end
+  end
+
+  defp handle_ytdlp_error(exit_status, stdout, stderr) do
+    cond do
+      String.contains?(stderr, "Video unavailable") ->
+        Logger.warn("this is an unavailable youtube id")
+        {:error, :video_unavailable}
+
+      true ->
         {:error, {:invalid_exit_code, exit_status}}
     end
   end

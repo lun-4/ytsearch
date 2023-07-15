@@ -26,14 +26,18 @@ defmodule YtSearch.Mp4Link do
 
     case Repo.one(query) do
       nil ->
-        nil
+        {:ok, nil}
 
       link ->
         if TTL.expired?(link, ttl_seconds()) do
           Repo.delete!(link)
-          nil
+          {:ok, nil}
         else
-          link
+          if link.mp4_link == nil do
+            {:error, :video_unavailable}
+          else
+            {:ok, link}
+          end
         end
     end
   end
@@ -63,14 +67,23 @@ defmodule YtSearch.Mp4Link do
     |> Repo.insert!()
   end
 
+  def insert_video_not_found(youtube_id) do
+    %__MODULE__{
+      youtube_id: youtube_id,
+      youtube_metadata: nil,
+      mp4_link: nil
+    }
+    |> Repo.insert!()
+  end
+
   @spec maybe_fetch_upstream(String.t(), String.t()) :: {:ok, __MODULE__.t()}
   def maybe_fetch_upstream(youtube_id, youtube_url) do
     case fetch_by_id(youtube_id) do
-      nil ->
+      {:ok, nil} ->
         fetch_mp4_link(youtube_id, youtube_url)
 
-      data ->
-        {:ok, data}
+      value ->
+        value
     end
   end
 
@@ -85,15 +98,19 @@ defmodule YtSearch.Mp4Link do
     Mutex.under(Mp4LinkMutex, youtube_id, fn ->
       # refetch to prevent double fetch
       case fetch_by_id(youtube_id) do
-        nil ->
+        {:ok, nil} ->
           # get mp4 from ytdlp
-          {:ok, {link_string, expires_at_unix_timestamp, meta}} =
-            Youtube.fetch_mp4_link(youtube_id)
+          case Youtube.fetch_mp4_link(youtube_id) do
+            {:ok, {link_string, expires_at_unix_timestamp, meta}} ->
+              {:ok, insert(youtube_id, link_string, expires_at_unix_timestamp, meta)}
 
-          {:ok, insert(youtube_id, link_string, expires_at_unix_timestamp, meta)}
+            {:error, :video_unavailable} ->
+              insert_video_not_found(youtube_id)
+              {:error, :video_unavailable}
+          end
 
-        link ->
-          {:ok, link}
+        value ->
+          value
       end
     end)
   end
