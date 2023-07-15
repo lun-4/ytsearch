@@ -162,8 +162,8 @@ defmodule YtSearch.Youtube do
          |> vrcjson_workaround}
 
       :error ->
-        Logger.error("stdout: #{stdout} #{stderr}")
-        {:error, {:invalid_error_code, exit_status, stderr}}
+        Logger.error("search exit with #{exit_status}. stdout: #{stdout}. stderr: #{stderr}.")
+        handle_ytdlp_error(exit_status, stdout, stderr)
     end
   end
 
@@ -344,6 +344,9 @@ defmodule YtSearch.Youtube do
       String.contains?(stderr, "Video unavailable") ->
         Logger.warn("this is an unavailable youtube id")
         {:error, :video_unavailable}
+
+      String.contains?(stderr, "This channel does not have a videos tab") ->
+        {:error, :channel_without_videos_tab}
 
       true ->
         {:error, {:invalid_exit_code, exit_status}}
