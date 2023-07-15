@@ -132,10 +132,10 @@ defmodule YtSearch.Slot do
     end
 
     defp schedule_work() do
-      # every 10 minutes, with a jitter of -3..10m
+      # every 10 minutes, with a jitter of -3..3m
       next_tick =
         case Mix.env() do
-          :prod -> 10 * 60 * 1000 + Enum.random((-3 * 60 * 1000)..(10 * 60 * 1000))
+          :prod -> 10 * 60 * 1000 + Enum.random((-3 * 60 * 1000)..(3 * 60 * 1000))
           _ -> 10000
         end
 
