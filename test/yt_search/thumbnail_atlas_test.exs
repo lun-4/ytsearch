@@ -24,7 +24,7 @@ defmodule YtSearch.ThumbnailAtlasTest do
           %{type: "video", slot_id: "#{slot.id}"},
           %{type: "channel", slot_id: "#{channel_slot.id}"}
         ],
-        "test"
+        "youtube.com/test"
       )
 
     %{slot: slot, search_slot: search_slot, thumbnnail: thumb}
