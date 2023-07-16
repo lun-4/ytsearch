@@ -80,7 +80,7 @@ defmodule YtSearch.SearchSlot do
     end)
   end
 
-  def from_playlist(search_query, playlist) do
+  def from_playlist(playlist, search_query) do
     playlist
     |> Jason.encode!()
     |> from_slots_json(search_query)
@@ -90,7 +90,11 @@ defmodule YtSearch.SearchSlot do
   defp from_slots_json(slots_json, search_query) do
     {:ok, new_id} = find_available_id()
 
-    %__MODULE__{slots_json: slots_json, id: new_id}
+    if not String.contains?(search_query, "youtube.com") do
+      raise "invalid search query: #{inspect(search_query)}"
+    end
+
+    %__MODULE__{slots_json: slots_json, id: new_id, query: search_query}
     |> Repo.insert!()
   end
 

@@ -90,8 +90,9 @@ defmodule YtSearchWeb.SearchController do
         end
 
       data ->
-        data
-        |> SearchSlot.get_slots()
+        {:ok,
+         data
+         |> SearchSlot.get_slots()}
     end
   end
 
