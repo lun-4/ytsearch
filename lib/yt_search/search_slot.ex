@@ -38,8 +38,11 @@ defmodule YtSearch.SearchSlot do
   def fetch_by_query(query) do
     query = from s in __MODULE__, where: s.query == ^query, select: s
 
-    Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    Repo.all(query)
+    |> Enum.filter(fn search_slot ->
+      TTL.maybe?(search_slot, __MODULE__) != nil
+    end)
+    |> Enum.at(0)
   end
 
   def get_slots(search_slot) do
