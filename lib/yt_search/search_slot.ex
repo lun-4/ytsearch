@@ -9,6 +9,7 @@ defmodule YtSearch.SearchSlot do
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
   alias YtSearch.SlotUtilities
+  require Logger
 
   @type t :: %__MODULE__{}
 
@@ -35,6 +36,20 @@ defmodule YtSearch.SearchSlot do
     |> TTL.maybe?(__MODULE__)
   end
 
+  def refresh(search_slot) do
+    unless search_slot == nil do
+      Logger.info("refreshed search id #{search_slot.id}")
+
+      search_slot
+      |> Ecto.Changeset.change(
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      )
+      |> Repo.update!()
+    else
+      nil
+    end
+  end
+
   def fetch_by_query(query) do
     query = from s in __MODULE__, where: s.query == ^query, select: s
 
@@ -43,6 +58,7 @@ defmodule YtSearch.SearchSlot do
       TTL.maybe?(search_slot, __MODULE__) != nil
     end)
     |> Enum.at(0)
+    |> refresh
   end
 
   def get_slots(search_slot) do

@@ -2,6 +2,7 @@ defmodule YtSearchWeb.HelloController do
   use YtSearchWeb, :controller
   require Logger
   alias YtSearch.Slot
+  alias YtSearch.SearchSlot
 
   def hello(conn, _params) do
     trending_tab = fetch_trending_tab()
@@ -95,6 +96,9 @@ defmodule YtSearchWeb.HelloController do
           nil
 
         {:ok, data} ->
+          data["slot_id"]
+          |> SearchSlot.refresh()
+
           case data["search_results"] do
             nil ->
               nil
