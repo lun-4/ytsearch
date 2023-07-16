@@ -25,6 +25,8 @@ defmodule YtSearchWeb.SearchTest do
   end
 
   defp verify_search_results(json_response) do
+    assert is_map(json_response)
+
     verify_single_result(json_response["search_results"] |> Enum.at(0), %{
       "type" => "channel",
       "channel_name" => "The Urban Rescue Ranch",
@@ -185,6 +187,12 @@ defmodule YtSearchWeb.SearchTest do
         end)
         |> Enum.map(fn task ->
           conn = Task.await(task)
+          # for non-200 searches, assert they make sense
+          if conn.status == 200 do
+            resp_json = json_response(conn, 200)
+            verify_search_results(resp_json)
+          end
+
           conn.status
         end)
         |> Enum.filter(fn status -> status == 429 end)
