@@ -4,6 +4,10 @@ defmodule YtSearch.SearchSlot do
   import Ecto.Query
   import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
+  alias YtSearch.TTL
+  alias YtSearch.Slot
+  alias YtSearch.ChannelSlot
+  alias YtSearch.PlaylistSlot
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
@@ -19,13 +23,23 @@ defmodule YtSearch.SearchSlot do
 
   schema "search_slots" do
     field(:slots_json, :string)
+    field(:query, :string)
     timestamps()
   end
 
   @spec fetch_by_id(Integer.t()) :: SearchSlot.t() | nil
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
-    Repo.one!(query)
+
+    Repo.one(query)
+    |> TTL.maybe?(__MODULE__)
+  end
+
+  def fetch_by_query(query) do
+    query = from s in __MODULE__, where: s.query == ^query, select: s
+
+    Repo.one(query)
+    |> TTL.maybe?(__MODULE__)
   end
 
   def get_slots(search_slot) do
@@ -33,18 +47,47 @@ defmodule YtSearch.SearchSlot do
     |> Jason.decode!()
   end
 
-  def from_playlist(playlist) do
-    playlist
-    |> Enum.map(fn entry ->
-      {numeric, _fractional} = Integer.parse(entry.slot_id)
-      [entry.type, numeric]
+  def fetched_slots_from_search(search_slot) do
+    search_slot
+    |> get_slots
+    |> Enum.map(fn maybe_slot ->
+      {slot_type, slot_id} =
+        case maybe_slot do
+          # old version of the field
+          [entity_type, id] ->
+            {entity_type, id}
+
+          slot when is_map(slot) ->
+            {slot["type"], slot["slot_id"]}
+        end
+
+      # assumes all slot types are "strict ttl" as in,
+      # fetches won't give nil values if the respective slots
+      # are going to be obliterated any time now
+      case slot_type do
+        t when t in ["video", "short", "livestream"] ->
+          Slot.fetch_by_id(slot_id)
+
+        "playlist" ->
+          PlaylistSlot.fetch(slot_id)
+
+        "channel" ->
+          ChannelSlot.fetch(slot_id)
+
+        _ ->
+          raise "invalid type for search slot entry: #{inspect(slot_type)}"
+      end
     end)
-    |> Jason.encode!()
-    |> from_slots_json()
   end
 
-  @spec from_slots_json(String.t()) :: SearchSlot.t()
-  defp from_slots_json(slots_json) do
+  def from_playlist(search_query, playlist) do
+    playlist
+    |> Jason.encode!()
+    |> from_slots_json(search_query)
+  end
+
+  @spec from_slots_json(String.t(), String.t()) :: SearchSlot.t()
+  defp from_slots_json(slots_json, search_query) do
     {:ok, new_id} = find_available_id()
 
     %__MODULE__{slots_json: slots_json, id: new_id}

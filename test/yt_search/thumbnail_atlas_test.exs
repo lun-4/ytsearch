@@ -19,7 +19,7 @@ defmodule YtSearch.ThumbnailAtlasTest do
     channel_slot = ChannelSlot.from(@test_youtube_id)
 
     search_slot =
-      SearchSlot.from_playlist([
+      SearchSlot.from_playlist("test", [
         %{type: "video", slot_id: "#{slot.id}"},
         %{type: "channel", slot_id: "#{channel_slot.id}"}
       ])

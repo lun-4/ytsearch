@@ -44,22 +44,54 @@ defmodule YtSearchWeb.SearchController do
     |> search_from_any_youtube_url(conn)
   end
 
+  defp fetch_by_query_and_valid(url) do
+    case SearchSlot.fetch_by_query(url) do
+      nil ->
+        nil
+
+      data ->
+        # we want to have a search slot that contains valid slots within
+        is_valid_slot =
+          data
+          |> SearchSlot.fetched_slots_from_search()
+          |> Enum.map(fn maybe_slot ->
+            maybe_slot != nil
+          end)
+          |> Enum.reduce(fn x, acc ->
+            x and acc
+          end)
+
+        if is_valid_slot do
+          data
+        else
+          nil
+        end
+    end
+  end
+
   def search_from_any_youtube_url(youtube_url, playlist_end \\ 20)
       when is_integer(playlist_end) do
-    case youtube_url |> Youtube.search_from_url(playlist_end) do
-      {:ok, ytdlp_data} ->
-        results =
-          ytdlp_data
-          |> Playlist.from_ytdlp_data()
+    case fetch_by_query_and_valid(youtube_url) do
+      nil ->
+        case youtube_url |> Youtube.search_from_url(playlist_end) do
+          {:ok, ytdlp_data} ->
+            results =
+              ytdlp_data
+              |> Playlist.from_ytdlp_data()
 
-        search_slot =
-          results
-          |> SearchSlot.from_playlist()
+            search_slot =
+              results
+              |> SearchSlot.from_playlist(youtube_url)
 
-        {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+            {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
-      {:error, :overloaded_ytdlp_seats} ->
-        {:error, :overloaded_ytdlp_seats}
+          {:error, :overloaded_ytdlp_seats} ->
+            {:error, :overloaded_ytdlp_seats}
+        end
+
+      data ->
+        data
+        |> SearchSlot.get_slots()
     end
   end
 

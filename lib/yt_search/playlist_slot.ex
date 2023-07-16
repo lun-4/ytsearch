@@ -25,7 +25,9 @@ defmodule YtSearch.PlaylistSlot do
   @spec fetch(Integer.t()) :: Slot.t() | nil
   def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+
     Repo.one(query)
+    |> TTL.maybe?(__MODULE__)
   end
 
   @spec from(String.t()) :: Slot.t()

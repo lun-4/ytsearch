@@ -26,22 +26,7 @@ defmodule YtSearch.Thumbnail.Atlas do
   def do_assemble(search_slot) do
     thumbnail_paths =
       search_slot
-      |> SearchSlot.get_slots()
-      |> Enum.map(fn entry ->
-        case entry do
-          ["channel", slot_id] ->
-            ChannelSlot.fetch(slot_id)
-
-          ["playlist", slot_id] ->
-            PlaylistSlot.fetch(slot_id)
-
-          [typ, slot_id] when typ in ["video", "short", "livestream"] ->
-            Slot.fetch_by_id(slot_id)
-
-          _ ->
-            raise "invalid type for entry: #{inspect(entry)}"
-        end
-      end)
+      |> SearchSlot.fetched_slots_from_search()
       |> Enum.map(fn slot ->
         # for each slot, attach to its thumbnail mutex, so if
         # theres thumbnails still being downloaded, we wait for
