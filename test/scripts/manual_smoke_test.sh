@@ -6,7 +6,7 @@ HOST=$1
 search_param=${SEARCH:-"urban+rescue+ranch"}
 
 hello_results=$(curl -A 'UnityWebRequest' -v "http://$HOST/api/v1/hello")
-printf "%s" "$hello_results" > helltest.json
+printf "%s" "$hello_results"
 is_online=$(printf "%s" "$hello_results" | jq -r .online)
 if [ "$is_online" != "true" ]; then
   echo "its not online"
