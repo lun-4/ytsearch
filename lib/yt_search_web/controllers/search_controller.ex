@@ -89,10 +89,9 @@ defmodule YtSearchWeb.SearchController do
             {:error, :overloaded_ytdlp_seats}
         end
 
-      data ->
+      search_slot ->
         {:ok,
-         data
-         |> SearchSlot.get_slots()}
+         %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
     end
   end
 

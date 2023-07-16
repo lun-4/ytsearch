@@ -192,6 +192,15 @@ defmodule YtSearchWeb.SearchTest do
       assert length(ratelimited_requests) > 0
 
       Application.put_env(:yt_search, YtSearch.Ratelimit, original_limits)
+
+      # attempt to test the SearchSlot storage by making a request after the main one
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/a/1/s?q=urban+rescue+ranch")
+
+      resp_json = json_response(conn, 200)
+      verify_search_results(resp_json)
     end
   end
 
