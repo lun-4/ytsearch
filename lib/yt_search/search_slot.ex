@@ -58,7 +58,6 @@ defmodule YtSearch.SearchSlot do
       TTL.maybe?(search_slot, __MODULE__) != nil
     end)
     |> Enum.at(0)
-    |> refresh
   end
 
   def get_slots(search_slot) do
