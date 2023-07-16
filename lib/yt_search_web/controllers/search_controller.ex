@@ -51,15 +51,22 @@ defmodule YtSearchWeb.SearchController do
 
       data ->
         # we want to have a search slot that contains valid slots within
-        is_valid_slot =
+        valid_slots =
           data
           |> SearchSlot.fetched_slots_from_search()
           |> Enum.map(fn maybe_slot ->
             maybe_slot != nil
           end)
-          |> Enum.reduce(fn x, acc ->
-            x and acc
-          end)
+
+        is_valid_slot =
+          unless length(valid_slots) == 0 do
+            valid_slots
+            |> Enum.reduce(fn x, acc ->
+              x and acc
+            end)
+          else
+            false
+          end
 
         if is_valid_slot do
           data
