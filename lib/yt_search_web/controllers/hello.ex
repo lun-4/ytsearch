@@ -110,15 +110,7 @@ defmodule YtSearchWeb.HelloController do
 
                 case search_result[:type] do
                   :video ->
-                    slot = Slot.fetch_by_id(slot_id)
-                    # recreate it, effectively refreshing the slot id
-                    new_slot = Slot.create(slot.youtube_id, slot.video_duration)
-
-                    if new_slot.id != slot.id do
-                      Logger.warning(
-                        "trending tab refresher: new slot (#{new_slot.id}) created instead of (#{slot.id}), thumbnails will be broken"
-                      )
-                    end
+                    Slot.refresh(slot_id)
 
                   _ ->
                     nil

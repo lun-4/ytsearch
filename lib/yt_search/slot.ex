@@ -3,6 +3,7 @@ defmodule YtSearch.Slot do
   import Ecto.Changeset
   import Ecto.Query
   import Ecto, only: [assoc: 2]
+  require Logger
   alias YtSearch.Repo
   alias YtSearch.TTL
   alias YtSearch.SlotUtilities
@@ -60,15 +61,27 @@ defmodule YtSearch.Slot do
         # we want this youtube id created, but the slot for it is expired...
         # instead of deleting it or generating a new one, renew it
         # by setting inserted_at to current timestamp
-        maybe_slot
-        |> Ecto.Changeset.change(
-          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-        )
-        |> Ecto.Changeset.change(inserted_at_v2: DateTime.to_unix(DateTime.utc_now()))
-        |> YtSearch.Repo.update!()
+        maybe_slot.id
+        |> refresh()
       else
         maybe_slot
       end
+    end
+  end
+
+  def refresh(slot_id) do
+    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    slot = Repo.one(query)
+
+    unless slot == nil do
+      Logger.info("refreshed video id #{slot.id}")
+
+      slot
+      |> Ecto.Changeset.change(
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      )
+      |> Ecto.Changeset.change(inserted_at_v2: DateTime.to_unix(DateTime.utc_now()))
+      |> YtSearch.Repo.update!()
     end
   end
 
