@@ -2,6 +2,23 @@ defmodule YtSearch.Repo.Migrations.MakeSlotsYoutubeIdProperlyUnique do
   use Ecto.Migration
   require Logger
 
+  defmodule OldSlot do
+    use Ecto.Schema
+    import Ecto.Changeset
+    import Ecto.Query
+    import Ecto, only: [assoc: 2]
+    require Logger
+
+    @type t :: %__MODULE__{}
+
+    @primary_key {:id, :integer, autogenerate: false}
+
+    schema "slots" do
+      field(:youtube_id, :string)
+      timestamps()
+    end
+  end
+
   defmodule NewSlot do
     use Ecto.Schema
     import Ecto.Changeset
@@ -72,7 +89,7 @@ defmodule YtSearch.Repo.Migrations.MakeSlotsYoutubeIdProperlyUnique do
 
       stream =
         repo().stream(
-          from s in YtSearch.Slot,
+          from s in OldSlot,
             select: s,
             order_by: [desc: fragment("unixepoch(?)", s.inserted_at)]
         )
