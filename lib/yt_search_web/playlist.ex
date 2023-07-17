@@ -18,10 +18,10 @@ defmodule YtSearchWeb.Playlist do
             if String.contains?(ytdlp_data["url"], "/shorts/") do
               :short
             else
-              if ytdlp_data["live_status"] == "is_live" do
-                :livestream
-              else
-                :video
+              case ytdlp_data["live_status"] do
+                "is_live" -> :livestream
+                "is_upcoming" -> :upcoming
+                _ -> :video
               end
             end
 
@@ -49,7 +49,10 @@ defmodule YtSearchWeb.Playlist do
     end)
     |> Enum.filter(fn {entity_type, ytdlp_data} ->
       cond do
+        # topic channels don't provide a videos tab, ignore them
         entity_type == :channel and String.ends_with?(ytdlp_data["title"], " - Topic") -> false
+        # we don't support upcoming things that don't actually have any videos for
+        entity_type == :upcoming -> false
         true -> true
       end
     end)

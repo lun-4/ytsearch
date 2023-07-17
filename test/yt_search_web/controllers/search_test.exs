@@ -230,4 +230,22 @@ defmodule YtSearchWeb.SearchTest do
       assert length(rjson["search_results"]) == 0
     end
   end
+
+  @premiere_video File.read!("test/support/files/upcoming_premiere_in_search.json")
+  test "it doesn't provide premieres", %{conn: conn} do
+    with_mock(
+      :exec,
+      run: fn _, _ ->
+        {:ok, [stdout: [@premiere_video]]}
+      end
+    ) do
+      conn =
+        conn
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/a/1/s?q=whatever")
+
+      rjson = json_response(conn, 200)
+      assert length(rjson["search_results"]) == 0
+    end
+  end
 end
