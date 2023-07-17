@@ -348,6 +348,9 @@ defmodule YtSearch.Youtube do
       String.contains?(stderr, "This channel does not have a videos tab") ->
         {:error, :channel_without_videos_tab}
 
+      String.contains?(stderr, "Premieres in") ->
+        {:error, :upcoming_video}
+
       true ->
         {:error, {:invalid_exit_code, exit_status}}
     end

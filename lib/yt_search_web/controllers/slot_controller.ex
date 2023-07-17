@@ -44,6 +44,11 @@ defmodule YtSearchWeb.SlotController do
                 conn
                 |> put_status(404)
                 |> text("video unavailable")
+
+              {:error, :upcoming_video} ->
+                conn
+                |> put_status(404)
+                |> text("video unavailable (upcoming video)")
             end
 
           :unity ->
