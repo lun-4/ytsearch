@@ -15,7 +15,7 @@ defmodule YtSearch.Repo.Migrations.MakeSlotsYoutubeIdProperlyUnique do
 
     schema "slots" do
       field(:youtube_id, :string)
-      timestamps()
+      Ecto.Schema.timestamps()
     end
   end
 
