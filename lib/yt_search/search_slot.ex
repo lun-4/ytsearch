@@ -48,8 +48,6 @@ defmodule YtSearch.SearchSlot do
         inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
       )
       |> Repo.update!()
-    else
-      nil
     end
   end
 
