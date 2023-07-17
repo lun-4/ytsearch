@@ -36,7 +36,10 @@ defmodule YtSearch.SearchSlot do
     |> TTL.maybe?(__MODULE__)
   end
 
-  def refresh(search_slot) do
+  def refresh(search_slot_id) do
+    query = from s in __MODULE__, where: s.id == ^search_slot_id, select: s
+    search_slot = Repo.one(query)
+
     unless search_slot == nil do
       Logger.info("refreshed search id #{search_slot.id}")
 

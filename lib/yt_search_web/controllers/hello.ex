@@ -96,10 +96,10 @@ defmodule YtSearchWeb.HelloController do
           nil
 
         {:ok, data} ->
-          data["slot_id"]
+          data[:slot_id]
           |> SearchSlot.refresh()
 
-          case data["search_results"] do
+          case data[:search_results] do
             nil ->
               nil
 
