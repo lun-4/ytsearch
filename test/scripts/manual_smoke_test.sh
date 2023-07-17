@@ -42,6 +42,7 @@ check_slot "$trending_tab_slot_id"
 
 # check search
 
+sleep 4
 result=$(curl -A 'UnityWebRequest' -v -G "http://$HOST/a/1/s" --data-urlencode "q=$search_param")
 first_video_slot_id=$(echo "$result" | jq -r '.search_results[] | select(.type == "video") | .slot_id' | head -n 1)
 echo "got slot $first_video_slot_id"
