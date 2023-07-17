@@ -106,10 +106,10 @@ defmodule YtSearchWeb.HelloController do
             results ->
               results
               |> Enum.each(fn search_result ->
-                {slot_id, ""} = search_result["slot_id"] |> Integer.parse()
+                slot_id = search_result[:slot_id]
 
-                case search_result["type"] do
-                  "video" ->
+                case search_result[:type] do
+                  :video ->
                     slot = Slot.fetch_by_id(slot_id)
                     # recreate it, effectively refreshing the slot id
                     new_slot = Slot.create(slot.youtube_id, slot.video_duration)
