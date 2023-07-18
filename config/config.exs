@@ -47,7 +47,7 @@ config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 config :prometheus, YtSearch.Repo.Instrumenter,
   stages: [:queue, :query, :decode],
   counter: true,
-  labels: [:result, :query, :source],
+  labels: [:result, :query],
   query_duration_buckets: [
     10,
     100,
