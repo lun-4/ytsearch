@@ -39,6 +39,7 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
     {:ok, %{}}
   end
 
+  @impl true
   def handle_info(:work, state) do
     do_calculate_counters()
     schedule_work()

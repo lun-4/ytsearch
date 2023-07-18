@@ -44,6 +44,27 @@ config :hammer,
 
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 
+config :prometheus, YtSearch.Repo.Instrumenter,
+  stages: [:queue, :query, :decode],
+  counter: true,
+  labels: [:result, :query, :source],
+  query_duration_buckets: [
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    300_000,
+    500_000,
+    750_000,
+    1_000_000,
+    1_500_000,
+    2_000_000,
+    3_000_000
+  ],
+  registry: :default,
+  duration_unit: :microseconds
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

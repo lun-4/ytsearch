@@ -4,6 +4,7 @@ defmodule YtSearch.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
@@ -56,13 +57,16 @@ defmodule YtSearch.Application do
   end
 
   defp start_telemetry do
+    Logger.info("starting telemetry...")
     require Prometheus.Registry
 
     if Application.get_env(:prometheus, YtSearch.Repo.Instrumenter) do
+      Logger.info("starting db telemetry...")
+
       :ok =
         :telemetry.attach(
           "prometheus-ecto",
-          [:pleroma, :repo, :query],
+          [:yt_search, :repo, :query],
           &YtSearch.Repo.Instrumenter.handle_event/4,
           %{}
         )
@@ -79,6 +83,7 @@ defmodule YtSearch.Application do
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()
     PrometheusPhx.setup()
+    Logger.info("telemetry started!")
   end
 
   # Tell Phoenix to update the endpoint configuration
