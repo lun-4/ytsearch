@@ -63,7 +63,7 @@ config :prometheus, YtSearch.Repo.Instrumenter,
     3_000_000
   ],
   registry: :default,
-  duration_unit: :microseconds
+  duration_unit: :milliseconds
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
