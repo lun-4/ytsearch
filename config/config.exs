@@ -44,6 +44,8 @@ config :hammer,
 
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 
+config :yt_search, YtSearch.Repo, cache_size: -1024_000
+
 config :prometheus, YtSearch.Repo.Instrumenter,
   stages: [:queue, :query, :decode],
   counter: true,

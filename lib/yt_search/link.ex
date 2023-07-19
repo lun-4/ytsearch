@@ -141,7 +141,7 @@ defmodule YtSearch.Mp4Link do
     end
 
     def do_janitor() do
-      Logger.debug("cleaning links...")
+      Logger.info("cleaning links...")
 
       expiry_time =
         NaiveDateTime.utc_now()
