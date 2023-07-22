@@ -2,6 +2,7 @@ defmodule YtSearch.Youtube do
   require Logger
 
   alias YtSearch.Youtube.Ratelimit
+  alias YtSearch.Youtube.Latency
 
   @spec ytdlp() :: String.t()
   defp ytdlp() do
@@ -82,12 +83,19 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp run_ytdlp(args, opts \\ []) do
+  defp run_ytdlp(call_type, args, opts \\ []) do
+    CallCounter.inc(call_type)
+
+    start_ts = System.monotonic_time(:millisecond)
+
     {status, result} =
       :exec.run(
         [ytdlp()] ++ args,
         [:sync, :stdout, :stderr] ++ opts
       )
+
+    end_ts = System.monotonic_time(:millisecond)
+    Latency.register(call_type, end_ts - start_ts)
 
     stdout = result |> Keyword.get(:stdout) || [""]
     stderr = result |> Keyword.get(:stderr) || [""]
@@ -136,10 +144,8 @@ defmodule YtSearch.Youtube do
   end
 
   def do_search_from_url(url, playlist_end) do
-    CallCounter.inc(:search)
-
     {status, result} =
-      run_ytdlp([
+      run_ytdlp(:search, [
         url,
         "--dump-json",
         "--flat-playlist",
@@ -169,10 +175,8 @@ defmodule YtSearch.Youtube do
 
   @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
   def fetch_mp4_link(youtube_id) do
-    CallCounter.inc(:mp4_link)
-
     {status, result} =
-      run_ytdlp([
+      run_ytdlp(:mp4_link, [
         "--no-check-certificate",
         # TODO do we want cache-dir??
         "--no-cache-dir",
@@ -276,10 +280,9 @@ defmodule YtSearch.Youtube do
 
     Logger.debug("outputting to #{subtitle_folder}")
 
-    CallCounter.inc(:subtitles)
-
     {status, result} =
       run_ytdlp(
+        :subtitles,
         [
           "--skip-download",
           "--write-subs",
@@ -353,6 +356,39 @@ defmodule YtSearch.Youtube do
 
       true ->
         {:error, {:invalid_exit_code, exit_status}}
+    end
+  end
+
+  defmodule Latency do
+    use Prometheus.Metric
+
+    def setup() do
+      Histogram.declare(
+        name: :yts_ytdlp_latency,
+        help: "latency of certain yt-dlp calls",
+        labels: [:call_type],
+        buckets:
+          [
+            10..100//10,
+            100..1000//100,
+            1000..2000//100,
+            2000..4000//500,
+            4000..10000//1000,
+            10000..20000//1500
+          ]
+          |> Enum.flat_map(&Enum.to_list/1)
+          |> Enum.uniq()
+      )
+    end
+
+    def register(call_type, latency) do
+      Histogram.observe(
+        [
+          name: :yts_ytdlp_latency,
+          labels: [call_type]
+        ],
+        latency
+      )
     end
   end
 end

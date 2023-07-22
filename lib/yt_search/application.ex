@@ -77,6 +77,7 @@ defmodule YtSearch.Application do
     YtSearchWeb.Endpoint.MetricsExporter.setup()
     YtSearchWeb.Endpoint.PipelineInstrumenter.setup()
     YtSearch.Youtube.CallCounter.setup()
+    YtSearch.Youtube.Latency.setup()
     YtSearch.SlotUtilities.RerollCounter.setup()
     YtSearch.SlotUtilities.UsageMeter.Gauge.setup()
 
