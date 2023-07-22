@@ -21,8 +21,44 @@ defmodule YtSearch.Thumbnail do
     Repo.one(query)
   end
 
+  # 2 hours
+  def ttl_seconds(), do: 2 * 60 * 60
+
   def insert(id, mimetype, blob) do
     %__MODULE__{id: id, mime_type: mimetype, data: blob}
     |> Repo.insert!()
+  end
+
+  defmodule Janitor do
+    require Logger
+
+    alias YtSearch.Repo
+    alias YtSearch.Thumbnail
+
+    import Ecto.Query
+
+    def tick() do
+      Logger.debug("cleaning thumbnails...")
+
+      expiry_time =
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-Thumbnail.ttl_seconds())
+
+      deleted_count =
+        from(s in Thumbnail,
+          where:
+            s.inserted_at <
+              ^expiry_time,
+          limit: 30
+        )
+        |> Repo.all()
+        |> Enum.map(fn thumb ->
+          Repo.delete(thumb)
+          1
+        end)
+        |> Enum.sum()
+
+      Logger.info("deleted #{deleted_count} thumbnails")
+    end
   end
 end

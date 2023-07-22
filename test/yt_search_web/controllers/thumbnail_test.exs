@@ -4,6 +4,8 @@ defmodule YtSearchWeb.ThumbnailTest do
 
   alias YtSearch.Youtube
   alias YtSearch.Thumbnail
+  import Ecto.Query
+  alias YtSearch.Repo
 
   defp png_data do
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII="
@@ -27,5 +29,25 @@ defmodule YtSearchWeb.ThumbnailTest do
       assert repo_thumb.id == thumb.id
       # TODO verify dimensions of given repo thumb
     end
+  end
+
+  @youtube_id "Amongus"
+
+  test "thumbnails are cleaned when theyre too old", _ctx do
+    thumb = Thumbnail.insert(@youtube_id, "image/png", png_data())
+
+    from(t in Thumbnail, where: t.id == ^thumb.id, select: t)
+    |> Repo.update_all(
+      set: [
+        inserted_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-Thumbnail.ttl_seconds() - 2)
+      ]
+    )
+
+    fetched = Thumbnail.fetch(@youtube_id)
+    assert fetched.data == thumb.data
+    Thumbnail.Janitor.tick()
+    nil = Thumbnail.fetch(@youtube_id)
   end
 end
