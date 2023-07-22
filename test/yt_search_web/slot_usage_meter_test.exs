@@ -88,29 +88,29 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
 
   @tag :skip
   test "correctly gives slot count" do
-    counters = UsageMeter.do_calculate_counters()
+    counters = UsageMeter.tick()
     IO.inspect(counters)
     assert Keyword.get(counters, Slot) == 100_000
 
     # now, if we set the slots with duration 720 to inserted_at_v2 - 720,
     # our countes should be around 50k
     time_travel_slots_to_expiration(720)
-    counters = UsageMeter.do_calculate_counters()
+    counters = UsageMeter.tick()
     IO.inspect(counters)
     assert Keyword.get(counters, Slot) == 50_000
 
     time_travel_slots_to_expiration(1800)
-    counters = UsageMeter.do_calculate_counters()
+    counters = UsageMeter.tick()
     IO.inspect(counters)
     assert Keyword.get(counters, Slot) == 30_000
 
     time_travel_slots_to_expiration(3600)
-    counters = UsageMeter.do_calculate_counters()
+    counters = UsageMeter.tick()
     IO.inspect(counters)
     assert Keyword.get(counters, Slot) == 10_000
 
     time_travel_slots_to_expiration(7200)
-    counters = UsageMeter.do_calculate_counters()
+    counters = UsageMeter.tick()
     IO.inspect(counters)
     assert Keyword.get(counters, Slot) == 0
   end

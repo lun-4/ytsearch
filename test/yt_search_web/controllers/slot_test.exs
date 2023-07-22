@@ -122,7 +122,7 @@ defmodule YtSearchWeb.SlotTest do
 
     [fetched | []] = Subtitle.fetch(@youtube_id)
     assert fetched.subtitle_data == subtitle.subtitle_data
-    Subtitle.Cleaner.do_clean_subtitles()
+    Subtitle.Cleaner.tick()
     # should be empty now
     [] = Subtitle.fetch(@youtube_id)
   end
@@ -223,7 +223,7 @@ defmodule YtSearchWeb.SlotTest do
     from_db = Repo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
     assert from_db.youtube_id == link.youtube_id
 
-    YtSearch.Mp4Link.Janitor.do_janitor()
+    YtSearch.Mp4Link.Janitor.tick()
     assert Repo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) == nil
   end
 
@@ -241,7 +241,7 @@ defmodule YtSearchWeb.SlotTest do
     from_db = Repo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
     assert from_db.id == slot.id
 
-    YtSearch.Slot.Janitor.do_janitor()
+    YtSearch.Slot.Janitor.tick()
     assert Repo.one(from s in Slot, where: s.id == ^slot.id, select: s) == nil
   end
 

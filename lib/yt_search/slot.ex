@@ -100,7 +100,6 @@ defmodule YtSearch.Slot do
   end
 
   defmodule Janitor do
-    use GenServer
     require Logger
 
     alias YtSearch.Repo
@@ -108,23 +107,7 @@ defmodule YtSearch.Slot do
 
     import Ecto.Query
 
-    def start_link(arg) do
-      GenServer.start_link(__MODULE__, arg)
-    end
-
-    @impl true
-    def init(_arg) do
-      schedule_work()
-      {:ok, %{}}
-    end
-
-    def handle_info(:work, state) do
-      do_janitor()
-      schedule_work()
-      {:noreply, state}
-    end
-
-    def do_janitor() do
+    def tick() do
       Logger.debug("cleaning expired slots...")
 
       expired_slots =
@@ -142,17 +125,6 @@ defmodule YtSearch.Slot do
       deleted_count = length(expired_slots)
 
       Logger.info("deleted #{deleted_count} slots")
-    end
-
-    defp schedule_work() do
-      # every 10 minutes, with a jitter of -3..3m
-      next_tick =
-        case Mix.env() do
-          :prod -> 10 * 60 * 1000 + Enum.random((-3 * 60 * 1000)..(3 * 60 * 1000))
-          _ -> 10000
-        end
-
-      Process.send_after(self(), :work, next_tick)
     end
   end
 end

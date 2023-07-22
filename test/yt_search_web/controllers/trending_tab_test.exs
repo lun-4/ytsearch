@@ -43,7 +43,7 @@ defmodule YtSearchWeb.TrendingTabTest do
         )
         |> YtSearch.Repo.update!()
 
-      YtSearchWeb.HelloController.Refresher.do_refresh()
+      YtSearchWeb.HelloController.Refresher.tick()
 
       search_slot_after = SearchSlot.fetch_by_id(search_slot_id)
       assert search_slot_after != nil

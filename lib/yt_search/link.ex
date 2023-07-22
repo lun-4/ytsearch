@@ -116,7 +116,6 @@ defmodule YtSearch.Mp4Link do
   end
 
   defmodule Janitor do
-    use GenServer
     require Logger
 
     alias YtSearch.Repo
@@ -124,23 +123,7 @@ defmodule YtSearch.Mp4Link do
 
     import Ecto.Query
 
-    def start_link(arg) do
-      GenServer.start_link(__MODULE__, arg)
-    end
-
-    @impl true
-    def init(_arg) do
-      schedule_work()
-      {:ok, %{}}
-    end
-
-    def handle_info(:work, state) do
-      do_janitor()
-      schedule_work()
-      {:noreply, state}
-    end
-
-    def do_janitor() do
+    def tick() do
       Logger.info("cleaning links...")
 
       expiry_time =
@@ -156,17 +139,6 @@ defmodule YtSearch.Mp4Link do
         |> Repo.delete_all()
 
       Logger.info("deleted #{deleted_count} links")
-    end
-
-    defp schedule_work() do
-      # every 10mins, with a jitter of -2..5m (to prevent a constant load on the server)
-      next_tick =
-        case Mix.env() do
-          :prod -> 10 * 60 * 1000 + Enum.random((-2 * 60 * 1000)..(5 * 60 * 1000))
-          _ -> 10000
-        end
-
-      Process.send_after(self(), :work, next_tick)
     end
   end
 end
