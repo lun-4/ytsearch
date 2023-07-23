@@ -8,7 +8,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
   @search_data File.read!("test/support/files/rez_infinite_search.json")
   @playlist_data File.read!("test/support/files/rez_infinite_playlist.json")
 
-  test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn} do
+  test "it handles playlist requests successfully", %{conn: conn} do
     with_mock(
       :exec,
       run: [
@@ -36,5 +36,13 @@ defmodule YtSearchWeb.PlaylistSlotTest do
       assert first_result["youtube_id"] == @expected_youtube_id
       assert first_result["type"] == "video"
     end
+  end
+
+  test "it 404s on unknown playlist ids", %{conn: conn} do
+    conn =
+      conn
+      |> get(~p"/a/1/p/18247")
+
+    assert conn.status == 404
   end
 end

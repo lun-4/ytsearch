@@ -123,6 +123,7 @@ defmodule YtSearchWeb.SearchController do
       nil ->
         conn
         |> put_status(404)
+        |> text("not found")
 
       slot ->
         slot
