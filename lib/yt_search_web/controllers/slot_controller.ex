@@ -18,52 +18,69 @@ defmodule YtSearchWeb.SlotController do
         |> render("slot.json")
 
       slot ->
-        youtube_url = "https://youtube.com/watch?v=#{slot.youtube_id}"
-
         case UserAgent.for(conn) do
           :quest_video ->
-            case Mp4Link.maybe_fetch_upstream(slot.youtube_id, youtube_url) do
-              {:ok, nil} ->
-                raise "should not happen"
-
-              {:ok, link} ->
-                case link |> Mp4Link.meta() |> Map.get("age_limit") do
-                  0 ->
-                    conn
-                    |> redirect(external: link.mp4_link)
-
-                  age_limit ->
-                    Logger.warn("age restricted video. #{age_limit}")
-
-                    conn
-                    |> put_status(404)
-                    |> text("age restricted video (#{age_limit})")
-                end
-
-              {:error, :video_unavailable} ->
-                conn
-                |> put_status(404)
-                |> text("video unavailable")
-
-              {:error, :upcoming_video} ->
-                conn
-                |> put_status(404)
-                |> text("video unavailable (upcoming video)")
-            end
+            handle_quest_video(conn, slot)
 
           :unity ->
-            do_slot_metadata(conn, slot, youtube_url)
+            do_slot_metadata(conn, slot)
 
           _ ->
             conn
-            |> redirect(external: youtube_url)
+            |> redirect(external: slot |> Slot.youtube_url())
         end
     end
   end
 
-  defp do_slot_metadata(conn, slot, youtube_url) do
+  defp handle_quest_video(conn, slot) do
+    case Mp4Link.maybe_fetch_upstream(slot) do
+      {:ok, nil} ->
+        raise "should not happen"
+
+      {:ok, link} ->
+        case link |> Mp4Link.meta() |> Map.get("age_limit") do
+          0 ->
+            conn
+            |> redirect(external: link.mp4_link)
+
+          age_limit ->
+            Logger.warn("age restricted video. #{age_limit}")
+
+            conn
+            |> put_status(404)
+            |> text("age restricted video (#{age_limit})")
+        end
+
+      {:error, :video_unavailable} ->
+        conn
+        |> put_status(404)
+        |> text("video unavailable")
+
+      {:error, :upcoming_video} ->
+        conn
+        |> put_status(404)
+        |> text("video unavailable (upcoming video)")
+    end
+  end
+
+  def fetch_redirect(conn, %{"slot_id" => slot_id_query}) do
+    {slot_id, _} = slot_id_query |> Integer.parse()
+
+    case Slot.fetch_by_id(slot_id) do
+      nil ->
+        conn
+        |> put_status(404)
+        |> assign(:slot, nil)
+        |> render("slot.json")
+
+      slot ->
+        handle_quest_video(conn, slot)
+    end
+  end
+
+  defp do_slot_metadata(conn, slot) do
     # for now, just find subtitles, but this can return future metadata
-    subtitle_data = do_subtitles(slot, youtube_url)
+    subtitle_data = do_subtitles(slot)
 
     conn
     |> json(%{subtitle_data: subtitle_data})
@@ -89,12 +106,14 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
-  defp do_subtitles(slot, youtube_url, recursing \\ false) do
+  defp do_subtitles(slot, recursing \\ false) do
     # 1. fetch once, to see if we dont need to acquire the mutex
     # 2. fetch again inside the mutex, in the case another process was
     # already fetching the subtitles
     # 3. fetch after requesting a fetch, for the process that did the
     # hard job of calling youtube
+    youtube_url = slot |> Slot.youtube_url()
+
     case subtitles_for(slot) do
       :no_requested_subtitles ->
         Mutex.under(SubtitleMutex, youtube_url, fn ->
@@ -105,7 +124,7 @@ defmodule YtSearchWeb.SlotController do
                 nil
               else
                 Youtube.fetch_subtitles(youtube_url)
-                do_subtitles(slot, youtube_url, true)
+                do_subtitles(slot, true)
               end
 
             :no_available_subtitles ->

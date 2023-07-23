@@ -127,4 +127,8 @@ defmodule YtSearch.Slot do
       Logger.info("deleted #{deleted_count} slots")
     end
   end
+
+  def youtube_url(slot) do
+    "https://youtube.com/watch?v=#{slot.youtube_id}"
+  end
 end

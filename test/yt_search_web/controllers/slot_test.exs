@@ -66,6 +66,25 @@ defmodule YtSearchWeb.SlotTest do
     end
   end
 
+  test "it always spits out mp4 redirect for /sr/", %{conn: conn, slot: slot} do
+    with_mock(
+      :exec,
+      run: [
+        in_series([:_, :_], [{:ok, [stdout: [@run1]]}])
+      ]
+    ) do
+      conn =
+        conn
+        |> get(~p"/api/v1/sr/#{slot.id}")
+
+      assert conn.status == 302
+
+      assert get_resp_header(conn, "location") == [
+               @expected_run1_url
+             ]
+    end
+  end
+
   @run_stream File.read!("test/support/files/lofi_stream.json")
               |> String.replace("1689378318", @custom_expire)
   @expected_run_stream_url "https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/#{@custom_expire}/ei/romxZLXCOoOF1sQPn9qkoAc/ip/2804:14d:5492:8fe8::1000/id/jfKfPfyJRdk.2/itag/96/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D137/hls_chunk_host/rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com/playlist_duration/30/manifest_duration/30/spc/Ul2Sq66okm6aYvjhYIzLhVAacySq1KM/vprv/1/playlist_type/DVR/initcwndbps/1015000/mh/rr/mm/44/mn/sn-oxunxg8pjvn-gxjl/ms/lva/mv/m/mvi/1/pl/48/dover/11/pacing/0/keepalive/yes/fexp/24007246/beids/24350018/mt/1689356439/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,playlist_duration,manifest_duration,spc,vprv,playlist_type/sig/AOq0QJ8wRgIhAObgGmA9jBsVLvxoQWsTgf5UnFnYaqHKv-oh5aXe_N7MAiEArz89GleotjzGD3A8PElTj_2pGP9HN6AIkZDJeo2nwnI%3D/lsparams/hls_chunk_host,initcwndbps,mh,mm,mn,ms,mv,mvi,pl/lsig/AG3C_xAwRQIhAN2uSS_Z-NVkxLcSm2iWnuS9sd6_rZ3SHBy_uni7rERHAiAyUvULpqCSKBKbGp5bJXYF5eSkfrnRw9UyAzgawfwbqw%3D%3D/playlist/index.m3u8"

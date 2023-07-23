@@ -25,6 +25,12 @@ check_slot(){
     exit 1
   fi
 
+  redirect_request=$(curl -w '%{http_code}' -o /dev/null -A 'stagefright' "http://$HOST/a/1/sr/$slot_id")
+  if [ "$redirect_request" != "302" ]; then
+    echo "expected 302, got $redirect_request"
+    exit 1
+  fi
+
   unity_request=$(curl -w '%{http_code}' -o /dev/null -A 'UnityWebRequest' "http://$HOST/a/1/sl/$slot_id")
   if [ "$unity_request" != "200" ]; then
     echo "expected 200, got $unity_request"

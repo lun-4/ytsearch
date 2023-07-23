@@ -6,6 +6,7 @@ defmodule YtSearch.Mp4Link do
   alias YtSearch.Repo
   alias YtSearch.Youtube
   alias YtSearch.TTL
+  alias YtSearch.Slot
 
   @type t :: %__MODULE__{}
 
@@ -76,11 +77,11 @@ defmodule YtSearch.Mp4Link do
     |> Repo.insert!()
   end
 
-  @spec maybe_fetch_upstream(String.t(), String.t()) :: {:ok, __MODULE__.t()}
-  def maybe_fetch_upstream(youtube_id, youtube_url) do
-    case fetch_by_id(youtube_id) do
+  @spec maybe_fetch_upstream(Slot.t()) :: {:ok, __MODULE__.t()}
+  def maybe_fetch_upstream(slot) do
+    case fetch_by_id(slot.youtube_id) do
       {:ok, nil} ->
-        fetch_mp4_link(youtube_id, youtube_url)
+        fetch_mp4_link(slot)
 
       value ->
         value
@@ -94,18 +95,19 @@ defmodule YtSearch.Mp4Link do
     end
   end
 
-  defp fetch_mp4_link(youtube_id, youtube_url) do
-    Mutex.under(Mp4LinkMutex, youtube_id, fn ->
+  defp fetch_mp4_link(slot) do
+    Mutex.under(Mp4LinkMutex, slot.youtube_id, fn ->
       # refetch to prevent double fetch
-      case fetch_by_id(youtube_id) do
+
+      case fetch_by_id(slot.youtube_id) do
         {:ok, nil} ->
           # get mp4 from ytdlp
-          case Youtube.fetch_mp4_link(youtube_id) do
+          case Youtube.fetch_mp4_link(slot.youtube_id) do
             {:ok, {link_string, expires_at_unix_timestamp, meta}} ->
-              {:ok, insert(youtube_id, link_string, expires_at_unix_timestamp, meta)}
+              {:ok, insert(slot.youtube_id, link_string, expires_at_unix_timestamp, meta)}
 
             {:error, :video_unavailable} ->
-              insert_video_not_found(youtube_id)
+              insert_video_not_found(slot.youtube_id)
               {:error, :video_unavailable}
           end
 
