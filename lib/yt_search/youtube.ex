@@ -150,6 +150,19 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def search_text("https://www.youtube.com/playlist?list=" <> playlist_id) do
+    case Piped.playlists(piped(), playlist_id) do
+      {:ok, response} ->
+        {:ok,
+         response.body
+         |> then(fn body -> body["relatedStreams"] end)
+         |> vrcjson_workaround}
+
+      v ->
+        v
+    end
+  end
+
   def search_text(text) do
     case Ratelimit.for_text_search() do
       :ok ->
