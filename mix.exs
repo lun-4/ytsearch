@@ -63,7 +63,9 @@ defmodule YtSearch.MixProject do
        branch: "no-logging"},
       {:prometheus_ecto, "~> 1.4"},
       {:erlexec, "~> 2.0"},
-      {:hammer, "~> 6.1"}
+      {:hammer, "~> 6.1"},
+      {:tesla, "~> 1.7"},
+      {:hackney, "~> 1.18"}
     ]
   end
 

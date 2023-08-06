@@ -29,6 +29,10 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  defp piped() do
+    Application.fetch_env!(:yt_search, YtSearch.Youtube)[:piped_url]
+  end
+
   defmodule CallCounter do
     use Prometheus.Metric
 
@@ -127,6 +131,34 @@ defmodule YtSearch.Youtube do
       result |> Keyword.get(:stderr),
       result |> Keyword.get(:exit_status)
     }
+  end
+
+  alias YtSearch.Piped
+
+  def search_text("https://www.youtube.com/channel/" <> channel_id) do
+    case Piped.channel(piped(), channel_id) do
+      {:ok, response} ->
+        {:ok,
+         response.body
+         |> then(fn body -> body["relatedStreams"] end)
+         |> vrcjson_workaround}
+
+      v ->
+        v
+    end
+  end
+
+  def search_text(text) do
+    case Piped.search(piped(), text) do
+      {:ok, response} ->
+        {:ok,
+         response.body
+         |> then(fn body -> body["items"] end)
+         |> vrcjson_workaround}
+
+      v ->
+        v
+    end
   end
 
   def search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do

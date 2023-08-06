@@ -29,6 +29,24 @@ defmodule YtSearch.Youtube.Thumbnail do
     end
   end
 
+  def fetch_piped_in_background(youtube_id, data) do
+    # TODO better algorithm for thumbnail selection
+    unless data["thumbnail"] == nil do
+      # TODO supervisor?
+      spawn(fn ->
+        maybe_download_thumbnail(youtube_id, data["thumbnail"])
+      end)
+
+      %ThumbnailMetadata{
+        # 16x9 faking happens here (TODO alpha on the atlas composite)
+        aspect_ratio: 1.77
+      }
+    else
+      Logger.warning("id '#{youtube_id}' does not provide thumbnail")
+      nil
+    end
+  end
+
   # same idea as Mp4Link.maybe_fetch_upstream
 
   @spec maybe_download_thumbnail(String.t(), String.t()) :: Thumbnail.t()

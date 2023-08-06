@@ -40,8 +40,11 @@ defmodule YtSearchWeb.SearchController do
       |> String.trim()
       |> URI.encode()
 
-    "https://www.youtube.com/results?search_query=#{escaped_query}"
-    |> search_from_any_youtube_url(conn)
+    {:ok, response} = search_text(escaped_query)
+    # TODO handle 429s
+    conn
+    |> put_status(200)
+    |> json(response)
   end
 
   defp fetch_by_query_and_valid(url) do
@@ -102,6 +105,33 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
+  # TODO remove duplicates
+
+  def search_text(text) do
+    case fetch_by_query_and_valid(text) do
+      nil ->
+        case Youtube.search_text(text) do
+          {:ok, ytdlp_data} ->
+            results =
+              ytdlp_data
+              |> Playlist.from_piped_data()
+
+            search_slot =
+              results
+              |> SearchSlot.from_playlist(text)
+
+            {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+
+          {:error, :overloaded_ytdlp_seats} ->
+            {:error, :overloaded_ytdlp_seats}
+        end
+
+      search_slot ->
+        {:ok,
+         %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
+    end
+  end
+
   def search_from_any_youtube_url(youtube_url, conn) do
     case search_from_any_youtube_url(youtube_url) do
       {:ok, jsondata} ->
@@ -126,9 +156,14 @@ defmodule YtSearchWeb.SearchController do
         |> text("not found")
 
       slot ->
-        slot
-        |> entity.as_youtube_url()
-        |> search_from_any_youtube_url(conn)
+        {:ok, resp} =
+          slot
+          |> entity.as_youtube_url()
+          |> search_text()
+
+        conn
+        |> put_status(200)
+        |> json(resp)
     end
   end
 

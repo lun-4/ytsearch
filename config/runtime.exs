@@ -20,7 +20,11 @@ if System.get_env("PHX_SERVER") do
   config :yt_search, YtSearchWeb.Endpoint, server: true
 end
 
-config :yt_search, YtSearch.Youtube, ytdlp_path: System.get_env("YTDLP_PATH") || "yt-dlp"
+if config_env() in [:dev, :prod] do
+  config :yt_search, YtSearch.Youtube,
+    ytdlp_path: System.get_env("YTDLP_PATH") || "yt-dlp",
+    piped_url: System.get_env("PIPED_URL") || "localhost:8080"
+end
 
 if config_env() == :prod do
   config :yt_search, YtSearch.Ratelimit,
