@@ -30,15 +30,16 @@ defmodule YtSearch.Youtube.Thumbnail do
   end
 
   def fetch_piped_in_background(youtube_id, data) do
-    # TODO better algorithm for thumbnail selection
     unless data["thumbnail"] == nil do
-      # TODO supervisor?
+      # TODO wrap up in a supervisor?
+      # reasons for that: handle network failures
+      # reasons against: moar codes, also need to fast fail after some amnt of retries
       spawn(fn ->
         maybe_download_thumbnail(youtube_id, data["thumbnail"])
       end)
 
       %ThumbnailMetadata{
-        # 16x9 faking happens here (TODO alpha on the atlas composite)
+        # 16x9 faking happens here (TODO alpha on the atlas composite for the faking to happen)
         aspect_ratio: 1.77
       }
     else

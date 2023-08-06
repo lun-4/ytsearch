@@ -110,6 +110,8 @@ defmodule YtSearchWeb.SearchTest do
   import Tesla.Mock
 
   test "it does the thing", %{conn: conn} do
+    # TODO review if we can enable async tests by moving away from mock
+    # and into Tesla.Mock
     mock(fn
       %{method: :get, url: "example.org" <> suffix} ->
         if String.contains?(suffix, "/channel/") do

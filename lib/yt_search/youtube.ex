@@ -135,6 +135,8 @@ defmodule YtSearch.Youtube do
 
   alias YtSearch.Piped
 
+  # TODO handle rate limiting
+
   def search_text("https://www.youtube.com/channel/" <> channel_id) do
     case Piped.channel(piped(), channel_id) do
       {:ok, response} ->
