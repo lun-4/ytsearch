@@ -1,9 +1,6 @@
 defmodule YtSearchWeb.SearchTest do
   use YtSearchWeb.ConnCase, async: false
 
-  @test_output File.read!("test/support/files/the_urban_rescue_ranch_search.json")
-  @channel_test_output File.read!("test/support/files/the_urban_rescue_ranch_channel.json")
-
   defp assert_int_or_null(nil), do: nil
 
   defp assert_int_or_null(value) do
