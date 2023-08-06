@@ -1,6 +1,5 @@
 defmodule YtSearchWeb.SearchTest do
   use YtSearchWeb.ConnCase, async: false
-  import Mock
 
   @test_output File.read!("test/support/files/the_urban_rescue_ranch_search.json")
   @channel_test_output File.read!("test/support/files/the_urban_rescue_ranch_channel.json")
@@ -147,24 +146,20 @@ defmodule YtSearchWeb.SearchTest do
     verify_channel_results(json_response(conn, 200))
   end
 
-  @tag :skip
   test "small route", %{conn: conn} do
-    with_mock(
-      :exec,
-      run: fn _, _ ->
-        {:ok, [stdout: [@test_output]]}
-      end
-    ) do
-      conn =
-        conn
-        |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/a/1/s?q=urban+rescue+ranch")
+    mock(fn
+      %{method: :get, url: "example.org" <> suffix} ->
+        json(Jason.decode!(@piped_search_output))
+    end)
 
-      assert verify_search_results(json_response(conn, 200))
-    end
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/1/s?q=urban+rescue+ranch")
+
+    assert verify_search_results(json_response(conn, 200))
   end
 
-  @tag :skip
   test "fails on non-UnityWebRequest", %{conn: conn} do
     conn =
       conn
@@ -176,90 +171,84 @@ defmodule YtSearchWeb.SearchTest do
 
   @tag :skip
   test "ytdlp ratelimiting works" do
-    with_mock(
-      :exec,
-      run: fn _, _ ->
-        # synthetic load
+    mock(fn
+      %{method: :get, url: "example.org" <> suffix} ->
         Process.sleep(2)
-        {:ok, [stdout: [@test_output]]}
-      end
-    ) do
-      # setup
-      original_limits = Application.fetch_env!(:yt_search, YtSearch.Ratelimit)
-      Application.put_env(:yt_search, YtSearch.Ratelimit, ytdlp_search: {2, 4})
+        json(Jason.decode!(@piped_search_output))
+    end)
 
-      ratelimited_requests =
-        1..20
-        |> Enum.map(fn _ ->
-          Task.async(fn ->
-            Phoenix.ConnTest.build_conn()
-            |> put_req_header("user-agent", "UnityWebRequest")
-            |> get(~p"/a/1/s?q=urban+rescue+ranch")
-          end)
+    # setup
+    original_limits = Application.fetch_env!(:yt_search, YtSearch.Ratelimit)
+    Application.put_env(:yt_search, YtSearch.Ratelimit, ytdlp_search: {2, 4})
+
+    ratelimited_requests =
+      1..20
+      |> Enum.map(fn _ ->
+        Task.async(fn ->
+          Phoenix.ConnTest.build_conn()
+          |> put_req_header("user-agent", "UnityWebRequest")
+          |> get(~p"/a/1/s?q=urban+rescue+ranch")
         end)
-        |> Enum.map(fn task ->
-          conn = Task.await(task)
-          # for non-200 searches, assert they make sense
-          if conn.status == 200 do
-            resp_json = json_response(conn, 200)
-            verify_search_results(resp_json)
-          end
+      end)
+      |> Enum.map(fn task ->
+        conn = Task.await(task)
+        # for non-200 searches, assert they make sense
+        if conn.status == 200 do
+          resp_json = json_response(conn, 200)
+          verify_search_results(resp_json)
+        end
 
-          conn.status
-        end)
-        |> Enum.filter(fn status -> status == 429 end)
+        conn.status
+      end)
+      |> Enum.filter(fn status -> status == 429 end)
 
-      assert length(ratelimited_requests) > 0
+    assert length(ratelimited_requests) > 0
 
-      Application.put_env(:yt_search, YtSearch.Ratelimit, original_limits)
+    Application.put_env(:yt_search, YtSearch.Ratelimit, original_limits)
 
-      # attempt to test the SearchSlot storage by making a request after the main one
-      conn =
-        Phoenix.ConnTest.build_conn()
-        |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/a/1/s?q=urban+rescue+ranch")
+    # attempt to test the SearchSlot storage by making a request after the main one
+    conn =
+      Phoenix.ConnTest.build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/1/s?q=urban+rescue+ranch")
 
-      resp_json = json_response(conn, 200)
-      verify_search_results(resp_json)
-    end
+    resp_json = json_response(conn, 200)
+    verify_search_results(resp_json)
   end
 
-  @topic_channel File.read!("test/support/files/search_for_topic_channel.json")
+  @piped_topic_channel File.read!("test/support/piped_outputs/topic_channel_search.json")
 
-  @tag :skip
   test "it doesn't provide topic channel results", %{conn: conn} do
-    with_mock(
-      :exec,
-      run: fn _, _ ->
-        {:ok, [stdout: [@topic_channel]]}
-      end
-    ) do
-      conn =
-        conn
-        |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/a/1/s?q=whatever")
+    mock(fn
+      %{method: :get, url: "example.org/search" <> suffix} ->
+        json(Jason.decode!(@piped_topic_channel))
+    end)
 
-      rjson = json_response(conn, 200)
-      assert length(rjson["search_results"]) == 0
-    end
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/1/s?q=whatever")
+
+    rjson = json_response(conn, 200)
+    # the original response containns 20, the channel entry is the only removed
+    assert length(rjson["search_results"]) == 19
   end
 
-  @premiere_video File.read!("test/support/files/upcoming_premiere_in_search.json")
-  @tag :skip
+  @piped_upcoming_premiere File.read!(
+                             "test/support/piped_outputs/upcoming_premiere_in_search.json"
+                           )
   test "it doesn't provide premieres", %{conn: conn} do
-    with_mock(
-      :exec,
-      run: fn _, _ ->
-        {:ok, [stdout: [@premiere_video]]}
-      end
-    ) do
-      conn =
-        conn
-        |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/a/1/s?q=whatever")
+    mock(fn
+      %{method: :get, url: "example.org/search" <> suffix} ->
+        json(Jason.decode!(@piped_upcoming_premiere))
+    end)
 
-      rjson = json_response(conn, 200)
-      assert length(rjson["search_results"]) == 0
-    end
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/1/s?q=whatever")
+
+    rjson = json_response(conn, 200)
+    assert length(rjson["search_results"]) == 19
   end
 end
