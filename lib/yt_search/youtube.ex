@@ -151,15 +151,21 @@ defmodule YtSearch.Youtube do
   end
 
   def search_text(text) do
-    case Piped.search(piped(), text) do
-      {:ok, response} ->
-        {:ok,
-         response.body
-         |> then(fn body -> body["items"] end)
-         |> vrcjson_workaround}
+    case Ratelimit.for_text_search() do
+      :ok ->
+        case Piped.search(piped(), text) do
+          {:ok, response} ->
+            {:ok,
+             response.body
+             |> then(fn body -> body["items"] end)
+             |> vrcjson_workaround}
 
-      v ->
-        v
+          v ->
+            v
+        end
+
+      :deny ->
+        {:error, :overloaded_ytdlp_seats}
     end
   end
 

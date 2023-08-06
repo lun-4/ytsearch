@@ -40,11 +40,17 @@ defmodule YtSearchWeb.SearchController do
       |> String.trim()
       |> URI.encode()
 
-    {:ok, response} = search_text(escaped_query)
-    # TODO handle 429s
-    conn
-    |> put_status(200)
-    |> json(response)
+    case search_text(escaped_query) do
+      {:ok, response} ->
+        conn
+        |> put_status(200)
+        |> json(response)
+
+      {:error, :overloaded_ytdlp_seats} ->
+        conn
+        |> put_status(429)
+        |> json(%{error: true, detail: "server overloaded"})
+    end
   end
 
   defp fetch_by_query_and_valid(url) do

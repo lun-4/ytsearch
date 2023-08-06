@@ -169,10 +169,10 @@ defmodule YtSearchWeb.SearchTest do
     assert rjson["error"]
   end
 
-  @tag :skip
   test "ytdlp ratelimiting works" do
-    mock(fn
-      %{method: :get, url: "example.org" <> suffix} ->
+    # need to use mock_global because this test involved multiple process
+    Tesla.Mock.mock_global(fn
+      %{method: :get, url: "example.org/search?q=amongus_test&filter=all"} ->
         Process.sleep(2)
         json(Jason.decode!(@piped_search_output))
     end)
@@ -187,7 +187,7 @@ defmodule YtSearchWeb.SearchTest do
         Task.async(fn ->
           Phoenix.ConnTest.build_conn()
           |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/a/1/s?q=urban+rescue+ranch")
+          |> get(~p"/a/1/s?q=amongus_test")
         end)
       end)
       |> Enum.map(fn task ->
@@ -210,7 +210,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/1/s?q=urban+rescue+ranch")
+      |> get(~p"/a/1/s?q=amongus_test")
 
     resp_json = json_response(conn, 200)
     verify_search_results(resp_json)
