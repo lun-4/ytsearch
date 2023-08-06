@@ -198,8 +198,20 @@ defmodule YtSearchWeb.Playlist do
 
   defp youtube_id_from_url(url) do
     cond do
-      String.starts_with?(url, "/watch") -> url |> String.split("=") |> Enum.at(1)
-      String.starts_with?(url, "/channel") -> url |> String.split("/") |> Enum.at(2)
+      url == nil ->
+        raise "nil url"
+
+      String.starts_with?(url, "/watch") ->
+        url |> String.split("=") |> Enum.at(1)
+
+      String.starts_with?(url, "/channel") ->
+        url |> String.split("/") |> Enum.at(2)
+
+      String.starts_with?(url, "/playlist") ->
+        url |> String.split("=") |> Enum.at(1)
+
+      true ->
+        raise "unsupported url: #{url}"
     end
   end
 
@@ -215,7 +227,12 @@ defmodule YtSearchWeb.Playlist do
               YtSearch.Slot.create(youtube_id, data["duration"])
           end
 
-        channel_id = data["uploaderUrl"] |> youtube_id_from_url
+        channel_id =
+          unless data["uploaderUrl"] == nil do
+            data["uploaderUrl"] |> youtube_id_from_url
+          else
+            nil
+          end
 
         channel_slot =
           case entity_type do
@@ -249,7 +266,12 @@ defmodule YtSearchWeb.Playlist do
               nil
             end,
           description: data["shortDescription"],
-          uploaded_at: div(data["uploaded"], 1000),
+          uploaded_at:
+            unless data["uploaded"] == nil do
+              div(data["uploaded"], 1000)
+            else
+              nil
+            end,
           view_count: data["views"],
           thumbnail: thumbnail_metadata,
           slot_id: "#{slot.id}"
