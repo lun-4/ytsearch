@@ -162,6 +162,7 @@ defmodule YtSearchWeb.Playlist do
             cond do
               entry["isShort"] -> :short
               entry["duration"] == -1 -> :livestream
+              entry["views"] == -1 -> :upcoming
               true -> :video
             end
 
@@ -178,6 +179,8 @@ defmodule YtSearchWeb.Playlist do
       cond do
         # topic channels don't provide a videos tab, ignore them
         entity_type == :channel and String.ends_with?(data["name"], " - Topic") -> false
+        # we don't support upcoming things that don't actually have any videos for
+        entity_type == :upcoming -> false
         true -> true
       end
     end)
