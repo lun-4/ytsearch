@@ -56,10 +56,10 @@ defmodule YtSearch.ChannelSlot do
   def as_youtube_url(slot) do
     case slot.youtube_id do
       "@" <> _rest ->
-        "https://www.youtube.com/#{slot.youtube_id}/videos"
+        raise "unsupported"
 
       youtube_id ->
-        "https://www.youtube.com/channel/#{youtube_id}/videos"
+        "https://www.youtube.com/channel/#{youtube_id}"
     end
   end
 end
