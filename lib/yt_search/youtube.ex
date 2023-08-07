@@ -138,7 +138,9 @@ defmodule YtSearch.Youtube do
   # TODO remove copypaste
   # TODO remove dependency on strings. just make search_channel(id) already. bitch
 
-  def search_text("https://www.youtube.com/channel/" <> channel_id) do
+  def search_text("https://www.youtube.com/channel/" <> raw_channel_id) do
+    channel_id = raw_channel_id |> String.split("/") |> Enum.at(0)
+
     case Piped.channel(piped(), channel_id) do
       {:ok, %{status: 200} = response} ->
         {:ok,
