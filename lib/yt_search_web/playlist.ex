@@ -255,7 +255,7 @@ defmodule YtSearchWeb.Playlist do
 
         %{
           type: entity_type,
-          title: data["title"],
+          title: data["title"] || data["name"],
           youtube_id: youtube_id,
           duration: data["duration"],
           channel_name: channel_name,

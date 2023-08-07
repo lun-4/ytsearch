@@ -26,6 +26,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     first_result = rjson["search_results"] |> Enum.at(0)
     assert first_result["youtube_id"] == @expected_playlist_id
     assert first_result["type"] == "playlist"
+    assert first_result["title"] != nil
 
     first_result_slot_id = first_result["slot_id"]
 
