@@ -135,15 +135,19 @@ defmodule YtSearch.Youtube do
 
   alias YtSearch.Piped
 
-  # TODO handle rate limiting
+  # TODO remove copypaste
+  # TODO remove dependency on strings. just make search_channel(id) already. bitch
 
   def search_text("https://www.youtube.com/channel/" <> channel_id) do
     case Piped.channel(piped(), channel_id) do
-      {:ok, response} ->
+      {:ok, %{status: 200} = response} ->
         {:ok,
          response.body
          |> then(fn body -> body["relatedStreams"] end)
          |> vrcjson_workaround}
+
+      {:ok, %Tesla.Env{} = response} ->
+        {:error, response}
 
       v ->
         v
@@ -152,11 +156,14 @@ defmodule YtSearch.Youtube do
 
   def search_text("https://www.youtube.com/playlist?list=" <> playlist_id) do
     case Piped.playlists(piped(), playlist_id) do
-      {:ok, response} ->
+      {:ok, %{status: 200} = response} ->
         {:ok,
          response.body
          |> then(fn body -> body["relatedStreams"] end)
          |> vrcjson_workaround}
+
+      {:ok, %Tesla.Env{} = response} ->
+        {:error, response}
 
       v ->
         v
@@ -167,11 +174,14 @@ defmodule YtSearch.Youtube do
     case Ratelimit.for_text_search() do
       :ok ->
         case Piped.search(piped(), text) do
-          {:ok, response} ->
+          {:ok, %{status: 200} = response} ->
             {:ok,
              response.body
              |> then(fn body -> body["items"] end)
              |> vrcjson_workaround}
+
+          {:ok, %Tesla.Env{} = response} ->
+            {:error, response}
 
           v ->
             v
