@@ -142,7 +142,7 @@ defmodule YtSearch.Youtube do
   end
 
   def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
-    piped_call(&Piped.playlist/2, playlist_id, "relatedStreams")
+    piped_call(&Piped.playlists/2, playlist_id, "relatedStreams")
   end
 
   def videos_for(text) when is_bitstring(text) do

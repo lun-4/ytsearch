@@ -51,8 +51,20 @@ defmodule YtSearch.SearchSlot do
     end
   end
 
+  defp internal_id_for(%ChannelSlot{youtube_id: channel_id}) do
+    "ytchannel://#{channel_id}"
+  end
+
+  defp internal_id_for(%PlaylistSlot{youtube_id: playlist_id}) do
+    "ytplaylist://#{playlist_id}"
+  end
+
+  defp internal_id_for(text) when is_bitstring(text) do
+    "ytsearch://#{text}"
+  end
+
   def fetch_by_query(query) do
-    query = from s in __MODULE__, where: s.query == ^query, select: s
+    query = from s in __MODULE__, where: s.query == ^(query |> internal_id_for), select: s
 
     Repo.all(query)
     |> Enum.filter(fn search_slot ->
@@ -102,7 +114,7 @@ defmodule YtSearch.SearchSlot do
   def from_playlist(playlist, search_query) do
     playlist
     |> Jason.encode!()
-    |> from_slots_json(search_query)
+    |> from_slots_json(search_query |> internal_id_for)
   end
 
   @spec from_slots_json(String.t(), String.t()) :: SearchSlot.t()
