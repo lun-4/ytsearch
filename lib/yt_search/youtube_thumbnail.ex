@@ -95,9 +95,17 @@ defmodule YtSearch.Youtube.Thumbnail do
       temporary_path = Temp.path!()
       File.write(temporary_path, body)
 
-      # resize to 128x before storage
+      # turn the thumbnail into a 16:9 aspect ratio image
+      # while adding transparency around the borders for non-16:9 images
+
+      # this lets the world use that transparency to show the correct
+      # perceived ratio on the user's eyes
+
       Mogrify.open(temporary_path)
-      |> Mogrify.resize("#{@thumbnail_size}x#{@thumbnail_size}!")
+      |> Mogrify.resize("256x144")
+      |> Mogrify.gravity("center")
+      |> Mogrify.custom("background", "none")
+      |> Mogrify.extent("256x144")
       |> Mogrify.save(in_place: true)
 
       final_body = File.read!(temporary_path)
