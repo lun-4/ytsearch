@@ -89,7 +89,7 @@ defmodule YtSearchWeb.SearchController do
       when is_integer(playlist_end) do
     case fetch_by_query_and_valid(youtube_url) do
       nil ->
-        case youtube_url |> Youtube.search_from_url(playlist_end) do
+        case youtube_url |> Youtube.deprecated_search_from_url(playlist_end) do
           {:ok, ytdlp_data} ->
             results =
               ytdlp_data
@@ -116,7 +116,7 @@ defmodule YtSearchWeb.SearchController do
   def search_text(text) do
     case fetch_by_query_and_valid(text) do
       nil ->
-        case Youtube.search_text(text) do
+        case Youtube.videos_for(text) do
           {:ok, ytdlp_data} ->
             results =
               ytdlp_data
@@ -164,7 +164,6 @@ defmodule YtSearchWeb.SearchController do
       slot ->
         {:ok, resp} =
           slot
-          |> entity.as_youtube_url()
           |> search_text()
 
         conn

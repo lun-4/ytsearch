@@ -134,67 +134,49 @@ defmodule YtSearch.Youtube do
   end
 
   alias YtSearch.Piped
+  alias YtSearch.ChannelSlot
+  alias YtSearch.PlaylistSlot
 
-  # TODO remove copypaste
-  # TODO remove dependency on strings. just make search_channel(id) already. bitch
-
-  def search_text("https://www.youtube.com/channel/" <> raw_channel_id) do
-    channel_id = raw_channel_id |> String.split("/") |> Enum.at(0)
-
-    case Piped.channel(piped(), channel_id) do
-      {:ok, %{status: 200} = response} ->
-        {:ok,
-         response.body
-         |> then(fn body -> body["relatedStreams"] end)
-         |> vrcjson_workaround}
-
-      {:ok, %Tesla.Env{} = response} ->
-        {:error, response}
-
-      v ->
-        v
-    end
+  def videos_for(%ChannelSlot{youtube_id: channel_id}) do
+    piped_call(&Piped.channel/2, channel_id, "relatedStreams")
   end
 
-  def search_text("https://www.youtube.com/playlist?list=" <> playlist_id) do
-    case Piped.playlists(piped(), playlist_id) do
-      {:ok, %{status: 200} = response} ->
-        {:ok,
-         response.body
-         |> then(fn body -> body["relatedStreams"] end)
-         |> vrcjson_workaround}
-
-      {:ok, %Tesla.Env{} = response} ->
-        {:error, response}
-
-      v ->
-        v
-    end
+  def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
+    piped_call(&Piped.playlist/2, playlist_id, "relatedStreams")
   end
 
-  def search_text(text) do
+  def videos_for(text) when is_bitstring(text) do
+    if String.starts_with?(text, "https://") do
+      # TODO maybe do parsing of youtube ids here
+      raise "no urls in search"
+    end
+
     case Ratelimit.for_text_search() do
-      :ok ->
-        case Piped.search(piped(), text) do
-          {:ok, %{status: 200} = response} ->
-            {:ok,
-             response.body
-             |> then(fn body -> body["items"] end)
-             |> vrcjson_workaround}
-
-          {:ok, %Tesla.Env{} = response} ->
-            {:error, response}
-
-          v ->
-            v
-        end
+      :allow ->
+        piped_call(&Piped.search/2, text, "items")
 
       :deny ->
         {:error, :overloaded_ytdlp_seats}
     end
   end
 
-  def search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
+  defp piped_call(func, id, list_field) do
+    case func.(piped(), id) do
+      {:ok, %{status: 200} = response} ->
+        {:ok,
+         response.body
+         |> then(fn body -> body[list_field] end)
+         |> vrcjson_workaround}
+
+      {:ok, %Tesla.Env{} = response} ->
+        {:error, response}
+
+      v ->
+        v
+    end
+  end
+
+  def deprecated_search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
     if String.contains?(url, "/results?") do
       case Ratelimit.for_text_search() do
         :ok ->
@@ -208,7 +190,7 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  def do_search_from_url(url, playlist_end) do
+  defp do_search_from_url(url, playlist_end) do
     {status, result} =
       run_ytdlp(:search, [
         url,
