@@ -50,7 +50,7 @@ defmodule YtSearch.Thumbnail.Atlas do
             @invalid_thumbnail_path
 
           thumbnail ->
-            temporary_path = Temp.path!()
+            temporary_path = Temp.path!() <> ".png"
             File.write!(temporary_path, thumbnail.data)
             temporary_path
         end
@@ -58,17 +58,21 @@ defmodule YtSearch.Thumbnail.Atlas do
 
     atlas_image_path = Temp.path!() <> ".png"
 
-    # elixir-mogrify does not support  append mode or whatever, use montage
-    # directly
+    # elixir-mogrify does not support append mode or whatever, use montage directly instead
     # https://superuser.com/questions/290656/vertically-stack-multiple-images-using-imagemagick
 
     paths_to_montage = thumbnail_paths ++ [atlas_image_path]
 
+    args =
+      ["-tile", "8x4", "-geometry", "128x128!", "-background", "none"] ++
+        paths_to_montage
+
+    Logger.debug("calling montage with args #{inspect(args)}")
+
     {_, 0} =
       System.cmd(
         "montage",
-        ["-tile", "8x4", "-geometry", "128x128!", "-background", "#000000"] ++
-          paths_to_montage,
+        args,
         stderr_to_stdout: true
       )
 
