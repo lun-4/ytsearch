@@ -161,7 +161,14 @@ defmodule YtSearch.Youtube do
   end
 
   defp piped_call(func, id, list_field) do
-    case func.(piped(), id) do
+    CallCounter.inc(:search)
+
+    start_ts = System.monotonic_time(:millisecond)
+    result = func.(piped(), id)
+    end_ts = System.monotonic_time(:millisecond)
+    Latency.register(:search, end_ts - start_ts)
+
+    case result do
       {:ok, %{status: 200} = response} ->
         {:ok,
          response.body
