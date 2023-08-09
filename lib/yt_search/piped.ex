@@ -17,4 +17,8 @@ defmodule YtSearch.Piped do
   def playlists(url, id) do
     get("#{url}/playlists/#{id}")
   end
+
+  def streams(url, id) do
+    get("#{url}/streams/#{id}")
+  end
 end

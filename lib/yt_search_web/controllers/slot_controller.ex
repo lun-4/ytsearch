@@ -116,14 +116,14 @@ defmodule YtSearchWeb.SlotController do
 
     case subtitles_for(slot) do
       :no_requested_subtitles ->
-        Mutex.under(SubtitleMutex, youtube_url, fn ->
+        Mutex.under(SubtitleMutex, slot.youtube_id, fn ->
           case subtitles_for(slot) do
             :no_requested_subtitles ->
               if recursing do
                 Logger.warn("should not recurse twice into requesting subtitles")
                 nil
               else
-                Youtube.fetch_subtitles(youtube_url)
+                Youtube.fetch_subtitles(slot.youtube_id)
                 do_subtitles(slot, true)
               end
 
