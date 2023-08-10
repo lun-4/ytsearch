@@ -38,6 +38,26 @@ defmodule YtSearch.ThumbnailAtlasTest do
     assert resp.status == 200
     assert Plug.Conn.get_resp_header(resp, "content-type") == ["image/png"]
 
-    # TODO assert dimensions of given atlas
+    # have to dump data somewhere
+    temporary_path = Temp.path!()
+    File.write!(temporary_path, resp.resp_body)
+
+    {output, 0} = System.cmd("identify", [temporary_path])
+
+    [{width, ""}, {height, ""}] =
+      output
+      |> String.split("PNG")
+      |> Enum.at(1)
+      |> String.trim(" ")
+      |> String.split(" ")
+      |> Enum.at(0)
+      |> String.split("x")
+      |> Enum.map(&Integer.parse(&1, 10))
+
+    assert is_integer(width)
+    assert is_integer(height)
+
+    assert width > 0
+    assert height > 0
   end
 end
