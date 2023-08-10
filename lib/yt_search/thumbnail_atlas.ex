@@ -57,25 +57,28 @@ defmodule YtSearch.Thumbnail.Atlas do
     # elixir-mogrify does not support append mode or whatever, use montage directly instead
     # https://superuser.com/questions/290656/vertically-stack-multiple-images-using-imagemagick
 
-    paths_to_montage = thumbnail_paths ++ [atlas_image_path]
+    used_paths = thumbnail_paths ++ [atlas_image_path]
 
     args =
-      ["-tile", "8x4", "-geometry", "128x128!", "-background", "none"] ++
-        paths_to_montage
+      thumbnail_paths ++
+        ["-tile", "8x4", "-geometry", "128x128!", "-background", "none"] ++
+        [atlas_image_path]
 
     Logger.debug("calling montage with args #{inspect(args)}")
 
-    {_, 0} =
+    {output, 0} =
       System.cmd(
         "montage",
         args,
         stderr_to_stdout: true
       )
 
+    Logger.debug("montage output: #{inspect(output)}")
+
     result = {:ok, "image/png", File.read!(atlas_image_path)}
 
     # clean everything up afterwards
-    paths_to_montage
+    used_paths
     |> Enum.filter(fn path -> path != @invalid_thumbnail_path end)
     |> Enum.each(fn path ->
       case File.rm(path) do
