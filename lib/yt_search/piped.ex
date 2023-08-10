@@ -21,4 +21,8 @@ defmodule YtSearch.Piped do
   def streams(url, id) do
     get("#{url}/streams/#{id}")
   end
+
+  def trending(url, region) do
+    get("#{url}/trending?region=#{region}")
+  end
 end

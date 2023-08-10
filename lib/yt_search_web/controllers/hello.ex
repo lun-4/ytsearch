@@ -3,6 +3,8 @@ defmodule YtSearchWeb.HelloController do
   require Logger
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
+  alias YtSearch.Youtube
+  alias YtSearchWeb.Playlist
 
   def hello(conn, _params) do
     trending_tab = fetch_trending_tab()
@@ -32,15 +34,27 @@ defmodule YtSearchWeb.HelloController do
     end
   end
 
+  defp upstream_trending_tab do
+    {:ok, data} = Youtube.trending()
+
+    results =
+      data
+      |> Playlist.from_piped_data()
+
+    search_slot =
+      results
+      |> SearchSlot.from_playlist("yt://trending")
+
+    {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+  end
+
   defp do_fetch_trending_tab() do
     url = "https://www.youtube.com/feed/trending"
 
     Mutex.under(SearchMutex, url, fn ->
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
-          {:ok, data} =
-            url
-            |> YtSearchWeb.SearchController.search_from_any_youtube_url()
+          {:ok, data} = upstream_trending_tab()
 
           Cachex.put(
             :tabs,

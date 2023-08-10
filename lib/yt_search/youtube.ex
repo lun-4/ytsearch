@@ -216,6 +216,10 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def trending(region \\ "US") do
+    piped_call(:search, &Piped.trending/2, region, nil)
+  end
+
   def deprecated_search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
     if String.contains?(url, "/results?") do
       case Ratelimit.for_text_search() do
