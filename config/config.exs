@@ -37,9 +37,7 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :yt_search, YtSearch.Youtube,
-  ytdlp_path: "yt-dlp",
-  piped_url: "localhost:8080"
+config :yt_search, YtSearch.Youtube, piped_url: "localhost:8080"
 
 config :hammer,
   backend: {Hammer.Backend.ETS, [expiry_ms: 60_000 * 60 * 4, cleanup_interval_ms: 60_000 * 10]}

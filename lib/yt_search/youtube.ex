@@ -6,31 +6,6 @@ defmodule YtSearch.Youtube do
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
 
-  @spec ytdlp() :: String.t()
-  defp ytdlp() do
-    ytdlp_path = Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
-
-    if String.starts_with?(ytdlp_path, "/") do
-      ytdlp_path
-    else
-      # find it manually in path
-      {path, _} =
-        System.fetch_env!("PATH")
-        |> String.split(":")
-        |> Enum.map(fn path_directory ->
-          joined_path =
-            path_directory
-            |> Path.join(ytdlp_path)
-
-          {joined_path, File.exists?(joined_path)}
-        end)
-        |> Enum.filter(fn {_, exists?} -> exists? end)
-        |> Enum.at(0)
-
-      path
-    end
-  end
-
   defp piped() do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:piped_url]
   end
