@@ -17,8 +17,8 @@ defmodule YtSearch.Youtube.Thumbnail do
         maybe_download_thumbnail(youtube_id, data["thumbnail"])
       end)
 
+      # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
       %ThumbnailMetadata{
-        # 16x9 faking happens here (TODO alpha on the atlas composite for the faking to happen)
         aspect_ratio: 1.77
       }
     else
