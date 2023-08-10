@@ -4,6 +4,7 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
   alias YtSearch.Youtube
+  alias YtSearch.Thumbnail
   alias YtSearchWeb.Playlist
 
   def hello(conn, _params) do
@@ -63,7 +64,8 @@ defmodule YtSearchWeb.HelloController do
               nil -> :nothing
               v -> v
             end,
-            ttl: 2 * 3600 * 1000
+            # 2 hours
+            ttl: 2 * 60 * 60 * 1000
           )
 
           {:ok, data}
@@ -107,7 +109,11 @@ defmodule YtSearchWeb.HelloController do
 
                 case search_result[:type] do
                   :video ->
-                    Slot.refresh(slot_id)
+                    slot = Slot.refresh(slot_id)
+
+                    unless slot == nil do
+                      Thumbnail.refresh(slot.youtube_id)
+                    end
 
                   _ ->
                     nil

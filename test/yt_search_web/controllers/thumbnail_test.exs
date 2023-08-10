@@ -53,4 +53,29 @@ defmodule YtSearchWeb.ThumbnailTest do
     Thumbnail.Janitor.tick()
     nil = Thumbnail.fetch(@youtube_id)
   end
+
+  test "thumbnails are refreshed" do
+    thumb = Thumbnail.insert(@youtube_id, "image/png", Data.png())
+
+    from(t in Thumbnail, where: t.id == ^thumb.id, select: t)
+    |> Repo.update_all(
+      set: [
+        inserted_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-Thumbnail.ttl_seconds() - 2)
+      ]
+    )
+
+    fetched = Thumbnail.fetch(@youtube_id)
+    assert fetched.data == thumb.data
+
+    Thumbnail.refresh(@youtube_id)
+
+    fetched2 = Thumbnail.fetch(@youtube_id)
+    assert fetched2.data == thumb.data
+    assert NaiveDateTime.compare(fetched2.inserted_at, fetched.inserted_at) == :gt
+
+    Thumbnail.Janitor.tick()
+    assert Thumbnail.fetch(@youtube_id) != nil
+  end
 end
