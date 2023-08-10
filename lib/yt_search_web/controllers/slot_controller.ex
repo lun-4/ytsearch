@@ -38,18 +38,8 @@ defmodule YtSearchWeb.SlotController do
         raise "should not happen"
 
       {:ok, link} ->
-        case link |> Mp4Link.meta() |> Map.get("age_limit") do
-          0 ->
-            conn
-            |> redirect(external: link.mp4_link)
-
-          age_limit ->
-            Logger.warn("age restricted video. #{age_limit}")
-
-            conn
-            |> put_status(404)
-            |> text("age restricted video (#{age_limit})")
-        end
+        conn
+        |> redirect(external: link.mp4_link)
 
       {:error, :video_unavailable} ->
         conn

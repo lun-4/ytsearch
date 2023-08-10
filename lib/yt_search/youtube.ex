@@ -185,11 +185,34 @@ defmodule YtSearch.Youtube do
          end)
          |> vrcjson_workaround}
 
+      {:error, %{status: 500, body: {:ok, raw_body}} = response} ->
+        body =
+          case raw_body |> Jason.decode() do
+            {:ok, body} ->
+              body
+
+            {:error, _} = val ->
+              Logger.error(
+                "an error happened while parsing 500, #{inspect(val)}, #{inspect(raw_body)}"
+              )
+
+              %{message: ""}
+          end
+
+        cond do
+          String.contains?(body["message"] || "", "Video unavailable") ->
+            Logger.warn("this is an unavailable youtube id")
+            {:error, :video_unavailable}
+
+          true ->
+            {:error, response}
+        end
+
       {:ok, %Tesla.Env{} = response} ->
         {:error, response}
 
-      v ->
-        v
+      {:error, _} = error_value ->
+        error_value
     end
   end
 
@@ -239,45 +262,91 @@ defmodule YtSearch.Youtube do
 
   @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
   def fetch_mp4_link(youtube_id) do
-    {status, result} =
-      run_ytdlp(:mp4_link, [
-        "--no-check-certificate",
-        # TODO do we want cache-dir??
-        "--no-cache-dir",
-        "--rm-cache-dir",
-        "-f",
-        "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-        "--dump-json",
-        YtSearch.Youtube.Util.to_watch_url(youtube_id)
-      ])
+    # TODO piped subtitle metadata and mp4 links are the same code path. we can optimize this
 
-    {stdout, stderr, exit_status} = from_result(result)
+    with {:ok, piped_response} <-
+           piped_call(:mp4_link, &Piped.streams/2, youtube_id, nil) do
+      wanted_video_result = extract_valid_streams(piped_response["videoStreams"])
 
-    url_result =
-      case status do
-        :ok ->
-          youtube_metadata =
-            stdout
-            |> Jason.decode!()
+      wanted_video_result =
+        if piped_response["livestream"] do
+          %{
+            "url" => piped_response["hls"]
+          }
+        else
+          wanted_video_result
+        end
 
-          {:ok, {youtube_metadata["url"], youtube_metadata}}
-
-        :error ->
-          Logger.error("fetch_mp4_link fail. #{exit_status} stdout: #{stdout} stderr: #{stderr}")
-          handle_ytdlp_error(exit_status, stdout, stderr)
-      end
-
-    case url_result do
-      {:ok, {url, meta}} ->
+      unless wanted_video_result == nil do
+        url = wanted_video_result["url"]
         uri = url |> URI.parse()
-
         expiry_timestamp = expiry_from_uri(uri)
-
-        {:ok, {url, expiry_timestamp, meta}}
-
-      any ->
-        any
+        {:ok, {url |> unproxied_piped_url, expiry_timestamp, wanted_video_result}}
+      else
+        {:error, :no_valid_video_formats_found}
+      end
     end
+  end
+
+  defp extract_valid_streams(incoming_video_streams) do
+    video_streams =
+      incoming_video_streams
+      |> Enum.map(fn stream ->
+        # for some reason, piped does not expose width/height when videoOnly=true
+        # extrapolate when that's the case
+
+        if stream["height"] == 0 or stream["width"] == 0 do
+          case stream["quality"] do
+            "720p" ->
+              stream
+              |> Map.put("width", 1280)
+              |> Map.put("height", 720)
+
+            "360p" ->
+              stream
+              |> Map.put("width", 480)
+              |> Map.put("height", 360)
+
+            "480p" ->
+              stream
+              |> Map.put("width", 640)
+              |> Map.put("height", 480)
+
+            _ ->
+              stream
+          end
+        else
+          stream
+        end
+      end)
+
+    # wanted format selection in ytdlp format:
+    # mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]
+    # we translate it into two Enum.filter calls, preffering first filter
+
+    first_filter_results =
+      video_streams
+      |> Enum.filter(fn stream ->
+        stream["mimeType"] == "video/mp4" and
+          stream["height"] <= 1080 and
+          stream["height"] >= 64 and
+          stream["width"] >= 64 and
+          not stream["videoOnly"]
+      end)
+      # order by pixel amount
+      |> Enum.sort_by(fn stream -> stream["width"] * stream["height"] end, :desc)
+
+    second_filter_results =
+      video_streams
+      |> Enum.filter(fn stream ->
+        stream["height"] <= 1080 and
+          stream["height"] >= 64 and
+          stream["width"] >= 64 and
+          not stream["videoOnly"]
+      end)
+      |> Enum.sort_by(fn stream -> stream["width"] * stream["height"] end, :desc)
+
+    first_filter_results |> Enum.at(0) || second_filter_results |> Enum.at(0)
   end
 
   defp expiry_from_query(uri) do
@@ -321,6 +390,22 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  defp unproxied_piped_url(url) when is_bitstring(url) do
+    url
+    |> URI.parse()
+    |> unproxied_piped_url
+  end
+
+  defp unproxied_piped_url(%URI{} = uri) do
+    query = (uri.query || "") |> URI.decode_query()
+    host = query["host"] || uri.host
+
+    uri
+    |> Map.put(:host, host)
+    |> Map.put(:authority, host)
+    |> to_string
+  end
+
   defp expiry_from_uri(uri) do
     expiry_from_query(uri) || expiry_from_path(uri)
   end
@@ -347,16 +432,10 @@ defmodule YtSearch.Youtube do
       |> Enum.filter(fn subtitle -> String.starts_with?(subtitle["code"], "en") end)
       |> Enum.map(fn subtitle ->
         # map all urls to direct calls, no need to use the piped proxy
-        uri = subtitle["url"] |> URI.parse()
-        query = uri.query |> URI.decode_query()
-
         subtitle
         |> Map.put(
           "url",
-          uri
-          |> Map.put(:host, query["host"])
-          |> Map.put(:authority, query["host"])
-          |> to_string
+          subtitle["url"] |> unproxied_piped_url
         )
       end)
       |> Enum.map(fn subtitle ->
