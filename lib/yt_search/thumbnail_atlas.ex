@@ -21,7 +21,7 @@ defmodule YtSearch.Thumbnail.Atlas do
   end
 
   @atlas_size 512
-  @invalid_thumbnail_path "priv/static/invalid_thumbnail.png"
+  @invalid_thumbnail_path Path.join(:code.priv_dir(:yt_search), "static/invalid_thumbnail.png")
 
   def do_assemble(search_slot) do
     thumbnail_paths =
@@ -43,10 +43,6 @@ defmodule YtSearch.Thumbnail.Atlas do
       |> Enum.map(fn maybe_thumbnail ->
         case maybe_thumbnail do
           nil ->
-            # give it blank image
-            #
-            # TODO use util method to get priv/static
-            # instead of relying on CWD
             @invalid_thumbnail_path
 
           thumbnail ->
