@@ -3,6 +3,10 @@ defmodule YtSearchWeb.SearchBatchTest do
 
   import Tesla.Mock
 
+  setup_all do
+    YtSearch.Test.Data.default_global_mock()
+  end
+
   @test_cases [
     "agirisan_search.json",
     "bigclivedotcom_search.json",

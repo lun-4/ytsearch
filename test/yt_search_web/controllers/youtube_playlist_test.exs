@@ -2,6 +2,10 @@ defmodule YtSearchWeb.PlaylistSlotTest do
   use YtSearchWeb.ConnCase, async: false
   import Tesla.Mock
 
+  setup do
+    YtSearch.Test.Data.default_global_mock()
+  end
+
   @expected_playlist_id "PLnVSKQeK_aPbUZnaViFxSoLZy3-9WqgYz"
   @expected_youtube_id "8wo6sNbzlYk"
 

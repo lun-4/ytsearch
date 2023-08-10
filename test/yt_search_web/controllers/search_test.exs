@@ -1,5 +1,16 @@
 defmodule YtSearchWeb.SearchTest do
   use YtSearchWeb.ConnCase, async: false
+  alias YtSearch.Test.Data
+
+  setup do
+    Tesla.Mock.mock_global(fn
+      %{method: :get, url: "https://i.ytimg.com/" <> _} ->
+        Data.png_response()
+
+      %{method: :get, url: "https://yt3.ggpht.com/" <> _} ->
+        Data.png_response()
+    end)
+  end
 
   defp assert_int_or_null(nil), do: nil
 
@@ -172,6 +183,12 @@ defmodule YtSearchWeb.SearchTest do
       %{method: :get, url: "example.org/search?q=amongus_test&filter=all"} ->
         Process.sleep(2)
         json(Jason.decode!(@piped_search_output))
+
+      %{method: :get, url: "https://i.ytimg.com/" <> _} ->
+        Data.png_response()
+
+      %{method: :get, url: "https://yt3.ggpht.com/" <> _} ->
+        Data.png_response()
     end)
 
     # setup

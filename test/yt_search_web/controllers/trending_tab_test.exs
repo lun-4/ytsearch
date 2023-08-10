@@ -6,6 +6,10 @@ defmodule YtSearchWeb.TrendingTabTest do
 
   @test_output File.read!("test/support/piped_outputs/trending_tab.json")
 
+  setup do
+    YtSearch.Test.Data.default_global_mock()
+  end
+
   test "trending tab works", %{conn: conn} do
     Tesla.Mock.mock(fn
       %{method: :get, url: "example.org/trending?region=US"} ->
