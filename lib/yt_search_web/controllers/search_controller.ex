@@ -85,8 +85,6 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  # TODO remove duplicates
-
   def search_text(text) do
     case fetch_by_query_and_valid(text) do
       nil ->
