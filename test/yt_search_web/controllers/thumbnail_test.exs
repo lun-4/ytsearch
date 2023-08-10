@@ -13,25 +13,14 @@ defmodule YtSearchWeb.ThumbnailTest do
   end
 
   test "correctly thumbnails a youtube thumbnail" do
-    with_mock(
-      HTTPoison,
-      get!: fn _ ->
-        %HTTPoison.Response{
-          body: Data.png(),
-          headers: [{"content-type", "image/png"}],
-          status_code: 200
-        }
-      end
-    ) do
-      {:ok, thumb} = Youtube.Thumbnail.maybe_download_thumbnail("a", "http://youtube.com")
-      assert thumb.id == "a"
-      repo_thumb = Thumbnail.fetch("a")
-      assert repo_thumb.id == thumb.id
+    {:ok, thumb} = Youtube.Thumbnail.maybe_download_thumbnail("a", "https://i.ytimg.com")
+    assert thumb.id == "a"
+    repo_thumb = Thumbnail.fetch("a")
+    assert repo_thumb.id == thumb.id
 
-      temporary_path = Temp.path!()
-      File.write!(temporary_path, repo_thumb.data)
-      YtSearch.AssertUtil.image(temporary_path)
-    end
+    temporary_path = Temp.path!()
+    File.write!(temporary_path, repo_thumb.data)
+    YtSearch.AssertUtil.image(temporary_path)
   end
 
   @youtube_id "Amongus"

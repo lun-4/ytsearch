@@ -285,13 +285,13 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp unproxied_piped_url(url) when is_bitstring(url) do
+  def unproxied_piped_url(url) when is_bitstring(url) do
     url
     |> URI.parse()
     |> unproxied_piped_url
   end
 
-  defp unproxied_piped_url(%URI{} = uri) do
+  def unproxied_piped_url(%URI{} = uri) do
     query = (uri.query || "") |> URI.decode_query()
     host = query["host"] || uri.host
 

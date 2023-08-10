@@ -14,7 +14,10 @@ defmodule YtSearch.Youtube.Thumbnail do
       # reasons for that: handle network failures
       # reasons against: moar codes, also need to fast fail after some amnt of retries
       spawn(fn ->
-        maybe_download_thumbnail(youtube_id, data["thumbnail"])
+        maybe_download_thumbnail(
+          youtube_id,
+          data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url()
+        )
       end)
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
@@ -59,16 +62,16 @@ defmodule YtSearch.Youtube.Thumbnail do
     Logger.debug("thumbnail requesting #{url}")
 
     # youtube channels give urls without scheme for some reason
-    response =
+    {:ok, response} =
       if String.starts_with?(url, "//") do
         "https:#{url}"
       else
         url
       end
-      |> HTTPoison.get!()
+      |> Tesla.get()
 
-    if response.status_code == 200 do
-      content_type = response.headers[:"content-type"]
+    if response.status == 200 do
+      content_type = Tesla.get_header(response, "content-type")
       body = response.body
 
       temporary_path = Temp.path!()
