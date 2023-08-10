@@ -25,6 +25,7 @@ defmodule YtSearchWeb.TrendingTabTest do
 
     resp_json = json_response(conn, 200)
     results = resp_json["trending_tab"]["search_results"]
+    assert length(results) == 20
     assert results |> Enum.at(0) |> Map.get("youtube_id") == "HYzyRHAHJl8"
     assert results |> Enum.at(3) |> Map.get("youtube_id") == "AsvGScyj4gw"
 

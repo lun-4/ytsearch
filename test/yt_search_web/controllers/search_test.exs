@@ -135,6 +135,7 @@ defmodule YtSearchWeb.SearchTest do
 
     resp_json = json_response(conn, 200)
     verify_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 19
     second_slot_id = resp_json["search_results"] |> Enum.at(2) |> Access.get("slot_id")
 
     conn =
