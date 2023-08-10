@@ -25,7 +25,7 @@ defmodule YtSearch.SlotUtilities do
         is_expired =
           case slot do
             %YtSearch.Slot{} ->
-              TTL.expired_video?(slot, module)
+              TTL.expired?(slot)
 
             _ ->
               TTL.expired?(slot, module.ttl())

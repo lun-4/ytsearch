@@ -103,7 +103,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       )
       |> YtSearch.Repo.update!()
 
-    assert YtSearch.TTL.expired_video?(changed_slot, YtSearch.Slot)
+    assert YtSearch.TTL.expired?(changed_slot)
 
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil
