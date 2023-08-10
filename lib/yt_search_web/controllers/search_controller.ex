@@ -85,32 +85,6 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  def search_from_any_youtube_url(youtube_url, playlist_end \\ 20)
-      when is_integer(playlist_end) do
-    case fetch_by_query_and_valid(youtube_url) do
-      nil ->
-        case youtube_url |> Youtube.deprecated_search_from_url(playlist_end) do
-          {:ok, ytdlp_data} ->
-            results =
-              ytdlp_data
-              |> Playlist.from_ytdlp_data()
-
-            search_slot =
-              results
-              |> SearchSlot.from_playlist(youtube_url)
-
-            {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
-
-          {:error, :overloaded_ytdlp_seats} ->
-            {:error, :overloaded_ytdlp_seats}
-        end
-
-      search_slot ->
-        {:ok,
-         %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
-    end
-  end
-
   # TODO remove duplicates
 
   def search_text(text) do
@@ -135,19 +109,6 @@ defmodule YtSearchWeb.SearchController do
       search_slot ->
         {:ok,
          %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
-    end
-  end
-
-  def search_from_any_youtube_url(youtube_url, conn) do
-    case search_from_any_youtube_url(youtube_url) do
-      {:ok, jsondata} ->
-        conn
-        |> json(jsondata)
-
-      {:error, :overloaded_ytdlp_seats} ->
-        conn
-        |> put_status(429)
-        |> json(%{error: true, detail: "server overloaded"})
     end
   end
 

@@ -1,8 +1,10 @@
 defmodule YtSearch.Youtube do
   require Logger
-
   alias YtSearch.Youtube.Ratelimit
   alias YtSearch.Youtube.Latency
+  alias YtSearch.Piped
+  alias YtSearch.ChannelSlot
+  alias YtSearch.PlaylistSlot
 
   @spec ytdlp() :: String.t()
   defp ytdlp() do
@@ -87,44 +89,6 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp run_ytdlp(call_type, args, opts \\ []) do
-    CallCounter.inc(call_type)
-
-    start_ts = System.monotonic_time(:millisecond)
-
-    {status, result} =
-      :exec.run(
-        [ytdlp()] ++ args,
-        [:sync, :stdout, :stderr] ++ opts
-      )
-
-    end_ts = System.monotonic_time(:millisecond)
-    Latency.register(call_type, end_ts - start_ts)
-
-    stdout = result |> Keyword.get(:stdout) || [""]
-    stderr = result |> Keyword.get(:stderr) || [""]
-
-    exit_status =
-      case status do
-        :ok -> 0
-        _ -> result |> Keyword.get(:exit_status)
-      end
-
-    {status,
-     result
-     # i can't trust the library splits exactly at line breaks
-     # so i join them back here
-     |> Keyword.put(
-       :stdout,
-       stdout |> Enum.reduce("", fn x, acc -> acc <> x end)
-     )
-     |> Keyword.put(
-       :stderr,
-       stderr |> Enum.reduce("", fn x, acc -> acc <> x end)
-     )
-     |> Keyword.put(:exit_status, exit_status)}
-  end
-
   defp from_result(result) do
     {
       result |> Keyword.get(:stdout),
@@ -132,10 +96,6 @@ defmodule YtSearch.Youtube do
       result |> Keyword.get(:exit_status)
     }
   end
-
-  alias YtSearch.Piped
-  alias YtSearch.ChannelSlot
-  alias YtSearch.PlaylistSlot
 
   def videos_for(%ChannelSlot{youtube_id: channel_id}) do
     piped_search_call(&Piped.channel/2, channel_id, "relatedStreams")
@@ -218,50 +178,6 @@ defmodule YtSearch.Youtube do
 
   def trending(region \\ "US") do
     piped_call(:search, &Piped.trending/2, region, nil)
-  end
-
-  def deprecated_search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
-    if String.contains?(url, "/results?") do
-      case Ratelimit.for_text_search() do
-        :ok ->
-          do_search_from_url(url, playlist_end)
-
-        :deny ->
-          {:error, :overloaded_ytdlp_seats}
-      end
-    else
-      do_search_from_url(url, playlist_end)
-    end
-  end
-
-  defp do_search_from_url(url, playlist_end) do
-    {status, result} =
-      run_ytdlp(:search, [
-        url,
-        "--dump-json",
-        "--flat-playlist",
-        "--add-headers",
-        "YouTube-Restrict:Moderate",
-        "--playlist-end",
-        to_string(playlist_end),
-        "--extractor-args",
-        "youtubetab:approximate_metadata"
-      ])
-
-    {stdout, stderr, exit_status} = from_result(result)
-
-    case status do
-      :ok ->
-        {:ok,
-         stdout
-         |> String.split("\n", trim: true)
-         |> Enum.map(&Jason.decode!/1)
-         |> vrcjson_workaround}
-
-      :error ->
-        Logger.error("search exit with #{exit_status}. stdout: #{stdout}. stderr: #{stderr}.")
-        handle_ytdlp_error(exit_status, stdout, stderr)
-    end
   end
 
   @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
