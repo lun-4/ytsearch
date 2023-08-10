@@ -27,7 +27,10 @@ defmodule YtSearchWeb.ThumbnailTest do
       assert thumb.id == "a"
       repo_thumb = Thumbnail.fetch("a")
       assert repo_thumb.id == thumb.id
-      # TODO verify dimensions of given repo thumb
+
+      temporary_path = Temp.path!()
+      File.write!(temporary_path, repo_thumb.data)
+      YtSearch.AssertUtil.image(temporary_path)
     end
   end
 
