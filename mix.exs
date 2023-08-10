@@ -65,7 +65,8 @@ defmodule YtSearch.MixProject do
       {:erlexec, "~> 2.0"},
       {:hammer, "~> 6.1"},
       {:tesla, "~> 1.7"},
-      {:hackney, "~> 1.18"}
+      {:hackney, "~> 1.18"},
+      {:recon, "~> 2.5"}
     ]
   end
 
