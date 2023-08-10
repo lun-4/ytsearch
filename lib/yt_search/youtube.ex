@@ -96,10 +96,10 @@ defmodule YtSearch.Youtube do
   end
 
   defp piped_search_call(func, id, list_field) do
-    piped_call(:search, func, id, list_field)
+    piped_call(:search, func, id, list_field, limit: 20)
   end
 
-  defp piped_call(call_type, func, id, list_field) do
+  defp piped_call(call_type, func, id, list_field, opts \\ []) do
     CallCounter.inc(call_type)
 
     start_ts = System.monotonic_time(:millisecond)
@@ -112,10 +112,19 @@ defmodule YtSearch.Youtube do
         {:ok,
          response.body
          |> then(fn body ->
-           unless list_field == nil do
-             body[list_field]
+           limit = Keyword.get(opts, :limit)
+
+           result =
+             unless list_field == nil do
+               body[list_field]
+             else
+               body
+             end
+
+           if is_list(result) and limit != nil do
+             result |> Enum.slice(0, limit)
            else
-             body
+             result
            end
          end)
          |> vrcjson_workaround}
@@ -152,7 +161,7 @@ defmodule YtSearch.Youtube do
   end
 
   def trending(region \\ "US") do
-    piped_call(:search, &Piped.trending/2, region, nil)
+    piped_call(:search, &Piped.trending/2, region, nil, limit: 20)
   end
 
   @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
