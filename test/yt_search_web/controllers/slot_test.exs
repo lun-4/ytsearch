@@ -183,15 +183,8 @@ defmodule YtSearchWeb.SlotTest do
 
       %{
         method: :get,
-        url: "https://youtube.example.org/api/timedtext/?v=#{@youtube_id}" <> _rest
+        url: "https://youtube.example.org/api/timedtext?v=#{@youtube_id}" <> _rest
       } ->
-        %Tesla.Env{status: 200, body: "Among Us"}
-
-      %{
-        method: :get,
-        url: "https://youtube.example.org" <> _rest
-      } ->
-        # TODO fix this so it uses the proper prefix
         %Tesla.Env{status: 200, body: "Among Us"}
     end)
 
