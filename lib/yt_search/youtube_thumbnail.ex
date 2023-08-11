@@ -21,6 +21,7 @@ defmodule YtSearch.Youtube.Thumbnail do
       end)
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
+      # UPGRADE: aspect_ratio is not used on /a/2
       %ThumbnailMetadata{
         aspect_ratio: 1.77
       }

@@ -92,6 +92,7 @@ defmodule YtSearch.Slot do
   def default_ttl, do: 60 * 60
   def max_ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
+  # UPGRADE: slot retuning for /a/2
   def urls, do: 100_000
 
   @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
