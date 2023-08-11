@@ -37,7 +37,7 @@ defmodule YtSearch.SlotUtilities do
         else
           if current_retry > module.max_id_retries() do
             case module do
-              %YtSearch.Slot{} ->
+              YtSearch.Slot ->
                 use_last_slot_assumes_v2(module)
 
               _ ->
