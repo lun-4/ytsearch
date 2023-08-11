@@ -60,6 +60,7 @@ defmodule YtSearchWeb.SearchController do
 
       data ->
         # we want to have a search slot that contains valid slots within
+        # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
         valid_slots =
           data
           |> SearchSlot.fetched_slots_from_search()
@@ -78,6 +79,7 @@ defmodule YtSearchWeb.SearchController do
           end
 
         if is_valid_slot do
+          # TODO i think we should call Slot.refresh here actually
           data
         else
           nil
