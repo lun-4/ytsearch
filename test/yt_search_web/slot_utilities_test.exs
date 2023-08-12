@@ -21,7 +21,12 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
   # this is a heavy load test, so it must be skipped
   @tag :skip
   test "it can still generate an id when a lot were already generated" do
-    cutoff_point = 0.9
+    cutoff_point =
+      unless System.get_env("HARD_TIME") != nil do
+        0.995
+      else
+        0.8
+      end
 
     # load a bunch of slots to test with
 
