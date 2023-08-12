@@ -41,7 +41,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
         inserted_at_v2: DateTime.to_unix(DateTime.utc_now())
       }
     end)
-    |> Enum.chunk_every(2000)
+    |> Enum.chunk_every(5000)
     |> Enum.each(fn batch ->
       IO.puts("inserting #{length(batch)} slots (pre-test)")
 
