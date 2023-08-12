@@ -85,6 +85,8 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       IO.puts(
         "\tmin:#{min_timing}ms avg:#{avg_timing}ms max:#{max_timing}ms sum:#{sum_timings}ms (#{inspect(samples)})"
       )
+
+      assert sum_timings < 500
     end)
   end
 
