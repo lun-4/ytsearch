@@ -18,7 +18,7 @@ defmodule YtSearch.SearchSlot do
   # 20 minutes
   def ttl, do: 20 * 60
   # this number must be synced with the world build
-  def urls, do: 100_000
+  def urls, do: 10_000
 
   schema "search_slots" do
     field(:slots_json, :string)

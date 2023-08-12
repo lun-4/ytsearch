@@ -13,7 +13,7 @@ defmodule YtSearch.PlaylistSlot do
   # 12 hours
   def ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
-  def urls, do: 100_000
+  def urls, do: 20_000
 
   schema "playlist_slots" do
     field(:youtube_id, :string)
