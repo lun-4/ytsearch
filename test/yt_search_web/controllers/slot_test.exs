@@ -1,6 +1,5 @@
 defmodule YtSearchWeb.SlotTest do
   use YtSearchWeb.ConnCase, async: false
-  import Mock
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
@@ -119,7 +118,7 @@ defmodule YtSearchWeb.SlotTest do
            ]
   end
 
-  test "it gives 404 on unknown slot ids", %{conn: conn, slot: slot} do
+  test "it gives 404 on unknown slot ids", %{conn: conn} do
     # i really dont want this test to fail because the generated test
     # slot clashes with a hardcoded one here
     {:ok, unknown_id} = YtSearch.SlotUtilities.find_available_slot_id(YtSearch.Slot)
@@ -137,7 +136,7 @@ defmodule YtSearchWeb.SlotTest do
     assert conn.status == 404
   end
 
-  test "subtitles are cleaned when theyre too old", %{slot: slot} do
+  test "subtitles are cleaned when theyre too old" do
     subtitle = Subtitle.insert(@youtube_id, "latin-1", "lorem ipsum listen to jungle now")
 
     from(s in Subtitle, where: s.youtube_id == ^subtitle.youtube_id, select: s)
@@ -158,7 +157,7 @@ defmodule YtSearchWeb.SlotTest do
 
   import Tesla.Mock
 
-  test "subtitles work and are only fetched once", %{conn: conn, slot: slot, ets_table: table} do
+  test "subtitles work and are only fetched once", %{slot: slot, ets_table: table} do
     mock_global(fn
       %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
         :timer.sleep(50)
@@ -220,7 +219,7 @@ defmodule YtSearchWeb.SlotTest do
     assert slot.id == 47635
   end
 
-  test "it removes links from db that are already expired", %{slot: slot} do
+  test "it removes links from db that are already expired" do
     link =
       Mp4Link.insert(
         "abcdef",

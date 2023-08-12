@@ -57,8 +57,6 @@ defmodule YtSearch.Youtube.Thumbnail do
     end)
   end
 
-  @thumbnail_size 128
-
   defp do_download_thumbnail(youtube_id, url) do
     Logger.debug("thumbnail requesting #{url}")
 

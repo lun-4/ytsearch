@@ -1,10 +1,7 @@
 defmodule YtSearch.ChannelSlot do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}

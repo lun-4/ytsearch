@@ -79,11 +79,6 @@ defmodule YtSearchWeb.HelloController do
   defmodule Refresher do
     require Logger
 
-    alias YtSearch.Repo
-    alias YtSearch.Subtitle
-
-    import Ecto.Query
-
     def tick() do
       Logger.info("refreshing trending tab slots...")
 

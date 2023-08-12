@@ -3,10 +3,6 @@ defmodule YtSearch.Thumbnail.Atlas do
 
   alias YtSearch.Thumbnail
   alias YtSearch.SearchSlot
-  alias YtSearch.Slot
-  alias YtSearch.ChannelSlot
-  alias YtSearch.PlaylistSlot
-  alias Mogrify.Draw
 
   @spec assemble(String.t()) ::
           {:ok, String.t(), binary()} | {:error, :unknown_search_slot}
@@ -20,7 +16,6 @@ defmodule YtSearch.Thumbnail.Atlas do
     end
   end
 
-  @atlas_size 512
   @invalid_thumbnail_path Path.join(:code.priv_dir(:yt_search), "static/invalid_thumbnail.png")
 
   def do_assemble(search_slot) do

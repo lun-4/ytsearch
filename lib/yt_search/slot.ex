@@ -1,8 +1,6 @@
 defmodule YtSearch.Slot do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   require Logger
   alias YtSearch.Repo
   alias YtSearch.TTL
@@ -104,7 +102,6 @@ defmodule YtSearch.Slot do
     require Logger
 
     alias YtSearch.Repo
-    alias YtSearch.Subtitle
 
     import Ecto.Query
 
@@ -118,7 +115,7 @@ defmodule YtSearch.Slot do
         |> Enum.map(fn slot ->
           {slot, YtSearch.TTL.expired?(slot)}
         end)
-        |> Enum.filter(fn {slot, expired?} -> expired? end)
+        |> Enum.filter(fn {_slot, expired?} -> expired? end)
         |> Enum.map(fn {expired_slot, true} ->
           Repo.delete(expired_slot)
         end)

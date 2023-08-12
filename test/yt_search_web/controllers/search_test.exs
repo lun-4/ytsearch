@@ -87,10 +87,6 @@ defmodule YtSearchWeb.SearchTest do
   end
 
   def verify_channel_results(json_response) do
-    desc =
-      "\"Uncle farmer dad Ben \\ud83d\\udc68\\ud83c\\udffb\\u200d\\ud83c\\udf3e\\ud83e\\udd1d\\n\\nDONT SUBSCRIBE TO THIS\""
-      |> Jason.decode!()
-
     verify_single_result(
       json_response["search_results"] |> Enum.at(0),
       %{
@@ -119,6 +115,8 @@ defmodule YtSearchWeb.SearchTest do
   test "it does the thing", %{conn: conn} do
     # TODO review if we can enable async tests by moving away from mock
     # and into Tesla.Mock
+
+    # TODO refactor to use pattern matching
     mock(fn
       %{method: :get, url: "example.org" <> suffix} ->
         if String.contains?(suffix, "/channel/") do
@@ -157,7 +155,7 @@ defmodule YtSearchWeb.SearchTest do
 
   test "small route", %{conn: conn} do
     mock(fn
-      %{method: :get, url: "example.org" <> suffix} ->
+      %{method: :get, url: "example.org" <> _suffix} ->
         json(Jason.decode!(@piped_search_output))
     end)
 
@@ -235,7 +233,7 @@ defmodule YtSearchWeb.SearchTest do
 
   test "it doesn't provide topic channel results", %{conn: conn} do
     mock(fn
-      %{method: :get, url: "example.org/search" <> suffix} ->
+      %{method: :get, url: "example.org/search" <> _suffix} ->
         json(Jason.decode!(@piped_topic_channel))
     end)
 
@@ -254,7 +252,7 @@ defmodule YtSearchWeb.SearchTest do
                            )
   test "it doesn't provide premieres", %{conn: conn} do
     mock(fn
-      %{method: :get, url: "example.org/search" <> suffix} ->
+      %{method: :get, url: "example.org/search" <> _suffix} ->
         json(Jason.decode!(@piped_upcoming_premiere))
     end)
 

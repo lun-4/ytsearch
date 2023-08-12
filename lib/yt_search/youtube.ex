@@ -64,14 +64,6 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp from_result(result) do
-    {
-      result |> Keyword.get(:stdout),
-      result |> Keyword.get(:stderr),
-      result |> Keyword.get(:exit_status)
-    }
-  end
-
   def videos_for(%ChannelSlot{youtube_id: channel_id}) do
     piped_search_call(&Piped.channel/2, channel_id, "relatedStreams")
   end
@@ -145,7 +137,7 @@ defmodule YtSearch.Youtube do
 
         cond do
           String.contains?(body["message"] || "", "Video unavailable") ->
-            Logger.warn("this is an unavailable youtube id")
+            Logger.warning("this is an unavailable youtube id")
             {:error, :video_unavailable}
 
           true ->
@@ -369,23 +361,6 @@ defmodule YtSearch.Youtube do
     else
       YtSearch.Subtitle.insert(youtube_id, "notfound", nil)
       nil
-    end
-  end
-
-  defp handle_ytdlp_error(exit_status, stdout, stderr) do
-    cond do
-      String.contains?(stderr, "Video unavailable") ->
-        Logger.warn("this is an unavailable youtube id")
-        {:error, :video_unavailable}
-
-      String.contains?(stderr, "This channel does not have a videos tab") ->
-        {:error, :channel_without_videos_tab}
-
-      String.contains?(stderr, "Premieres in") ->
-        {:error, :upcoming_video}
-
-      true ->
-        {:error, {:invalid_exit_code, exit_status}}
     end
   end
 

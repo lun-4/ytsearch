@@ -36,6 +36,8 @@ defmodule YtSearch.SlotUtilities do
           {:ok, random_id}
         else
           if current_retry > module.max_id_retries() do
+            # TODO let the module say if it wants v2 behavior or not
+            # this function should be agnostic on the module. no if slot
             case module do
               YtSearch.Slot ->
                 use_last_slot_assumes_v2(module)

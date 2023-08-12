@@ -1,8 +1,6 @@
 defmodule YtSearch.Mp4Link do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
   alias YtSearch.Youtube
   alias YtSearch.TTL
@@ -51,18 +49,16 @@ defmodule YtSearch.Mp4Link do
       mp4_link: mp4_link
     }
     |> then(fn value ->
-      case expires_at do
-        nil ->
-          value
-
+      unless expires_at == nil do
         # if youtube gives expiry timestamp, use it so that
         # (inserted_at + @ttl) = expiry
         # guaranteeding we expire it at the same time youtube expires it
-        expires ->
-          value
-          |> Ecto.Changeset.change(
-            inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
-          )
+        value
+        |> Ecto.Changeset.change(
+          inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
+        )
+      else
+        value
       end
     end)
     |> Repo.insert!()

@@ -1,6 +1,5 @@
 defmodule YtSearchWeb.TrendingTabTest do
   use YtSearchWeb.ConnCase, async: false
-  import Mock
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
 

@@ -1,25 +1,20 @@
 defmodule YtSearchWeb.SlotUtilitiesTest do
-  use YtSearchWeb.ConnCase, async: true
-  import Mock
+  use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
-  alias YtSearch.Subtitle
   alias YtSearch.Repo
-  import Ecto.Query
 
   defp random_yt_id do
     :rand.uniform(100_000_000_000_000) |> to_string |> Base.encode64()
   end
 
-  defp printtime(func, print \\ false) do
+  defp printtime(func) do
     prev = System.monotonic_time()
-    res = func.()
+    func.()
     next = System.monotonic_time()
     diff = next - prev
     diff |> System.convert_time_unit(:native, :millisecond)
 
-    if print do
-      IO.puts("took #{diff} ms running function")
-    end
+    IO.puts("took #{diff} ms running function")
   end
 
   @tag timeout: :infinity
@@ -45,12 +40,9 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     |> Enum.each(fn batch ->
       IO.puts("inserting #{length(batch)} slots (pre-test)")
 
-      printtime(
-        fn ->
-          Repo.insert_all(YtSearch.Slot, batch)
-        end,
-        true
-      )
+      printtime(fn ->
+        Repo.insert_all(YtSearch.Slot, batch)
+      end)
     end)
 
     # then see how things go on the second half (one by one id gen)
@@ -66,7 +58,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     |> Enum.each(fn batch ->
       timings =
         batch
-        |> Enum.map(fn num ->
+        |> Enum.map(fn _ ->
           prev = System.monotonic_time()
 
           YtSearch.Slot.create(random_yt_id(), 3600)

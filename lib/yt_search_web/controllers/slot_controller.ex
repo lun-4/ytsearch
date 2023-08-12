@@ -102,7 +102,6 @@ defmodule YtSearchWeb.SlotController do
     # already fetching the subtitles
     # 3. fetch after requesting a fetch, for the process that did the
     # hard job of calling youtube
-    youtube_url = slot |> Slot.youtube_url()
 
     case subtitles_for(slot) do
       :no_requested_subtitles ->
@@ -110,7 +109,7 @@ defmodule YtSearchWeb.SlotController do
           case subtitles_for(slot) do
             :no_requested_subtitles ->
               if recursing do
-                Logger.warn("should not recurse twice into requesting subtitles")
+                Logger.warning("should not recurse twice into requesting subtitles")
                 nil
               else
                 Youtube.fetch_subtitles(slot.youtube_id)

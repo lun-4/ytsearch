@@ -1,8 +1,6 @@
 defmodule YtSearch.PlaylistSlot do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
   alias YtSearch.TTL
   alias YtSearch.SlotUtilities
