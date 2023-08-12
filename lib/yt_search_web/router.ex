@@ -9,7 +9,7 @@ defmodule YtSearchWeb.Router do
     pipe_through :api
   end
 
-  scope "/api/v1", YtSearchWeb do
+  scope "/api/v2", YtSearchWeb do
     get("/search", SearchController, :search_by_text)
     get("/c/:channel_slot_id", SearchController, :fetch_channel)
     get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
@@ -23,7 +23,7 @@ defmodule YtSearchWeb.Router do
   # - quest vrchat keyboard not having a cursor you can click on
   # - quest vrchat keyboard not actually scrolling properly when link is too long
   # - world url map has less bytes per url, which helps on overall world size
-  scope "/a/1", YtSearchWeb do
+  scope "/a/2", YtSearchWeb do
     get("/s", SearchController, :search_by_text)
     get("/c/:channel_slot_id", SearchController, :fetch_channel)
     get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
