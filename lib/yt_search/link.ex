@@ -5,6 +5,7 @@ defmodule YtSearch.Mp4Link do
   alias YtSearch.Youtube
   alias YtSearch.TTL
   alias YtSearch.Slot
+  require Logger
 
   @type t :: %__MODULE__{}
 
