@@ -105,6 +105,10 @@ defmodule YtSearch.Mp4Link do
             {:error, :video_unavailable} ->
               insert_video_not_found(slot.youtube_id)
               {:error, :video_unavailable}
+
+            {:error, :no_valid_video_formats_found} ->
+              insert_video_not_found(slot.youtube_id)
+              {:error, :video_unavailable}
           end
 
         value ->
