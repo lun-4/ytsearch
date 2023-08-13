@@ -3,6 +3,7 @@ defmodule YtSearch.ChannelSlot do
   import Ecto.Query
   alias YtSearch.Repo
   alias YtSearch.SlotUtilities
+  alias YtSearch.TTL
 
   @type t :: %__MODULE__{}
   @primary_key {:id, :integer, autogenerate: false}
@@ -33,15 +34,20 @@ defmodule YtSearch.ChannelSlot do
 
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    case Repo.one(query) do
-      nil ->
-        {:ok, new_id} = find_available_id()
+    channel_slot =
+      Repo.all(query)
+      |> Enum.filter(fn channel_slot ->
+        TTL.maybe?(channel_slot, __MODULE__) != nil
+      end)
+      |> Enum.at(0)
 
-        %__MODULE__{youtube_id: youtube_id, id: new_id}
-        |> Repo.insert!()
+    if channel_slot == nil do
+      {:ok, new_id} = find_available_id()
 
-      slot ->
-        slot
+      %__MODULE__{youtube_id: youtube_id, id: new_id}
+      |> Repo.insert!()
+    else
+      channel_slot
     end
   end
 
