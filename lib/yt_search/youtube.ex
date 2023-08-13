@@ -208,6 +208,16 @@ defmodule YtSearch.Youtube do
               |> Map.put("width", 640)
               |> Map.put("height", 480)
 
+            "240p" ->
+              stream
+              |> Map.put("width", 320)
+              |> Map.put("height", 240)
+
+            "144p" ->
+              stream
+              |> Map.put("width", 256)
+              |> Map.put("height", 144)
+
             _ ->
               stream
           end
