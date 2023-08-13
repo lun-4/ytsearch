@@ -97,7 +97,7 @@ defmodule YtSearch.Youtube.Thumbnail do
         "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"
       )
 
-      {:error, {:http_response, response.status_code, response.headers, response.body}}
+      {:error, {:http_response, response.status, response.headers, response.body}}
     end
   end
 end
