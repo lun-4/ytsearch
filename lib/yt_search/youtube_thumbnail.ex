@@ -94,7 +94,7 @@ defmodule YtSearch.Youtube.Thumbnail do
       {:ok, Thumbnail.insert(youtube_id, content_type, final_body)}
     else
       Logger.error(
-        "thumbnail request. expected 200, got #{inspect(response.status_code)} #{inspect(response.body)}"
+        "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"
       )
 
       {:error, {:http_response, response.status_code, response.headers, response.body}}
