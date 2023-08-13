@@ -15,7 +15,7 @@ defmodule YtSearchWeb.VRCJSONWorkaroundTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v1/search?search=anything")
+      |> get(~p"/api/v2/search?search=anything")
 
     resp_json = json_response(conn, 200)
     fourth_result = resp_json["search_results"] |> Enum.at(0)

@@ -27,7 +27,7 @@ defmodule YtSearchWeb.SearchBatchTest do
       conn =
         conn
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v1/search?search=whatever")
+        |> get(~p"/api/v2/search?search=whatever")
 
       json_response(conn, 200)
     end

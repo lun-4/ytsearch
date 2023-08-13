@@ -48,7 +48,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v1/s/#{slot.id}")
+      |> get(~p"/api/v2/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -68,7 +68,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v1/s/#{slot.id}")
+      |> get(~p"/api/v2/s/#{slot.id}")
 
     assert get_resp_header(conn, "location") == ["https://mp5.com"]
   end
@@ -84,7 +84,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/api/v1/sr/#{slot.id}")
+      |> get(~p"/api/v2/sr/#{slot.id}")
 
     assert conn.status == 302
 
@@ -109,7 +109,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v1/s/#{slot.id}")
+      |> get(~p"/api/v2/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -125,13 +125,13 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/a/1/sl/#{unknown_id}")
+      |> get(~p"/a/2/sl/#{unknown_id}")
 
     assert conn.status == 404
 
     conn =
       conn
-      |> get(~p"/a/1/sl/#{unknown_id}")
+      |> get(~p"/a/2/sl/#{unknown_id}")
 
     assert conn.status == 404
   end
@@ -192,7 +192,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v1/s/#{slot.id}")
+        |> get(~p"/api/v2/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -273,7 +273,7 @@ defmodule YtSearchWeb.SlotTest do
       conn =
         conn
         |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-        |> get(~p"/api/v1/s/#{slot.id}")
+        |> get(~p"/api/v2/s/#{slot.id}")
 
       assert conn.status == 404
       assert conn.resp_body == "video unavailable"

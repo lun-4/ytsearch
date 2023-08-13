@@ -24,7 +24,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/1/s?q=anything")
+      |> get(~p"/a/2/s?q=anything")
 
     rjson = json_response(conn, 200)
     first_result = rjson["search_results"] |> Enum.at(0)
@@ -36,7 +36,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
 
     conn =
       conn
-      |> get(~p"/a/1/p/#{first_result_slot_id}")
+      |> get(~p"/a/2/p/#{first_result_slot_id}")
 
     rjson = json_response(conn, 200)
     first_result = rjson["search_results"] |> Enum.at(0)
@@ -47,7 +47,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
   test "it 404s on unknown playlist ids", %{conn: conn} do
     conn =
       conn
-      |> get(~p"/a/1/p/18247")
+      |> get(~p"/a/2/p/18247")
 
     assert conn.status == 404
   end
