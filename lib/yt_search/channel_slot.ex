@@ -1,10 +1,7 @@
 defmodule YtSearch.ChannelSlot do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
@@ -15,7 +12,7 @@ defmodule YtSearch.ChannelSlot do
   # 4 hours
   def ttl, do: 4 * 60 * 60
   # this number must be synced with the world build
-  def urls, do: 100_000
+  def urls, do: 60_000
 
   schema "channel_slots" do
     field(:youtube_id, :string)
@@ -56,10 +53,10 @@ defmodule YtSearch.ChannelSlot do
   def as_youtube_url(slot) do
     case slot.youtube_id do
       "@" <> _rest ->
-        "https://www.youtube.com/#{slot.youtube_id}/videos"
+        raise "unsupported"
 
       youtube_id ->
-        "https://www.youtube.com/channel/#{youtube_id}/videos"
+        "https://www.youtube.com/channel/#{youtube_id}"
     end
   end
 end

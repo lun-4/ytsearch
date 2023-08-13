@@ -1,31 +1,32 @@
 defmodule YtSearchWeb.SlotUtilitiesTest do
-  use YtSearchWeb.ConnCase, async: true
-  import Mock
+  use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
-  alias YtSearch.Subtitle
   alias YtSearch.Repo
-  import Ecto.Query
 
   defp random_yt_id do
     :rand.uniform(100_000_000_000_000) |> to_string |> Base.encode64()
   end
 
-  defp printtime(func, print \\ false) do
+  defp printtime(func) do
     prev = System.monotonic_time()
-    res = func.()
+    func.()
     next = System.monotonic_time()
     diff = next - prev
     diff |> System.convert_time_unit(:native, :millisecond)
 
-    if print do
-      IO.puts("took #{diff} ms running function")
-    end
+    IO.puts("took #{diff} ms running function")
   end
 
   @tag timeout: :infinity
+  # this is a heavy load test, so it must be skipped
   @tag :skip
   test "it can still generate an id when a lot were already generated" do
-    cutoff_point = 0.9
+    cutoff_point =
+      unless System.get_env("HARD_TIME") != nil do
+        0.995
+      else
+        0.8
+      end
 
     # load a bunch of slots to test with
 
@@ -40,16 +41,13 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
         inserted_at_v2: DateTime.to_unix(DateTime.utc_now())
       }
     end)
-    |> Enum.chunk_every(2000)
+    |> Enum.chunk_every(5000)
     |> Enum.each(fn batch ->
       IO.puts("inserting #{length(batch)} slots (pre-test)")
 
-      printtime(
-        fn ->
-          Repo.insert_all(YtSearch.Slot, batch)
-        end,
-        true
-      )
+      printtime(fn ->
+        Repo.insert_all(YtSearch.Slot, batch)
+      end)
     end)
 
     # then see how things go on the second half (one by one id gen)
@@ -65,7 +63,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     |> Enum.each(fn batch ->
       timings =
         batch
-        |> Enum.map(fn num ->
+        |> Enum.map(fn _ ->
           prev = System.monotonic_time()
 
           YtSearch.Slot.create(random_yt_id(), 3600)
@@ -87,6 +85,8 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       IO.puts(
         "\tmin:#{min_timing}ms avg:#{avg_timing}ms max:#{max_timing}ms sum:#{sum_timings}ms (#{inspect(samples)})"
       )
+
+      assert sum_timings < 500
     end)
   end
 
@@ -102,7 +102,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       )
       |> YtSearch.Repo.update!()
 
-    assert YtSearch.TTL.expired_video?(changed_slot, YtSearch.Slot)
+    assert YtSearch.TTL.expired?(changed_slot)
 
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil

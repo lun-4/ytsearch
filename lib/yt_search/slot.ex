@@ -1,8 +1,6 @@
 defmodule YtSearch.Slot do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   require Logger
   alias YtSearch.Repo
   alias YtSearch.TTL
@@ -34,7 +32,7 @@ defmodule YtSearch.Slot do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe_video?(__MODULE__)
+    |> TTL.maybe?(__MODULE__)
   end
 
   @spec create(String.t(), Integer.t() | nil) :: Slot.t()
@@ -57,7 +55,7 @@ defmodule YtSearch.Slot do
       }
       |> Repo.insert!()
     else
-      if TTL.expired_video?(maybe_slot, __MODULE__) do
+      if TTL.expired?(maybe_slot) do
         # we want this youtube id created, but the slot for it is expired...
         # instead of deleting it or generating a new one, renew it
         # by setting inserted_at to current timestamp
@@ -92,6 +90,7 @@ defmodule YtSearch.Slot do
   def default_ttl, do: 60 * 60
   def max_ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
+  # UPGRADE: slot retuning for /a/2
   def urls, do: 100_000
 
   @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
@@ -103,7 +102,6 @@ defmodule YtSearch.Slot do
     require Logger
 
     alias YtSearch.Repo
-    alias YtSearch.Subtitle
 
     import Ecto.Query
 
@@ -115,9 +113,9 @@ defmodule YtSearch.Slot do
         |> Repo.all()
         |> Enum.to_list()
         |> Enum.map(fn slot ->
-          {slot, YtSearch.TTL.expired_video?(slot, YtSearch.Slot)}
+          {slot, YtSearch.TTL.expired?(slot)}
         end)
-        |> Enum.filter(fn {slot, expired?} -> expired? end)
+        |> Enum.filter(fn {_slot, expired?} -> expired? end)
         |> Enum.map(fn {expired_slot, true} ->
           Repo.delete(expired_slot)
         end)

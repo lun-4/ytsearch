@@ -7,32 +7,6 @@ defmodule YtSearch.SlotUtilities do
     find_available_slot_id(module, 1)
   end
 
-  defmodule RerollCounter do
-    use Prometheus.Metric
-
-    def setup() do
-      Histogram.declare(
-        name: :yts_slot_reroll_count,
-        help: "(THIS METRIC IS BROKEN FOR NOW) Total times we rerolled an ID for a given slot",
-        labels: [:type],
-        # TODO everyone is on 20 right now, but in the future that might change?
-        buckets: 0..20 |> Enum.to_list()
-      )
-    end
-
-    def register(type, amount_of_tries) do
-      Histogram.observe(
-        [
-          name: :yts_slot_reroll_count,
-          labels: [
-            type |> to_string |> String.split(".") |> Enum.at(-1)
-          ]
-        ],
-        amount_of_tries
-      )
-    end
-  end
-
   @spec find_available_slot_id(atom()) ::
           {:ok, Integer.t()} | {:error, :no_available_id}
   def find_available_slot_id(module, current_retry) do
@@ -43,7 +17,6 @@ defmodule YtSearch.SlotUtilities do
 
     case Repo.one(query) do
       nil ->
-        RerollCounter.register(module, current_retry)
         {:ok, random_id}
 
       slot ->
@@ -52,7 +25,7 @@ defmodule YtSearch.SlotUtilities do
         is_expired =
           case slot do
             %YtSearch.Slot{} ->
-              TTL.expired_video?(slot, module)
+              TTL.expired?(slot)
 
             _ ->
               TTL.expired?(slot, module.ttl())
@@ -60,12 +33,13 @@ defmodule YtSearch.SlotUtilities do
 
         if is_expired do
           Repo.delete!(slot)
-          RerollCounter.register(module, current_retry)
           {:ok, random_id}
         else
           if current_retry > module.max_id_retries() do
+            # TODO let the module say if it wants v2 behavior or not
+            # this function should be agnostic on the module. no if slot
             case module do
-              %YtSearch.Slot{} ->
+              YtSearch.Slot ->
                 use_last_slot_assumes_v2(module)
 
               _ ->

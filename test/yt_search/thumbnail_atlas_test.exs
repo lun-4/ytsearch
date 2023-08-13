@@ -5,16 +5,13 @@ defmodule YtSearch.ThumbnailAtlasTest do
   alias YtSearch.SearchSlot
   alias YtSearch.ChannelSlot
   alias YtSearch.Thumbnail
-
-  defp png_data do
-    File.read!("test/support/hq720.webp")
-  end
+  alias YtSearch.Test.Data
 
   @test_youtube_id "YM3ZQF5Xbe8"
 
   setup do
     # setup
-    thumb = Thumbnail.insert(@test_youtube_id, "image/webp", png_data())
+    thumb = Thumbnail.insert(@test_youtube_id, "image/webp", Data.png())
     slot = Slot.create(@test_youtube_id, 3600)
     channel_slot = ChannelSlot.from(@test_youtube_id)
 
@@ -33,11 +30,14 @@ defmodule YtSearch.ThumbnailAtlasTest do
   test "creates an atlas from a single thumbnail", %{conn: conn, search_slot: search_slot} do
     resp =
       conn
-      |> get("/a/1/at/#{search_slot.id}")
+      |> get("/a/2/at/#{search_slot.id}")
 
     assert resp.status == 200
     assert Plug.Conn.get_resp_header(resp, "content-type") == ["image/png"]
 
-    # TODO assert dimensions of given atlas
+    # have to dump data somewhere
+    temporary_path = Temp.path!()
+    File.write!(temporary_path, resp.resp_body)
+    YtSearch.AssertUtil.image(temporary_path)
   end
 end

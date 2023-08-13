@@ -3,10 +3,6 @@ defmodule YtSearch.Thumbnail.Atlas do
 
   alias YtSearch.Thumbnail
   alias YtSearch.SearchSlot
-  alias YtSearch.Slot
-  alias YtSearch.ChannelSlot
-  alias YtSearch.PlaylistSlot
-  alias Mogrify.Draw
 
   @spec assemble(String.t()) ::
           {:ok, String.t(), binary()} | {:error, :unknown_search_slot}
@@ -20,8 +16,7 @@ defmodule YtSearch.Thumbnail.Atlas do
     end
   end
 
-  @atlas_size 512
-  @invalid_thumbnail_path "priv/static/invalid_thumbnail.png"
+  @invalid_thumbnail_path Path.join(:code.priv_dir(:yt_search), "static/invalid_thumbnail.png")
 
   def do_assemble(search_slot) do
     thumbnail_paths =
@@ -43,14 +38,10 @@ defmodule YtSearch.Thumbnail.Atlas do
       |> Enum.map(fn maybe_thumbnail ->
         case maybe_thumbnail do
           nil ->
-            # give it blank image
-            #
-            # TODO use util method to get priv/static
-            # instead of relying on CWD
             @invalid_thumbnail_path
 
           thumbnail ->
-            temporary_path = Temp.path!()
+            temporary_path = Temp.path!() <> ".png"
             File.write!(temporary_path, thumbnail.data)
             temporary_path
         end
@@ -58,24 +49,31 @@ defmodule YtSearch.Thumbnail.Atlas do
 
     atlas_image_path = Temp.path!() <> ".png"
 
-    # elixir-mogrify does not support  append mode or whatever, use montage
-    # directly
+    # elixir-mogrify does not support append mode or whatever, use montage directly instead
     # https://superuser.com/questions/290656/vertically-stack-multiple-images-using-imagemagick
 
-    paths_to_montage = thumbnail_paths ++ [atlas_image_path]
+    used_paths = thumbnail_paths ++ [atlas_image_path]
 
-    {_, 0} =
+    args =
+      thumbnail_paths ++
+        ["-tile", "8x4", "-geometry", "128x128!", "-background", "none"] ++
+        [atlas_image_path]
+
+    Logger.debug("calling montage with args #{inspect(args)}")
+
+    {output, 0} =
       System.cmd(
         "montage",
-        ["-tile", "8x4", "-geometry", "128x128!", "-background", "#000000"] ++
-          paths_to_montage,
+        args,
         stderr_to_stdout: true
       )
+
+    Logger.debug("montage output: #{inspect(output)}")
 
     result = {:ok, "image/png", File.read!(atlas_image_path)}
 
     # clean everything up afterwards
-    paths_to_montage
+    used_paths
     |> Enum.filter(fn path -> path != @invalid_thumbnail_path end)
     |> Enum.each(fn path ->
       case File.rm(path) do

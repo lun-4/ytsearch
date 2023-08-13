@@ -1,6 +1,5 @@
 defmodule YtSearchWeb.SlotTest do
   use YtSearchWeb.ConnCase, async: false
-  import Mock
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
@@ -21,113 +20,123 @@ defmodule YtSearchWeb.SlotTest do
 
   @custom_expire (System.os_time(:second) + 3_600) |> to_string
 
-  @run1 File.read!("test/support/files/youtube_video_url_dumpjson.json")
-        |> String.replace("1689377943", @custom_expire)
-  @expected_run1_url "https://rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com/videoplayback?expire=#{@custom_expire}&ei=N4ixZIvVI5K-wgTpnZnABQ&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1000&id=o-AG7Gp8Ck3IiSrq01gTvGOSgGEQXSgK4fIfRhUbEN6bG0&itag=22&source=youtube&requiressl=yes&mh=xI&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7knee&ms=au%2Crdu&mv=m&mvi=1&pl=48&initcwndbps=1032500&spc=Ul2Sqylj0XRoYEDnWvXXBHgndotsGrA&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=666.435&lmt=1689203297962924&mt=1689355996&fvip=2&fexp=24007246&c=ANDROID&txp=4432434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRQIgNOCrI8Fh8Mgn2alrFGPSW5CwMJBhZ1BPkVCoQwI_r3cCIQDOqaJpe0hHBly0McJUbXuJdmsSC4lzz0rDYJI_1BgLcQ%3D%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRgIhAMWZANXrZcmTWWbhCR83utfBM0K6gNMIm1QBL5hyHbqWAiEAoWhLkZ-7_Kiz__PWYbNch_fd69oUM68v18YJ-OEkiy4%3D"
-  @run2 @run1 |> String.replace(@expected_run1_url, "https://mp5.com")
+  @run1 File.read!("test/support/piped_outputs/video_streams.json")
+        |> String.replace("1691627905", @custom_expire)
 
-  @run1_r18 File.read!("test/support/files/youtube_video_url_dumpjson.json")
-            |> String.replace("1689377943", @custom_expire)
-            |> String.replace("\"age_limit\": 0", "\"age_limit\": 18")
+  @expected_run1_url "https://rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com/videoplayback?expire=#{@custom_expire}&ei=Id3TZI2vOZ-lobIP_dmBiA4&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1001&id=o-AHJX6AwsW-zQGeS4Eyu1Bdv-yjYJr1bEu-We0EmP4NDb&itag=22&source=youtube&requiressl=yes&mh=xI&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7knee&ms=au%2Crdu&mv=m&mvi=1&pl=52&initcwndbps=835000&spc=UWF9f3ylca2q7Fjk8ujpSFMzTN3TUXs&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=666.435&lmt=1689626995182173&mt=1691606033&fvip=2&fexp=24007246%2C24362688&c=ANDROID&txp=5532434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRgIhAPypX1tk8JHpuo_QPe9KKVaiy-hbIBIXyq5qBBg963rzAiEAsnlp-AkDLpOmwhcgCQ1TKRrs-EtMl230VM_9SbNGg14%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRAIgP3rzSh2MwDq2ZxW1Pcgfcf-pki_ahrDfZ1HFz4_5CpgCIHwqgkD-lup0L9EpoGyYEWjtM4XQEJjbppRu1aPaXV2A&cpn=iZTa_BP8GjO4tg7g&host=rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com"
+  @run1_original_url "https://pipedproxy-cdg.kavin.rocks/videoplayback?expire=#{@custom_expire}&ei=Id3TZI2vOZ-lobIP_dmBiA4&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1001&id=o-AHJX6AwsW-zQGeS4Eyu1Bdv-yjYJr1bEu-We0EmP4NDb&itag=22&source=youtube&requiressl=yes&mh=xI&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7knee&ms=au%2Crdu&mv=m&mvi=1&pl=52&initcwndbps=835000&spc=UWF9f3ylca2q7Fjk8ujpSFMzTN3TUXs&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=666.435&lmt=1689626995182173&mt=1691606033&fvip=2&fexp=24007246%2C24362688&c=ANDROID&txp=5532434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRgIhAPypX1tk8JHpuo_QPe9KKVaiy-hbIBIXyq5qBBg963rzAiEAsnlp-AkDLpOmwhcgCQ1TKRrs-EtMl230VM_9SbNGg14%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRAIgP3rzSh2MwDq2ZxW1Pcgfcf-pki_ahrDfZ1HFz4_5CpgCIHwqgkD-lup0L9EpoGyYEWjtM4XQEJjbppRu1aPaXV2A&cpn=iZTa_BP8GjO4tg7g&host=rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com"
+  @run2 @run1 |> String.replace(@run1_original_url, "https://mp5.com")
 
-  test "it gets the mp4 url on quest useragents, supporting ttl", %{conn: conn, slot: slot} do
-    with_mock(
-      :exec,
-      run: [
-        in_series([:_, :_], [{:ok, [stdout: [@run1]]}, {:ok, [stdout: [@run2]]}])
-      ]
-    ) do
-      conn =
-        conn
-        |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-        |> get(~p"/api/v1/s/#{slot.id}")
+  test "it gets the mp4 url on quest useragents, supporting ttl", %{
+    conn: conn,
+    slot: slot,
+    ets_table: table
+  } do
+    Tesla.Mock.mock(fn
+      %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
+        calls = :ets.update_counter(table, :ytdlp_cmd_2, 1, {:ytdlp_cmd_2, 0})
 
-      assert conn.status == 302
+        Tesla.Mock.json(
+          case calls do
+            1 -> @run1
+            2 -> @run2
+          end
+          |> Jason.decode!()
+        )
+    end)
 
-      assert get_resp_header(conn, "location") == [
-               @expected_run1_url
-             ]
+    conn =
+      conn
+      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+      |> get(~p"/api/v2/s/#{slot.id}")
 
-      {:ok, link} = YtSearch.Mp4Link.fetch_by_id(@youtube_id)
-      assert link != nil
+    assert conn.status == 302
 
-      link
-      |> Ecto.Changeset.change(
-        inserted_at: link.inserted_at |> NaiveDateTime.add(-100_000, :second)
-      )
-      |> YtSearch.Repo.update!()
+    assert get_resp_header(conn, "location") == [
+             @expected_run1_url
+           ]
 
-      conn =
-        build_conn()
-        |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-        |> get(~p"/api/v1/s/#{slot.id}")
+    {:ok, link} = YtSearch.Mp4Link.fetch_by_id(@youtube_id)
+    assert link != nil
 
-      assert get_resp_header(conn, "location") == ["https://mp5.com"]
-    end
+    link
+    |> Ecto.Changeset.change(
+      inserted_at: link.inserted_at |> NaiveDateTime.add(-100_000, :second)
+    )
+    |> YtSearch.Repo.update!()
+
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+      |> get(~p"/api/v2/s/#{slot.id}")
+
+    assert get_resp_header(conn, "location") == ["https://mp5.com"]
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn, slot: slot} do
-    with_mock(
-      :exec,
-      run: [
-        in_series([:_, :_], [{:ok, [stdout: [@run1]]}])
-      ]
-    ) do
-      conn =
-        conn
-        |> get(~p"/api/v1/sr/#{slot.id}")
+    Tesla.Mock.mock(fn
+      %{method: :get, url: "example.org/streams" <> _} ->
+        Tesla.Mock.json(
+          @run1
+          |> Jason.decode!()
+        )
+    end)
 
-      assert conn.status == 302
+    conn =
+      conn
+      |> get(~p"/api/v2/sr/#{slot.id}")
 
-      assert get_resp_header(conn, "location") == [
-               @expected_run1_url
-             ]
-    end
+    assert conn.status == 302
+
+    assert get_resp_header(conn, "location") == [
+             @expected_run1_url
+           ]
   end
 
-  @run_stream File.read!("test/support/files/lofi_stream.json")
-              |> String.replace("1689378318", @custom_expire)
-  @expected_run_stream_url "https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/#{@custom_expire}/ei/romxZLXCOoOF1sQPn9qkoAc/ip/2804:14d:5492:8fe8::1000/id/jfKfPfyJRdk.2/itag/96/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D137/hls_chunk_host/rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com/playlist_duration/30/manifest_duration/30/spc/Ul2Sq66okm6aYvjhYIzLhVAacySq1KM/vprv/1/playlist_type/DVR/initcwndbps/1015000/mh/rr/mm/44/mn/sn-oxunxg8pjvn-gxjl/ms/lva/mv/m/mvi/1/pl/48/dover/11/pacing/0/keepalive/yes/fexp/24007246/beids/24350018/mt/1689356439/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,playlist_duration,manifest_duration,spc,vprv,playlist_type/sig/AOq0QJ8wRgIhAObgGmA9jBsVLvxoQWsTgf5UnFnYaqHKv-oh5aXe_N7MAiEArz89GleotjzGD3A8PElTj_2pGP9HN6AIkZDJeo2nwnI%3D/lsparams/hls_chunk_host,initcwndbps,mh,mm,mn,ms,mv,mvi,pl/lsig/AG3C_xAwRQIhAN2uSS_Z-NVkxLcSm2iWnuS9sd6_rZ3SHBy_uni7rERHAiAyUvULpqCSKBKbGp5bJXYF5eSkfrnRw9UyAzgawfwbqw%3D%3D/playlist/index.m3u8"
+  @run_stream File.read!("test/support/piped_outputs/lofi_stream.json")
+              |> String.replace("1691635330", @custom_expire)
+  @expected_stream_url "https://manifest.googlevideo.com/api/manifest/hls_variant/expire/#{@custom_expire}/ei/IvrTZLKgGf_Y1sQPk4KOuAE/ip/2804%3A14d%3A5492%3A8fe8%3A%3A1001/id/jfKfPfyJRdk.2/source/yt_live_broadcast/requiressl/yes/hfr/1/playlist_duration/3600/manifest_duration/3600/demuxed/1/maudio/1/vprv/1/go/1/pacing/0/nvgoi/1/short_key/1/ncsapi/1/keepalive/yes/fexp/24007246%2C51000023/dover/13/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cdemuxed%2Cmaudio%2Cvprv%2Cgo%2Citag%2Cplaylist_type/sig/AOq0QJ8wRQIhANBnLbXAZIDegOLck5OxexbCOmLLVMKOtqukyUpwVnr1AiAHdQByc0Hm-MPN26SmyYflKk9LA905ahxukvjccfzR5w%3D%3D/file/index.m3u8?host=manifest.googlevideo.com"
 
   test "it gets m3u8 url on streams", %{conn: conn, slot: slot} do
-    with_mock(
-      :exec,
-      run: [
-        in_series([:_, :_], [{:ok, [stdout: [@run_stream]]}])
-      ]
-    ) do
-      conn =
-        conn
-        |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-        |> get(~p"/api/v1/s/#{slot.id}")
+    Tesla.Mock.mock(fn
+      %{method: :get, url: "example.org/streams" <> _} ->
+        Tesla.Mock.json(
+          @run_stream
+          |> Jason.decode!()
+        )
+    end)
 
-      assert conn.status == 302
+    conn =
+      conn
+      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+      |> get(~p"/api/v2/s/#{slot.id}")
 
-      assert get_resp_header(conn, "location") == [
-               @expected_run_stream_url
-             ]
-    end
+    assert conn.status == 302
+
+    assert get_resp_header(conn, "location") == [
+             @expected_stream_url
+           ]
   end
 
-  test "it gives 404 on unknown slot ids", %{conn: conn, slot: slot} do
+  test "it gives 404 on unknown slot ids", %{conn: conn} do
     # i really dont want this test to fail because the generated test
     # slot clashes with a hardcoded one here
     {:ok, unknown_id} = YtSearch.SlotUtilities.find_available_slot_id(YtSearch.Slot)
 
     conn =
       conn
-      |> get(~p"/a/1/sl/#{unknown_id}")
+      |> get(~p"/a/2/sl/#{unknown_id}")
 
     assert conn.status == 404
 
     conn =
       conn
-      |> get(~p"/a/1/sl/#{unknown_id}")
+      |> get(~p"/a/2/sl/#{unknown_id}")
 
     assert conn.status == 404
   end
 
-  test "subtitles are cleaned when theyre too old", %{slot: slot} do
+  test "subtitles are cleaned when theyre too old" do
     subtitle = Subtitle.insert(@youtube_id, "latin-1", "lorem ipsum listen to jungle now")
 
     from(s in Subtitle, where: s.youtube_id == ^subtitle.youtube_id, select: s)
@@ -146,70 +155,51 @@ defmodule YtSearchWeb.SlotTest do
     [] = Subtitle.fetch(@youtube_id)
   end
 
-  test "subtitles work and are only fetched once", %{conn: conn, slot: slot, ets_table: table} do
-    with_mocks([
-      {
-        :exec,
-        [],
-        run: fn _, _ ->
-          :timer.sleep(50)
-          calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
+  import Tesla.Mock
 
-          if calls > 1 do
-            {:error, [stdout: ["called mock too much"]]}
-          else
-            output = File.read!("test/support/files/ytdlp_subtitle_output.txt")
-            {:ok, [stdout: [output]]}
-          end
+  test "subtitles work and are only fetched once", %{slot: slot, ets_table: table} do
+    mock_global(fn
+      %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
+        :timer.sleep(50)
+        calls = :ets.update_counter(table, :ytdlp_cmd, 1, {:ytdlp_cmd, 0})
+
+        unless calls > 1 do
+          json(%{
+            "subtitles" => [
+              %{
+                "url" =>
+                  "https://pipedproxy-cdg.kavin.rocks/api/timedtext?v=#{@youtube_id}&ei=k_TSZKi2ItWMobIPs7aF6AQ&caps=asr&opi=112496729&xoaf=5&lang=en&fmt=vtt&host=youtube.example.org",
+                "mimeType" => "text/vtt",
+                "name" => "English",
+                "code" => "en",
+                "autoGenerated" => true
+              }
+            ]
+          })
+        else
+          %Tesla.Env{status: 500, body: "called mock too much"}
         end
-      },
-      {Path, [:passthrough],
-       wildcard: fn "/tmp/yts-subtitles/#{@youtube_id}/*#{@youtube_id}*en*.vtt" ->
-         ytdlp_calls = :ets.lookup(table, :ytdlp_cmd) |> Keyword.get(:ytdlp_cmd) || 0
 
-         if ytdlp_calls > 0 do
-           [
-             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt",
-             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt"
-           ]
-         else
-           []
-         end
-       end},
-      {File, [:passthrough],
-       read: fn path ->
-         [ytdlp_cmd: ytdlp_calls] = :ets.lookup(table, :ytdlp_cmd)
+      %{
+        method: :get,
+        url: "https://youtube.example.org/api/timedtext?v=#{@youtube_id}" <> _rest
+      } ->
+        %Tesla.Env{status: 200, body: "Among Us"}
+    end)
 
-         if ytdlp_calls < 1 do
-           {:error, :didnt_call_ytdlp}
-         else
-           case path do
-             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en-orig.vtt" ->
-               {:ok, "Among Us"}
-
-             "/tmp/yts-subtitles/#{@youtube_id}/Apple's new Mac Pro can't do THIS! [yI7fV88T8A0].en.vtt" ->
-               {:ok, "Among Us 2"}
-
-             _ ->
-               {:error, :enoent}
-           end
-         end
-       end}
-    ]) do
-      1..10
-      |> Enum.map(fn _ ->
-        Task.async(fn ->
-          Phoenix.ConnTest.build_conn()
-          |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/api/v1/s/#{slot.id}")
-        end)
+    1..10
+    |> Enum.map(fn _ ->
+      Task.async(fn ->
+        Phoenix.ConnTest.build_conn()
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/api/v2/s/#{slot.id}")
+        |> json_response(200)
       end)
-      |> Enum.map(fn task ->
-        conn = Task.await(task)
-        resp = json_response(conn, 200)
-        assert resp["subtitle_data"] == "Among Us"
-      end)
-    end
+    end)
+    |> Enum.map(fn task ->
+      resp = Task.await(task)
+      assert resp["subtitle_data"] == "Among Us"
+    end)
   end
 
   @another_youtube_id "k2RuprlsXng"
@@ -229,7 +219,7 @@ defmodule YtSearchWeb.SlotTest do
     assert slot.id == 47635
   end
 
-  test "it removes links from db that are already expired", %{slot: slot} do
+  test "it removes links from db that are already expired" do
     link =
       Mp4Link.insert(
         "abcdef",
@@ -264,54 +254,29 @@ defmodule YtSearchWeb.SlotTest do
     assert Repo.one(from s in Slot, where: s.id == ^slot.id, select: s) == nil
   end
 
-  test "it does not fetch age restricted videos", %{conn: conn, slot: slot} do
-    with_mock(
-      :exec,
-      run: [
-        in_series([:_, :_], [{:ok, [stdout: [@run1_r18]]}])
-      ]
-    ) do
+  test "it gives 404 on invalid youtube ids", %{conn: conn, slot: slot} do
+    Tesla.Mock.mock(fn
+      %{method: :get, url: "example.org/streams" <> _} ->
+        %{
+          status: 500,
+          body:
+            %{
+              error: "alkssdjlasjd",
+              message: "Video unavailable"
+            }
+            |> Jason.encode()
+        }
+    end)
+
+    1..10
+    |> Enum.each(fn _ ->
       conn =
         conn
         |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-        |> get(~p"/api/v1/s/#{slot.id}")
+        |> get(~p"/api/v2/s/#{slot.id}")
 
       assert conn.status == 404
-      assert conn.resp_body == "age restricted video (18)"
-
-      {:ok, link} = YtSearch.Mp4Link.fetch_by_id(@youtube_id)
-      assert link != nil
-
-      assert link |> YtSearch.Mp4Link.meta() |> Map.get("age_limit") == 18
-    end
-  end
-
-  test "it gives 404 on invalid youtube ids", %{conn: conn, slot: slot} do
-    with_mock(
-      :exec,
-      run: [
-        in_series([:_, :_], [
-          {:error,
-           [
-             exit_status: 256,
-             stdout: [],
-             stderr: [
-               "[youtube] zOfKfdXQTVU: Video unavailable. This video is no longer available because the YouTube account associated with this video has been terminated."
-             ]
-           ]}
-        ])
-      ]
-    ) do
-      1..10
-      |> Enum.each(fn _ ->
-        conn =
-          conn
-          |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-          |> get(~p"/api/v1/s/#{slot.id}")
-
-        assert conn.status == 404
-        assert conn.resp_body == "video unavailable"
-      end)
-    end
+      assert conn.resp_body == "video unavailable"
+    end)
   end
 end

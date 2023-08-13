@@ -1,9 +1,8 @@
 defmodule YtSearch.Thumbnail do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
+  require Logger
 
   @type t :: %__MODULE__{}
 
@@ -59,6 +58,21 @@ defmodule YtSearch.Thumbnail do
         |> Enum.sum()
 
       Logger.info("deleted #{deleted_count} thumbnails")
+    end
+  end
+
+  def refresh(id) do
+    query = from s in __MODULE__, where: s.id == ^id, select: s
+    slot = Repo.one(query)
+
+    unless slot == nil do
+      Logger.info("refreshed thumbnail id #{id}")
+
+      slot
+      |> Ecto.Changeset.change(
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      )
+      |> YtSearch.Repo.update!()
     end
   end
 end

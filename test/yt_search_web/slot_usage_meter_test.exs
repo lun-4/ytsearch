@@ -1,9 +1,7 @@
 defmodule YtSearchWeb.SlotUsageMeterTest do
   use YtSearchWeb.ConnCase, async: true
-  import Mock
   alias YtSearch.Slot
   alias YtSearch.Repo
-  alias YtSearch.TTL
   import Ecto.Query
 
   alias YtSearch.SlotUtilities.UsageMeter

@@ -1,12 +1,6 @@
 defmodule YtSearch.TTL do
-  def expired?(entity, entity_ttl) do
-    now = DateTime.utc_now()
-    inserted_at = entity.inserted_at |> DateTime.from_naive!("Etc/UTC")
-    lifetime = DateTime.diff(now, inserted_at, :second)
-    lifetime > entity_ttl
-  end
-
-  def expired_video?(slot, module) do
+  def expired?(%YtSearch.Slot{} = slot) do
+    module = YtSearch.Slot
     now = DateTime.utc_now()
     inserted_at = slot.inserted_at |> DateTime.from_naive!("Etc/UTC")
     lifetime = DateTime.diff(now, inserted_at, :second)
@@ -20,11 +14,17 @@ defmodule YtSearch.TTL do
     lifetime > entity_ttl
   end
 
-  def maybe_video?(entity, entity_module) do
-    # TODO decrease copypaste
+  def expired?(entity, entity_ttl) do
+    now = DateTime.utc_now()
+    inserted_at = entity.inserted_at |> DateTime.from_naive!("Etc/UTC")
+    lifetime = DateTime.diff(now, inserted_at, :second)
+    lifetime > entity_ttl
+  end
+
+  def maybe?(entity, YtSearch.Slot) do
     cond do
       entity == nil -> nil
-      expired_video?(entity, entity_module) -> nil
+      expired?(entity) -> nil
       true -> entity
     end
   end

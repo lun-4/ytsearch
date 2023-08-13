@@ -1,32 +1,13 @@
 defmodule YtSearch.Youtube do
   require Logger
-
   alias YtSearch.Youtube.Ratelimit
   alias YtSearch.Youtube.Latency
+  alias YtSearch.Piped
+  alias YtSearch.ChannelSlot
+  alias YtSearch.PlaylistSlot
 
-  @spec ytdlp() :: String.t()
-  defp ytdlp() do
-    ytdlp_path = Application.fetch_env!(:yt_search, YtSearch.Youtube)[:ytdlp_path]
-
-    if String.starts_with?(ytdlp_path, "/") do
-      ytdlp_path
-    else
-      # find it manually in path
-      {path, _} =
-        System.fetch_env!("PATH")
-        |> String.split(":")
-        |> Enum.map(fn path_directory ->
-          joined_path =
-            path_directory
-            |> Path.join(ytdlp_path)
-
-          {joined_path, File.exists?(joined_path)}
-        end)
-        |> Enum.filter(fn {_, exists?} -> exists? end)
-        |> Enum.at(0)
-
-      path
-    end
+  defp piped() do
+    Application.fetch_env!(:yt_search, YtSearch.Youtube)[:piped_url]
   end
 
   defmodule CallCounter do
@@ -83,137 +64,196 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp run_ytdlp(call_type, args, opts \\ []) do
+  def videos_for(%ChannelSlot{youtube_id: channel_id}) do
+    piped_search_call(&Piped.channel/2, channel_id, "relatedStreams")
+  end
+
+  def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
+    piped_search_call(&Piped.playlists/2, playlist_id, "relatedStreams")
+  end
+
+  def videos_for(text) when is_bitstring(text) do
+    if String.starts_with?(text, "https://") do
+      # TODO maybe do parsing of youtube ids here
+      raise "no urls in search"
+    end
+
+    case Ratelimit.for_text_search() do
+      :allow ->
+        piped_search_call(&Piped.search/2, text, "items")
+
+      :deny ->
+        {:error, :overloaded_ytdlp_seats}
+    end
+  end
+
+  defp piped_search_call(func, id, list_field) do
+    piped_call(:search, func, id, list_field, limit: 20)
+  end
+
+  defp piped_call(call_type, func, id, list_field, opts \\ []) do
     CallCounter.inc(call_type)
 
     start_ts = System.monotonic_time(:millisecond)
-
-    {status, result} =
-      :exec.run(
-        [ytdlp()] ++ args,
-        [:sync, :stdout, :stderr] ++ opts
-      )
-
+    result = func.(piped(), id)
     end_ts = System.monotonic_time(:millisecond)
     Latency.register(call_type, end_ts - start_ts)
 
-    stdout = result |> Keyword.get(:stdout) || [""]
-    stderr = result |> Keyword.get(:stderr) || [""]
-
-    exit_status =
-      case status do
-        :ok -> 0
-        _ -> result |> Keyword.get(:exit_status)
-      end
-
-    {status,
-     result
-     # i can't trust the library splits exactly at line breaks
-     # so i join them back here
-     |> Keyword.put(
-       :stdout,
-       stdout |> Enum.reduce("", fn x, acc -> acc <> x end)
-     )
-     |> Keyword.put(
-       :stderr,
-       stderr |> Enum.reduce("", fn x, acc -> acc <> x end)
-     )
-     |> Keyword.put(:exit_status, exit_status)}
-  end
-
-  defp from_result(result) do
-    {
-      result |> Keyword.get(:stdout),
-      result |> Keyword.get(:stderr),
-      result |> Keyword.get(:exit_status)
-    }
-  end
-
-  def search_from_url(url, playlist_end \\ 20, retry_limit \\ false) do
-    if String.contains?(url, "/results?") do
-      case Ratelimit.for_text_search() do
-        :ok ->
-          do_search_from_url(url, playlist_end)
-
-        :deny ->
-          {:error, :overloaded_ytdlp_seats}
-      end
-    else
-      do_search_from_url(url, playlist_end)
-    end
-  end
-
-  def do_search_from_url(url, playlist_end) do
-    {status, result} =
-      run_ytdlp(:search, [
-        url,
-        "--dump-json",
-        "--flat-playlist",
-        "--add-headers",
-        "YouTube-Restrict:Moderate",
-        "--playlist-end",
-        to_string(playlist_end),
-        "--extractor-args",
-        "youtubetab:approximate_metadata"
-      ])
-
-    {stdout, stderr, exit_status} = from_result(result)
-
-    case status do
-      :ok ->
+    case result do
+      {:ok, %{status: 200} = response} ->
         {:ok,
-         stdout
-         |> String.split("\n", trim: true)
-         |> Enum.map(&Jason.decode!/1)
+         response.body
+         |> then(fn body ->
+           limit = Keyword.get(opts, :limit)
+
+           result =
+             unless list_field == nil do
+               body[list_field]
+             else
+               body
+             end
+
+           if is_list(result) and limit != nil do
+             result |> Enum.slice(0, limit)
+           else
+             result
+           end
+         end)
          |> vrcjson_workaround}
 
-      :error ->
-        Logger.error("search exit with #{exit_status}. stdout: #{stdout}. stderr: #{stderr}.")
-        handle_ytdlp_error(exit_status, stdout, stderr)
+      {:error, %{status: 500, body: {:ok, raw_body}} = response} ->
+        body =
+          case raw_body |> Jason.decode() do
+            {:ok, body} ->
+              body
+
+            {:error, _} = val ->
+              Logger.error(
+                "an error happened while parsing 500, #{inspect(val)}, #{inspect(raw_body)}"
+              )
+
+              %{message: ""}
+          end
+
+        cond do
+          String.contains?(body["message"] || "", "Video unavailable") ->
+            Logger.warning("this is an unavailable youtube id")
+            {:error, :video_unavailable}
+
+          true ->
+            {:error, response}
+        end
+
+      {:ok, %Tesla.Env{} = response} ->
+        {:error, response}
+
+      {:error, _} = error_value ->
+        error_value
     end
+  end
+
+  def trending(region \\ "US") do
+    piped_call(:search, &Piped.trending/2, region, nil, limit: 20)
   end
 
   @spec fetch_mp4_link(String.t()) :: {:ok, {String.t(), Integer.t() | nil}} | {:error, any()}
   def fetch_mp4_link(youtube_id) do
-    {status, result} =
-      run_ytdlp(:mp4_link, [
-        "--no-check-certificate",
-        # TODO do we want cache-dir??
-        "--no-cache-dir",
-        "--rm-cache-dir",
-        "-f",
-        "mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]",
-        "--dump-json",
-        YtSearch.Youtube.Util.to_watch_url(youtube_id)
-      ])
+    # TODO piped subtitle metadata and mp4 links are the same code path. we can optimize this
 
-    {stdout, stderr, exit_status} = from_result(result)
+    with {:ok, piped_response} <-
+           piped_call(:mp4_link, &Piped.streams/2, youtube_id, nil) do
+      wanted_video_result = extract_valid_streams(piped_response["videoStreams"])
 
-    url_result =
-      case status do
-        :ok ->
-          youtube_metadata =
-            stdout
-            |> Jason.decode!()
+      wanted_video_result =
+        if piped_response["livestream"] do
+          %{
+            "url" => piped_response["hls"]
+          }
+        else
+          wanted_video_result
+        end
 
-          {:ok, {youtube_metadata["url"], youtube_metadata}}
-
-        :error ->
-          Logger.error("fetch_mp4_link fail. #{exit_status} stdout: #{stdout} stderr: #{stderr}")
-          handle_ytdlp_error(exit_status, stdout, stderr)
-      end
-
-    case url_result do
-      {:ok, {url, meta}} ->
+      unless wanted_video_result == nil do
+        url = wanted_video_result["url"]
         uri = url |> URI.parse()
-
         expiry_timestamp = expiry_from_uri(uri)
-
-        {:ok, {url, expiry_timestamp, meta}}
-
-      any ->
-        any
+        {:ok, {url |> unproxied_piped_url, expiry_timestamp, wanted_video_result}}
+      else
+        Logger.warning("no valid formats found for #{youtube_id}")
+        {:error, :no_valid_video_formats_found}
+      end
     end
+  end
+
+  defp extract_valid_streams(incoming_video_streams) do
+    video_streams =
+      incoming_video_streams
+      |> Enum.map(fn stream ->
+        # for some reason, piped does not expose width/height when videoOnly=true
+        # extrapolate when that's the case
+
+        if stream["height"] == 0 or stream["width"] == 0 do
+          case stream["quality"] do
+            "720p" ->
+              stream
+              |> Map.put("width", 1280)
+              |> Map.put("height", 720)
+
+            "360p" ->
+              stream
+              |> Map.put("width", 480)
+              |> Map.put("height", 360)
+
+            "480p" ->
+              stream
+              |> Map.put("width", 640)
+              |> Map.put("height", 480)
+
+            "240p" ->
+              stream
+              |> Map.put("width", 320)
+              |> Map.put("height", 240)
+
+            "144p" ->
+              stream
+              |> Map.put("width", 256)
+              |> Map.put("height", 144)
+
+            _ ->
+              stream
+          end
+        else
+          stream
+        end
+      end)
+
+    # wanted format selection in ytdlp format:
+    # mp4[height<=?1080][height>=?64][width>=?64]/best[height<=?1080][height>=?64][width>=?64]
+    # we translate it into two Enum.filter calls, preffering first filter
+
+    first_filter_results =
+      video_streams
+      |> Enum.filter(fn stream ->
+        stream["mimeType"] == "video/mp4" and
+          stream["height"] <= 1080 and
+          stream["height"] >= 64 and
+          stream["width"] >= 64 and
+          not stream["videoOnly"]
+      end)
+      # order by pixel amount
+      |> Enum.sort_by(fn stream -> stream["width"] * stream["height"] end, :desc)
+
+    second_filter_results =
+      video_streams
+      |> Enum.filter(fn stream ->
+        stream["height"] <= 1080 and
+          stream["height"] >= 64 and
+          stream["width"] >= 64 and
+          not stream["videoOnly"]
+      end)
+      |> Enum.sort_by(fn stream -> stream["width"] * stream["height"] end, :desc)
+
+    first_filter_results |> Enum.at(0) || second_filter_results |> Enum.at(0)
   end
 
   defp expiry_from_query(uri) do
@@ -257,105 +297,81 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def unproxied_piped_url(url) when is_bitstring(url) do
+    url
+    |> URI.parse()
+    |> unproxied_piped_url
+  end
+
+  def unproxied_piped_url(%URI{} = uri) do
+    query = (uri.query || "") |> URI.decode_query()
+    host = query["host"] || uri.host
+
+    uri
+    |> Map.put(:host, host)
+    |> Map.put(:authority, host)
+    |> to_string
+  end
+
   defp expiry_from_uri(uri) do
     expiry_from_query(uri) || expiry_from_path(uri)
   end
 
-  def fetch_subtitles(youtube_url) do
-    uri = youtube_url |> URI.parse()
-
-    id =
-      case uri.query do
-        nil ->
-          "any"
-
-        value ->
-          value
-          |> URI.decode_query()
-          |> Map.get("v")
-      end
-
-    subtitle_folder = "/tmp/yts-subtitles/#{id}"
-    File.mkdir_p!(subtitle_folder)
-
-    Logger.debug("outputting to #{subtitle_folder}")
-
-    {status, result} =
-      run_ytdlp(
-        :subtitles,
-        [
-          "--skip-download",
-          "--write-subs",
-          "--write-auto-subs",
-          "--sub-format",
-          "vtt",
-          "--sub-langs",
-          "en-orig,en,en-US",
-          youtube_url
-        ],
-        cd: subtitle_folder
-      )
-
-    {stdout, stderr, exit_status} = from_result(result)
-
-    case status do
-      :ok ->
-        subtitles =
-          Path.wildcard(subtitle_folder <> "/*#{id}*en*.vtt")
-          |> Enum.map(fn child_path ->
-            {child_path, File.read(child_path)}
-          end)
-          |> Enum.filter(fn {path, result} ->
-            case result do
-              {:ok, _data} ->
-                true
-
-              _ ->
-                Logger.error("expected #{path} to work, got #{inspect(result)}")
-                false
-            end
-          end)
-          |> Enum.map(fn {path, {:ok, data}} ->
-            subtitle =
-              path
-              |> Path.basename()
-              |> String.split(".")
-              |> Enum.at(-2)
-              |> then(fn language ->
-                YtSearch.Subtitle.insert(id, language, data)
-              end)
-
-            File.rm(path)
-            subtitle
-          end)
-
-        if length(subtitles) == 0 do
-          YtSearch.Subtitle.insert(id, "notfound", nil)
-          nil
-        else
-          :ok
-        end
-
-      :error ->
-        Logger.error("ytdlp gave #{exit_status}. stdout: #{stdout}. stderr: #{stderr}.")
-        handle_ytdlp_error(exit_status, stdout, stderr)
+  def fetch_subtitles(youtube_id) do
+    if String.starts_with?(youtube_id, "https://") do
+      raise "invalid youtube id: #{youtube_id}"
     end
-  end
 
-  defp handle_ytdlp_error(exit_status, stdout, stderr) do
-    cond do
-      String.contains?(stderr, "Video unavailable") ->
-        Logger.warn("this is an unavailable youtube id")
-        {:error, :video_unavailable}
+    {:ok, subtitles} = piped_call(:subtitles, &Piped.streams/2, youtube_id, "subtitles")
 
-      String.contains?(stderr, "This channel does not have a videos tab") ->
-        {:error, :channel_without_videos_tab}
+    subtitle_count =
+      subtitles
+      |> Enum.map(fn subtitle ->
+        # make it akin to ytdlp
+        if not subtitle["autoGenerated"] do
+          code = subtitle["code"]
+          subtitle |> Map.put("code", "#{code}-orig")
+        else
+          subtitle
+        end
+      end)
+      # prefer english subtitles (we dont have subtitle selection features yet)
+      |> Enum.filter(fn subtitle -> String.starts_with?(subtitle["code"], "en") end)
+      |> Enum.map(fn subtitle ->
+        # map all urls to direct calls, no need to use the piped proxy
+        subtitle
+        |> Map.put(
+          "url",
+          subtitle["url"] |> unproxied_piped_url
+        )
+      end)
+      |> Enum.map(fn subtitle ->
+        # map each to a task that fetches the subtitle from youtube
+        Task.async(fn ->
+          url = subtitle["url"]
+          Logger.debug("subtitle, calling #{url}")
 
-      String.contains?(stderr, "Premieres in") ->
-        {:error, :upcoming_video}
+          case Tesla.get(url) do
+            {:ok, %{status: 200} = response} ->
+              {subtitle, response.body}
 
-      true ->
-        {:error, {:invalid_exit_code, exit_status}}
+            result ->
+              Logger.error("#{url} failed, got #{inspect(result)}")
+              nil
+          end
+        end)
+      end)
+      |> Enum.map(fn task ->
+        {subtitle, data} = Task.await(task)
+        YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
+      end)
+      |> Enum.count()
+
+    unless subtitle_count == 0 do
+      :ok
+    else
+      YtSearch.Subtitle.insert(youtube_id, "notfound", nil)
+      nil
     end
   end
 

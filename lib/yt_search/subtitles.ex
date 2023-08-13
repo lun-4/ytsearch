@@ -1,11 +1,7 @@
 defmodule YtSearch.Subtitle do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
-  alias YtSearch.Youtube
-  alias YtSearch.TTL
 
   @type t :: %__MODULE__{}
 

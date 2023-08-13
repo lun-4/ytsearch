@@ -1,12 +1,11 @@
 defmodule YtSearch.Mp4Link do
   use Ecto.Schema
-  import Ecto.Changeset
   import Ecto.Query
-  import Ecto, only: [assoc: 2]
   alias YtSearch.Repo
   alias YtSearch.Youtube
   alias YtSearch.TTL
   alias YtSearch.Slot
+  require Logger
 
   @type t :: %__MODULE__{}
 
@@ -51,18 +50,16 @@ defmodule YtSearch.Mp4Link do
       mp4_link: mp4_link
     }
     |> then(fn value ->
-      case expires_at do
-        nil ->
-          value
-
+      unless expires_at == nil do
         # if youtube gives expiry timestamp, use it so that
         # (inserted_at + @ttl) = expiry
         # guaranteeding we expire it at the same time youtube expires it
-        expires ->
-          value
-          |> Ecto.Changeset.change(
-            inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
-          )
+        value
+        |> Ecto.Changeset.change(
+          inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
+        )
+      else
+        value
       end
     end)
     |> Repo.insert!()
@@ -107,6 +104,16 @@ defmodule YtSearch.Mp4Link do
               {:ok, insert(slot.youtube_id, link_string, expires_at_unix_timestamp, meta)}
 
             {:error, :video_unavailable} ->
+              insert_video_not_found(slot.youtube_id)
+              {:error, :video_unavailable}
+
+            {:error, :no_valid_video_formats_found} ->
+              # TODO this should be a different status code
+              insert_video_not_found(slot.youtube_id)
+              {:error, :video_unavailable}
+
+            {:error, %Tesla.Env{} = resp} ->
+              Logger.warning("got an error from upstream: #{inspect(resp)}")
               insert_video_not_found(slot.youtube_id)
               {:error, :video_unavailable}
           end

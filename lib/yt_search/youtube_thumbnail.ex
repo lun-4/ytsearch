@@ -8,23 +8,25 @@ defmodule YtSearch.Youtube.Thumbnail do
     defstruct [:aspect_ratio]
   end
 
-  def fetch_in_background(entity_type, ytdlp_data) do
-    # TODO better algorithm for thumbnail selection
-    if ytdlp_data["thumbnails"] != nil do
-      selected_thumbnail_metadata =
-        ytdlp_data["thumbnails"]
-        |> Enum.at(0)
-
-      # TODO supervisor?
+  def fetch_piped_in_background(youtube_id, data) do
+    unless data["thumbnail"] == nil do
+      # TODO wrap up in a supervisor?
+      # reasons for that: handle network failures
+      # reasons against: moar codes, also need to fast fail after some amnt of retries
       spawn(fn ->
-        maybe_download_thumbnail(ytdlp_data["id"], selected_thumbnail_metadata["url"])
+        maybe_download_thumbnail(
+          youtube_id,
+          data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url()
+        )
       end)
 
+      # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
+      # UPGRADE: aspect_ratio is not used on /a/2
       %ThumbnailMetadata{
-        aspect_ratio: selected_thumbnail_metadata["width"] / selected_thumbnail_metadata["height"]
+        aspect_ratio: 1.77
       }
     else
-      Logger.warning("id '#{ytdlp_data["id"]}' does not provide thumbnail")
+      Logger.warning("id '#{youtube_id}' does not provide thumbnail")
       nil
     end
   end
@@ -55,30 +57,36 @@ defmodule YtSearch.Youtube.Thumbnail do
     end)
   end
 
-  @thumbnail_size 128
-
   defp do_download_thumbnail(youtube_id, url) do
     Logger.debug("thumbnail requesting #{url}")
 
     # youtube channels give urls without scheme for some reason
-    response =
+    {:ok, response} =
       if String.starts_with?(url, "//") do
         "https:#{url}"
       else
         url
       end
-      |> HTTPoison.get!()
+      |> Tesla.get()
 
-    if response.status_code == 200 do
-      content_type = response.headers[:"content-type"]
+    if response.status == 200 do
+      content_type = Tesla.get_header(response, "content-type")
       body = response.body
 
       temporary_path = Temp.path!()
       File.write(temporary_path, body)
 
-      # resize to 128x before storage
+      # turn the thumbnail into a 16:9 aspect ratio image
+      # while adding transparency around the borders for non-16:9 images
+
+      # this lets the world use that transparency to show the correct
+      # perceived ratio on the user's eyes
+
       Mogrify.open(temporary_path)
-      |> Mogrify.resize("#{@thumbnail_size}x#{@thumbnail_size}!")
+      |> Mogrify.resize("256x144")
+      |> Mogrify.gravity("center")
+      |> Mogrify.custom("background", "none")
+      |> Mogrify.extent("256x144")
       |> Mogrify.save(in_place: true)
 
       final_body = File.read!(temporary_path)
@@ -86,7 +94,7 @@ defmodule YtSearch.Youtube.Thumbnail do
       {:ok, Thumbnail.insert(youtube_id, content_type, final_body)}
     else
       Logger.error(
-        "thumbnail request. expected 200, got #{inspect(response.status_code)} #{inspect(response.body)}"
+        "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"
       )
 
       {:error, {:http_response, response.status_code, response.headers, response.body}}

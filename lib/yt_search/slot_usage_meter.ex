@@ -43,7 +43,7 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
                 |> Repo.all()
                 |> Enum.to_list()
                 |> Enum.map(fn slot ->
-                  YtSearch.TTL.expired_video?(slot, YtSearch.Slot)
+                  YtSearch.TTL.expired?(slot)
                 end)
                 |> Enum.filter(fn x -> !x end)
 

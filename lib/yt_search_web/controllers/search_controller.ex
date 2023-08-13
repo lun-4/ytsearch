@@ -40,8 +40,17 @@ defmodule YtSearchWeb.SearchController do
       |> String.trim()
       |> URI.encode()
 
-    "https://www.youtube.com/results?search_query=#{escaped_query}"
-    |> search_from_any_youtube_url(conn)
+    case search_text(escaped_query) do
+      {:ok, response} ->
+        conn
+        |> put_status(200)
+        |> json(response)
+
+      {:error, :overloaded_ytdlp_seats} ->
+        conn
+        |> put_status(429)
+        |> json(%{error: true, detail: "server overloaded"})
+    end
   end
 
   defp fetch_by_query_and_valid(url) do
@@ -51,6 +60,7 @@ defmodule YtSearchWeb.SearchController do
 
       data ->
         # we want to have a search slot that contains valid slots within
+        # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
         valid_slots =
           data
           |> SearchSlot.fetched_slots_from_search()
@@ -69,6 +79,7 @@ defmodule YtSearchWeb.SearchController do
           end
 
         if is_valid_slot do
+          # TODO i think we should call Slot.refresh here actually
           data
         else
           nil
@@ -76,19 +87,18 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  def search_from_any_youtube_url(youtube_url, playlist_end \\ 20)
-      when is_integer(playlist_end) do
-    case fetch_by_query_and_valid(youtube_url) do
+  def search_text(text) do
+    case fetch_by_query_and_valid(text) do
       nil ->
-        case youtube_url |> Youtube.search_from_url(playlist_end) do
+        case Youtube.videos_for(text) do
           {:ok, ytdlp_data} ->
             results =
               ytdlp_data
-              |> Playlist.from_ytdlp_data()
+              |> Playlist.from_piped_data()
 
             search_slot =
               results
-              |> SearchSlot.from_playlist(youtube_url)
+              |> SearchSlot.from_playlist(text)
 
             {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
@@ -99,19 +109,6 @@ defmodule YtSearchWeb.SearchController do
       search_slot ->
         {:ok,
          %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
-    end
-  end
-
-  def search_from_any_youtube_url(youtube_url, conn) do
-    case search_from_any_youtube_url(youtube_url) do
-      {:ok, jsondata} ->
-        conn
-        |> json(jsondata)
-
-      {:error, :overloaded_ytdlp_seats} ->
-        conn
-        |> put_status(429)
-        |> json(%{error: true, detail: "server overloaded"})
     end
   end
 
@@ -126,9 +123,13 @@ defmodule YtSearchWeb.SearchController do
         |> text("not found")
 
       slot ->
-        slot
-        |> entity.as_youtube_url()
-        |> search_from_any_youtube_url(conn)
+        {:ok, resp} =
+          slot
+          |> search_text()
+
+        conn
+        |> put_status(200)
+        |> json(resp)
     end
   end
 

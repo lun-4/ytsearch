@@ -38,18 +38,8 @@ defmodule YtSearchWeb.SlotController do
         raise "should not happen"
 
       {:ok, link} ->
-        case link |> Mp4Link.meta() |> Map.get("age_limit") do
-          0 ->
-            conn
-            |> redirect(external: link.mp4_link)
-
-          age_limit ->
-            Logger.warn("age restricted video. #{age_limit}")
-
-            conn
-            |> put_status(404)
-            |> text("age restricted video (#{age_limit})")
-        end
+        conn
+        |> redirect(external: link.mp4_link)
 
       {:error, :video_unavailable} ->
         conn
@@ -112,18 +102,17 @@ defmodule YtSearchWeb.SlotController do
     # already fetching the subtitles
     # 3. fetch after requesting a fetch, for the process that did the
     # hard job of calling youtube
-    youtube_url = slot |> Slot.youtube_url()
 
     case subtitles_for(slot) do
       :no_requested_subtitles ->
-        Mutex.under(SubtitleMutex, youtube_url, fn ->
+        Mutex.under(SubtitleMutex, slot.youtube_id, fn ->
           case subtitles_for(slot) do
             :no_requested_subtitles ->
               if recursing do
-                Logger.warn("should not recurse twice into requesting subtitles")
+                Logger.warning("should not recurse twice into requesting subtitles")
                 nil
               else
-                Youtube.fetch_subtitles(youtube_url)
+                Youtube.fetch_subtitles(slot.youtube_id)
                 do_subtitles(slot, true)
               end
 
