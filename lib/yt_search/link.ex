@@ -107,6 +107,12 @@ defmodule YtSearch.Mp4Link do
               {:error, :video_unavailable}
 
             {:error, :no_valid_video_formats_found} ->
+              # TODO this should be a different status code
+              insert_video_not_found(slot.youtube_id)
+              {:error, :video_unavailable}
+
+            {:error, %Tesla.Env{} = resp} ->
+              Logger.warning("got an error from upstream: #{inspect(resp)}")
               insert_video_not_found(slot.youtube_id)
               {:error, :video_unavailable}
           end
