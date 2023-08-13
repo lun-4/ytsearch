@@ -179,6 +179,7 @@ defmodule YtSearch.Youtube do
         expiry_timestamp = expiry_from_uri(uri)
         {:ok, {url |> unproxied_piped_url, expiry_timestamp, wanted_video_result}}
       else
+        Logger.warning("no valid formats found for #{youtube_id}")
         {:error, :no_valid_video_formats_found}
       end
     end
