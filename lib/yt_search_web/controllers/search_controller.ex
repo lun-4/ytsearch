@@ -50,6 +50,11 @@ defmodule YtSearchWeb.SearchController do
         conn
         |> put_status(429)
         |> json(%{error: true, detail: "server overloaded"})
+
+      {:error, :video_unavailable} ->
+        conn
+        |> put_status(404)
+        |> json(%{error: false, detail: "video not found"})
     end
   end
 
@@ -104,6 +109,9 @@ defmodule YtSearchWeb.SearchController do
 
           {:error, :overloaded_ytdlp_seats} ->
             {:error, :overloaded_ytdlp_seats}
+
+          {:error, :video_unavailable} ->
+            {:error, :video_unavailable}
         end
 
       search_slot ->
