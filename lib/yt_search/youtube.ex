@@ -188,9 +188,15 @@ defmodule YtSearch.Youtube do
          end)
          |> vrcjson_workaround}
 
-      {:error, %{status: 500, body: {:ok, raw_body}} = response} ->
+      {:ok, %{status: 500, body: raw_body} = response} ->
         body =
-          case raw_body |> Jason.decode() do
+          case raw_body
+               |> then(fn body ->
+                 case body do
+                   {:ok, body} -> body |> Jason.decode()
+                   v -> {:ok, v}
+                 end
+               end) do
             {:ok, body} ->
               body
 
@@ -199,11 +205,11 @@ defmodule YtSearch.Youtube do
                 "an error happened while parsing 500, #{inspect(val)}, #{inspect(raw_body)}"
               )
 
-              %{message: ""}
+              %{"message" => ""}
           end
 
         cond do
-          String.contains?(body["message"] || "", "Video unavailable") ->
+          String.contains?(message, "Video unavailable") ->
             Logger.warning("this is an unavailable youtube id")
             {:error, :video_unavailable}
 
