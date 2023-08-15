@@ -208,6 +208,8 @@ defmodule YtSearch.Youtube do
               %{"message" => ""}
           end
 
+        message = body["message"] || ""
+
         cond do
           String.contains?(message, "Video unavailable") ->
             Logger.warning("this is an unavailable youtube id")
