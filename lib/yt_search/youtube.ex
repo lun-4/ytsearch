@@ -72,18 +72,85 @@ defmodule YtSearch.Youtube do
     piped_search_call(&Piped.playlists/2, playlist_id, "relatedStreams")
   end
 
+  @youtube_url_regex ~r/(www\.youtube\.com|youtube\.com|youtu\.be)\/(.+)$/
+  @host_by_watch_query ["www.youtube.com", "youtube.com"]
+  @host_by_path ["youtu.be"]
+
+  @keys_to_copy [
+    "title",
+    "uploader",
+    "uploaderUrl",
+    "isShort",
+    "duration",
+    "views",
+    {"uploader", "uploaderName"},
+    {"description", "shortDescription"},
+    {"thumbnailUrl", "thumbnail"}
+  ]
+
   def videos_for(text) when is_bitstring(text) do
-    if String.starts_with?(text, "https://") do
-      # TODO maybe do parsing of youtube ids here
-      raise "no urls in search"
-    end
+    captures = Regex.run(@youtube_url_regex, text)
 
-    case Ratelimit.for_text_search() do
-      :allow ->
-        piped_search_call(&Piped.search/2, text, "items")
+    unless captures == nil do
+      [_full, host, url_path] = captures
 
-      :deny ->
-        {:error, :overloaded_ytdlp_seats}
+      {:ok, youtube_id} =
+        cond do
+          host in @host_by_watch_query ->
+            uri = URI.parse(url_path)
+
+            query =
+              uri.query
+              |> URI.decode_query()
+
+            {:ok, query["v"]}
+
+          host in @host_by_path ->
+            video_id = url_path |> String.split("/") |> Enum.at(0)
+            {:ok, video_id}
+
+          true ->
+            Logger.error("invalid host: #{host}")
+            {:input_error, :invalid_host}
+        end
+
+      with {:ok, piped_response} <-
+             piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
+        video_result =
+          @keys_to_copy
+          |> Enum.reduce(%{}, fn key, result ->
+            {key_from, key_to} =
+              case key do
+                {_, _} -> key
+                key -> {key, key}
+              end
+
+            result
+            |> Map.put(key_to, piped_response[key_from])
+          end)
+          # NOTE isShort is not shown on stream output. we will show results as type=video
+          # NOTE duration is 0, not -1, for live streams
+          |> Map.put("type", "stream")
+          |> Map.put("url", "/watch?v=#{youtube_id}")
+          # we don't get the real uploaded timestamp, so fill it with date at midnight
+          |> Map.put(
+            "uploaded",
+            piped_response["uploadDate"]
+            |> Date.from_iso8601!()
+            |> DateTime.new!(~T[00:00:00])
+            |> DateTime.to_unix(:millisecond)
+          )
+
+        {:ok, [video_result]}
+      end
+    else
+      case Ratelimit.for_text_search() do
+        :allow ->
+          piped_search_call(&Piped.search/2, text, "items")
+
+        :deny ->
+          {:error, :overloaded_ytdlp_seats}
+      end
     end
   end
 

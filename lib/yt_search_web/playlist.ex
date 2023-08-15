@@ -10,7 +10,7 @@ defmodule YtSearchWeb.Playlist do
           "stream" ->
             cond do
               entry["isShort"] -> :short
-              entry["duration"] == -1 -> :livestream
+              entry["duration"] in [-1, 0] -> :livestream
               entry["views"] == -1 -> :upcoming
               true -> :video
             end
