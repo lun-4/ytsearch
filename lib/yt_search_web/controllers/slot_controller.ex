@@ -119,12 +119,18 @@ defmodule YtSearchWeb.SlotController do
             :no_available_subtitles ->
               nil
 
+            :no_subtitles_found ->
+              nil
+
             data ->
               data
           end
         end)
 
       :no_available_subtitles ->
+        nil
+
+      :no_subtitles_found ->
         nil
 
       data ->
