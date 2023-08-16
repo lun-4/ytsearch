@@ -12,6 +12,8 @@ defmodule YtSearchWeb.SlotController do
 
     case Slot.fetch_by_id(slot_id) do
       nil ->
+        Logger.warning("unavailable (slot not found)")
+
         conn
         |> put_status(404)
         |> assign(:slot, nil)
@@ -42,11 +44,15 @@ defmodule YtSearchWeb.SlotController do
         |> redirect(external: link.mp4_link)
 
       {:error, :video_unavailable} ->
+        Logger.warning("unavailable (video unavailable)")
+
         conn
         |> put_status(404)
         |> text("video unavailable")
 
       {:error, :upcoming_video} ->
+        Logger.warning("unavailable (upcoming video)")
+
         conn
         |> put_status(404)
         |> text("video unavailable (upcoming video)")
@@ -58,6 +64,8 @@ defmodule YtSearchWeb.SlotController do
 
     case Slot.fetch_by_id(slot_id) do
       nil ->
+        Logger.warning("unavailable (not found)")
+
         conn
         |> put_status(404)
         |> assign(:slot, nil)
