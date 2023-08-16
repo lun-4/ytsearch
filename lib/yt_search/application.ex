@@ -40,9 +40,9 @@ defmodule YtSearch.Application do
         start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
       },
       {Cachex, name: :tabs},
-      Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-10 * 60)..(30 * 60)),
+      Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
       # Tinycron.new(YtSearch.Slot.Janitor, every: 10 * 60, jitter: (-3 * 60)..(3 * 60)),
-      Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -40..40),
+      Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
       Tinycron.new(YtSearch.Mp4Link.Janitor, every: 10 * 60, jitter: (-2 * 60)..(5 * 60)),
       Tinycron.new(YtSearchWeb.HelloController.Refresher, every: 3 * 60, jitter: -60..60),
       Tinycron.new(YtSearch.Thumbnail.Janitor, every: 10 * 60, jitter: (-2 * 60)..(4 * 60))
