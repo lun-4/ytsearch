@@ -84,7 +84,19 @@ defmodule YtSearchWeb.SearchController do
           end
 
         if is_valid_slot do
-          # TODO i think we should call Slot.refresh here actually
+          # TODO add refresh method to ChannelSlot and PlaylistSlot
+          data
+          |> SearchSlot.fetched_slots_from_search()
+          |> Enum.each(fn slot ->
+            case slot do
+              %YtSearch.Slot{} ->
+                YtSearch.Slot.refresh(slot.id)
+
+              _ ->
+                :ignore
+            end
+          end)
+
           data
         else
           nil
