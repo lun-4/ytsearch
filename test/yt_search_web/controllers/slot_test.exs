@@ -257,15 +257,13 @@ defmodule YtSearchWeb.SlotTest do
   test "it gives 404 on invalid youtube ids", %{conn: conn, slot: slot} do
     Tesla.Mock.mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
-        %{
-          status: 500,
-          body:
-            %{
-              error: "alkssdjlasjd",
-              message: "Video unavailable"
-            }
-            |> Jason.encode()
-        }
+        json(
+          %{
+            error: "alkssdjlasjd",
+            message: "Video unavailable"
+          },
+          status: 500
+        )
     end)
 
     1..10
