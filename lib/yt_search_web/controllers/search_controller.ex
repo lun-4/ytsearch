@@ -1,6 +1,7 @@
 defmodule YtSearchWeb.SearchController do
   use YtSearchWeb, :controller
 
+  require Logger
   alias YtSearch.Youtube
   alias YtSearch.SearchSlot
   alias YtSearch.ChannelSlot
@@ -55,6 +56,13 @@ defmodule YtSearchWeb.SearchController do
         conn
         |> put_status(404)
         |> json(%{error: false, detail: "video not found"})
+
+      {:input_error, err} ->
+        Logger.warning("input error when searching '#{escaped_query}': #{inspect(err)}")
+
+        conn
+        |> put_status(200)
+        |> json(%{search_results: []})
     end
   end
 
@@ -124,6 +132,9 @@ defmodule YtSearchWeb.SearchController do
 
           {:error, :video_unavailable} ->
             {:error, :video_unavailable}
+
+          {:input_error, err} ->
+            {:input_error, err}
         end
 
       search_slot ->

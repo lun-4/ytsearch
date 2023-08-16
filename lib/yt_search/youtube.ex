@@ -94,27 +94,8 @@ defmodule YtSearch.Youtube do
     unless captures == nil do
       [_full, host, url_path] = captures
 
-      {:ok, youtube_id} =
-        cond do
-          host in @host_by_watch_query ->
-            uri = URI.parse(url_path)
-
-            query =
-              uri.query
-              |> URI.decode_query()
-
-            {:ok, query["v"]}
-
-          host in @host_by_path ->
-            video_id = url_path |> String.split("/") |> Enum.at(0)
-            {:ok, video_id}
-
-          true ->
-            Logger.error("invalid host: #{host}")
-            {:input_error, :invalid_host}
-        end
-
-      with {:ok, piped_response} <-
+      with {:ok, youtube_id} <- youtube_id_from_uri(host, url_path),
+           {:ok, piped_response} <-
              piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
         video_result =
           @keys_to_copy
@@ -151,6 +132,31 @@ defmodule YtSearch.Youtube do
         :deny ->
           {:error, :overloaded_ytdlp_seats}
       end
+    end
+  end
+
+  defp youtube_id_from_uri(host, url_path) do
+    cond do
+      host in @host_by_watch_query ->
+        uri = URI.parse(url_path)
+
+        unless uri.query == nil do
+          query =
+            uri.query
+            |> URI.decode_query()
+
+          {:ok, query["v"]}
+        else
+          {:input_error, :invalid_format}
+        end
+
+      host in @host_by_path ->
+        video_id = url_path |> String.split("/") |> Enum.at(0)
+        {:ok, video_id}
+
+      true ->
+        Logger.error("invalid host: #{host}")
+        {:input_error, :invalid_host}
     end
   end
 
