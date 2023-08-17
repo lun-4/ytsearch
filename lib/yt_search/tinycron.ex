@@ -5,7 +5,7 @@ defmodule YtSearch.Tinycron do
   def new(module, opts \\ []) do
     %{
       id: module,
-      start: {__MODULE__, :start_link, [module, opts]}
+      start: {__MODULE__, :start_link, [module, opts |> Keyword.put(:name, module)]}
     }
   end
 
