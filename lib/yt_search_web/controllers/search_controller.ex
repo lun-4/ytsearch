@@ -133,6 +133,12 @@ defmodule YtSearchWeb.SearchController do
           {:error, :video_unavailable} ->
             {:error, :video_unavailable}
 
+          {:error, :channel_unavailable} ->
+            {:error, :channel_unavailable}
+
+          {:error, :channel_not_found} ->
+            {:error, :channel_not_found}
+
           {:input_error, err} ->
             {:input_error, err}
         end
@@ -154,13 +160,23 @@ defmodule YtSearchWeb.SearchController do
         |> text("not found")
 
       slot ->
-        {:ok, resp} =
-          slot
-          |> search_text()
+        case slot
+             |> search_text() do
+          {:ok, resp} ->
+            conn
+            |> put_status(200)
+            |> json(resp)
 
-        conn
-        |> put_status(200)
-        |> json(resp)
+          {:error, :channel_not_found} ->
+            conn
+            |> put_status(404)
+            |> json(%{error: true, detail: "channel not found"})
+
+          {:error, :channel_unavailable} ->
+            conn
+            |> put_status(404)
+            |> json(%{error: true, detail: "channel unavailable"})
+        end
     end
   end
 

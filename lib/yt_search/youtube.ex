@@ -221,6 +221,14 @@ defmodule YtSearch.Youtube do
             Logger.warning("this is an unavailable youtube id")
             {:error, :video_unavailable}
 
+          String.contains?(message, "This channel does not exist") ->
+            Logger.warning("this is a non existing channel")
+            {:error, :channel_not_found}
+
+          String.contains?(message, "This channel is not available") ->
+            Logger.warning("this is an unavailable channel")
+            {:error, :channel_unavailable}
+
           true ->
             {:error, response}
         end
