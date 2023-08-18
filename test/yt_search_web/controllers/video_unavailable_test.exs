@@ -3,9 +3,15 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   import Tesla.Mock
   alias YtSearch.Test.Data
   alias YtSearch.Slot
+  alias YtSearch.ChannelSlot
 
   @test_youtube_id "DTDimRi2_TQ"
   @piped_video_output File.read!("test/support/piped_outputs/unavailable.json")
+  @unavailable_channel_output File.read!("test/support/piped_outputs/unavailable_channel.json")
+  @notfound_channel_output File.read!("test/support/piped_outputs/notfound_channel.json")
+
+  @unavailable_channel_id "UCMsgXPD3wzzt8RxHJmXH7hQ"
+  @notfound_channel_id "UCMsgXPD3wzzt8RxHJmXHHHH"
 
   setup do
     Data.default_global_mock()
@@ -13,9 +19,19 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     mock(fn
       %{method: :get, url: "example.org/streams/#{@test_youtube_id}"} ->
         json(Jason.decode!(@piped_video_output), status: 500)
+
+      %{method: :get, url: "example.org/channel/#{@unavailable_channel_id}"} ->
+        json(Jason.decode!(@unavailable_channel_output), status: 500)
+
+      %{method: :get, url: "example.org/channel/#{@notfound_channel_id}"} ->
+        json(Jason.decode!(@notfound_channel_output), status: 500)
     end)
 
-    %{slot: Slot.create(@test_youtube_id, 0)}
+    %{
+      slot: Slot.create(@test_youtube_id, 0),
+      unavailable_channel_slot: ChannelSlot.from(@unavailable_channel_id),
+      notfound_channel_slot: ChannelSlot.from(@notfound_channel_id)
+    }
   end
 
   test "it successfully gives out 404 on unavailable video for subtitle", %{
@@ -40,5 +56,21 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       |> get(~p"/a/2/sr/#{slot.id}")
 
     assert text_response(conn, 404) == "video unavailable"
+  end
+
+  test "it 404s on unavailable channels", %{conn: conn, unavailable_channel_slot: channel_slot} do
+    conn =
+      conn
+      |> get(~p"/a/2/c/#{channel_slot.id}")
+
+    assert json_response(conn, 404)["detail"] == "channel unavailable"
+  end
+
+  test "it 404s on non-existing channels", %{conn: conn, notfound_channel_slot: channel_slot} do
+    conn =
+      conn
+      |> get(~p"/a/2/c/#{channel_slot.id}")
+
+    assert json_response(conn, 404)["detail"] == "channel not found"
   end
 end
