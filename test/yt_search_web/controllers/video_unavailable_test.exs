@@ -45,7 +45,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     assert resp_json["subtitle_data"] == nil
   end
 
-  test "it successfully gives out 404 on unavailable video for mp4 link", %{
+  test "it successfully gives out 200 on unavailable video for mp4 link", %{
     conn: conn,
     slot: slot
   } do
@@ -53,7 +53,20 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       conn
       |> get(~p"/a/2/sr/#{slot.id}")
 
-    assert text_response(conn, 404) == "video unavailable"
+    assert response_content_type(conn, :mp4)
+    # idk how to assert video content
+    assert response(conn, 200) != nil
+  end
+
+  test "it successfully gives out 404 on unavailable video for m3u8 link", %{
+    conn: conn,
+    slot: slot
+  } do
+    conn =
+      conn
+      |> get(~p"/a/2/sl/#{slot.id}/index.m3u8")
+
+    assert text_response(conn, 404) == "error happened: E01"
   end
 
   test "it 404s on unavailable channels", %{conn: conn, unavailable_channel_slot: channel_slot} do

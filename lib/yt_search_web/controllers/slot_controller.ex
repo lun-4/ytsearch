@@ -33,14 +33,68 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
+  @error_video_directory Path.join(:code.priv_dir(:yt_search), "static/redirect_errors")
+
+  defp show_error_video(conn, error_code) do
+    # let ops override error videos so actual file sending is offloaded
+    external_url =
+      case System.fetch_env("YTS_ERROR_VIDEO_URL_#{error_code}") do
+        :error -> nil
+        {:ok, ""} -> nil
+        {:ok, url} -> url
+      end
+
+    unless conn.assigns[:want_stream] do
+      if external_url == nil do
+        conn
+        |> put_resp_content_type("video/mp4", nil)
+        |> send_file(
+          200,
+          Path.join(
+            @error_video_directory,
+            "yts_error_message_#{error_code |> String.downcase()}.mp4"
+          )
+        )
+      else
+        conn
+        |> redirect(external: external_url)
+      end
+    else
+      # we can't redirect to a video when the quest player is in stream mode
+      # so... 404 it
+      conn
+      |> put_status(404)
+      |> text("error happened: #{error_code}")
+    end
+  end
+
+  defp redirect_to(conn, link) do
+    cond do
+      link == nil ->
+        # redirect to E00
+        show_error_video(conn, "E00")
+
+      link.mp4_link == nil ->
+        show_error_video(conn, link.error_reason)
+
+      true ->
+        conn
+        |> redirect(external: link.mp4_link)
+    end
+  end
+
   defp handle_quest_video(conn, slot) do
     case Mp4Link.maybe_fetch_upstream(slot) do
       {:ok, nil} ->
         raise "should not happen"
 
       {:ok, link} ->
-        conn
-        |> redirect(external: link.mp4_link)
+        redirect_to(conn, link)
+
+      {:error, %Mp4Link{} = link} ->
+        redirect_to(conn, link)
+
+      # TODO are these error cases needed now?
 
       {:error, :video_unavailable} ->
         Logger.warning("unavailable (video unavailable)")
@@ -64,15 +118,17 @@ defmodule YtSearchWeb.SlotController do
     case Slot.fetch_by_id(slot_id) do
       nil ->
         Logger.warning("unavailable (not found)")
-
-        conn
-        |> put_status(404)
-        |> assign(:slot, nil)
-        |> render("slot.json")
+        redirect_to(conn, nil)
 
       slot ->
         handle_quest_video(conn, slot)
     end
+  end
+
+  def fetch_stream_redirect(conn, args) do
+    conn
+    |> assign(:want_stream, true)
+    |> fetch_redirect(args)
   end
 
   defp do_slot_metadata(conn, slot) do

@@ -30,7 +30,7 @@ defmodule YtSearchWeb.Router do
     get("/at/:search_slot_id", AtlasController, :fetch)
     get("/sl/:slot_id", SlotController, :fetch_video)
     get("/sr/:slot_id", SlotController, :fetch_redirect)
-    get("/sl/:slot_id/index.m3u8", SlotController, :fetch_video)
+    get("/sl/:slot_id/index.m3u8", SlotController, :fetch_stream_redirect)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

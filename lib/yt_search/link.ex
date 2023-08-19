@@ -16,6 +16,7 @@ defmodule YtSearch.Mp4Link do
   schema "links" do
     field(:mp4_link, :string)
     field(:youtube_metadata, :string)
+    field(:error_reason, :string)
     timestamps()
   end
 
@@ -64,11 +65,33 @@ defmodule YtSearch.Mp4Link do
     |> Repo.insert!()
   end
 
-  def insert_video_not_found(youtube_id) do
+  @error_atom_from_string %{
+    "E01" => :video_unavailable,
+    "E02" => :no_valid_formats_found,
+    "E03" => :internal_error
+  }
+
+  @error_string_from_atom @error_atom_from_string
+                          |> Enum.map(fn {k, v} -> {v, k} end)
+                          |> Enum.into(%{})
+
+  def error_atom_from_string(str) do
+    @error_atom_from_string[str]
+  end
+
+  def error_string_from_atom(atom) do
+    @error_string_from_atom[atom]
+  end
+
+  @spec insert_error(String.t(), atom()) :: Mp4Link.t()
+  def insert_error(youtube_id, reason) do
+    reason_string = error_string_from_atom(reason) || "internal_error"
+
     %__MODULE__{
       youtube_id: youtube_id,
       youtube_metadata: nil,
-      mp4_link: nil
+      mp4_link: nil,
+      error_reason: reason_string
     }
     |> Repo.insert!()
   end
@@ -96,19 +119,12 @@ defmodule YtSearch.Mp4Link do
       {:ok, {link_string, expires_at_unix_timestamp, meta}} ->
         {:ok, insert(slot.youtube_id, link_string, expires_at_unix_timestamp, meta)}
 
-      {:error, :video_unavailable} ->
-        insert_video_not_found(slot.youtube_id)
-        {:error, :video_unavailable}
-
-      {:error, :no_valid_video_formats_found} ->
-        # TODO this should be a different status code
-        insert_video_not_found(slot.youtube_id)
-        {:error, :video_unavailable}
+      {:error, err} when err in [:video_unavailable, :no_valid_video_formats_found] ->
+        {:error, insert_error(slot.youtube_id, err)}
 
       {:error, %Tesla.Env{} = resp} ->
         Logger.warning("got an error from upstream: #{inspect(resp)}")
-        insert_video_not_found(slot.youtube_id)
-        {:error, :video_unavailable}
+        {:error, insert_error(slot.youtube_id, :internal_error)}
     end
   end
 
