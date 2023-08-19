@@ -71,11 +71,6 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   @impl true
-  def handle_call(:ping, from, state) do
-    {:ok, :pong, state}
-  end
-
-  @impl true
   def handle_call(:subtitles, from, state) do
     handle_request(:subtitles, from, state)
   end
@@ -101,7 +96,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
-  defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = state) do
+  defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
     wanted_video_result = Youtube.extract_valid_streams(meta["videoStreams"])
 
     #  override with hls
@@ -125,7 +120,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
-  defp process_metadata(meta, %{youtube_id: youtube_id, type: :subtitles} = state) do
+  defp process_metadata(meta, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     with {:ok, subtitles} <- Youtube.extract_subtitles(meta) do
       subtitles
       |> Enum.each(fn {subtitle, data} ->
@@ -136,13 +131,13 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
-  defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = state) do
+  defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     Logger.error("failed to fetch subtitles: #{inspect(error)}. setting it as not found")
     YtSearch.Subtitle.insert(youtube_id, "notfound", nil)
     nil
   end
 
-  defp process_error(error, %{type: :mp4_link} = state) do
+  defp process_error(error, %{type: :mp4_link} = _state) do
     Logger.error("failed to fetch link: #{inspect(error)}.")
     error
   end

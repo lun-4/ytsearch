@@ -2,7 +2,6 @@ defmodule YtSearch.Mp4Link do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Repo
-  alias YtSearch.Youtube
   alias YtSearch.TTL
   alias YtSearch.Slot
   require Logger

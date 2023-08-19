@@ -4,7 +4,6 @@ defmodule YtSearchWeb.SlotController do
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
   alias YtSearch.Subtitle
-  alias YtSearch.Youtube
   alias YtSearchWeb.UserAgent
 
   def fetch_video(conn, %{"slot_id" => slot_id_query}) do
