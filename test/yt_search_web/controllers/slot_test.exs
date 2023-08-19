@@ -29,17 +29,20 @@ defmodule YtSearchWeb.SlotTest do
   @run2 @run1 |> String.replace(@run1_original_url, "https://mp5.com")
 
   defp stop_metadata_workers(youtube_id) do
-    with [{worker, :self}] <- Registry.lookup(YtSearch.MetadataWorkers, youtube_id) do
+    with [{worker, :self}] <- Registry.lookup(YtSearch.MetadataWorkers, youtube_id),
+         true <- Process.alive?(worker) do
       GenServer.stop(worker, {:shutdown, :test_request})
     end
 
     with [{worker, :self}] <-
-           Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
+           Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}),
+         true <- Process.alive?(worker) do
       GenServer.stop(worker, {:shutdown, :test_request})
     end
 
     with [{worker, :self}] <-
-           Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
+           Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}),
+         true <- Process.alive?(worker) do
       GenServer.stop(worker, {:shutdown, :test_request})
     end
   end
