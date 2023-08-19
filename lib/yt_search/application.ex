@@ -45,7 +45,10 @@ defmodule YtSearch.Application do
       Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
       Tinycron.new(YtSearch.Mp4Link.Janitor, every: 10 * 60, jitter: (-2 * 60)..(5 * 60)),
       Tinycron.new(YtSearchWeb.HelloController.Refresher, every: 3 * 60, jitter: -60..60),
-      Tinycron.new(YtSearch.Thumbnail.Janitor, every: 10 * 60, jitter: (-2 * 60)..(4 * 60))
+      Tinycron.new(YtSearch.Thumbnail.Janitor, every: 10 * 60, jitter: (-2 * 60)..(4 * 60)),
+      {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
+      {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
+      {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
     ]
 
     start_telemetry()

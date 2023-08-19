@@ -15,6 +15,7 @@ defmodule YtSearchWeb.SlotTest do
 
   setup do
     slot = Slot.create(@youtube_id, 3600)
+    stop_metadata_workers(slot.youtube_id)
     %{slot: slot}
   end
 
@@ -27,12 +28,28 @@ defmodule YtSearchWeb.SlotTest do
   @run1_original_url "https://pipedproxy-cdg.kavin.rocks/videoplayback?expire=#{@custom_expire}&ei=Id3TZI2vOZ-lobIP_dmBiA4&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1001&id=o-AHJX6AwsW-zQGeS4Eyu1Bdv-yjYJr1bEu-We0EmP4NDb&itag=22&source=youtube&requiressl=yes&mh=xI&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7knee&ms=au%2Crdu&mv=m&mvi=1&pl=52&initcwndbps=835000&spc=UWF9f3ylca2q7Fjk8ujpSFMzTN3TUXs&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=666.435&lmt=1689626995182173&mt=1691606033&fvip=2&fexp=24007246%2C24362688&c=ANDROID&txp=5532434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRgIhAPypX1tk8JHpuo_QPe9KKVaiy-hbIBIXyq5qBBg963rzAiEAsnlp-AkDLpOmwhcgCQ1TKRrs-EtMl230VM_9SbNGg14%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRAIgP3rzSh2MwDq2ZxW1Pcgfcf-pki_ahrDfZ1HFz4_5CpgCIHwqgkD-lup0L9EpoGyYEWjtM4XQEJjbppRu1aPaXV2A&cpn=iZTa_BP8GjO4tg7g&host=rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com"
   @run2 @run1 |> String.replace(@run1_original_url, "https://mp5.com")
 
+  defp stop_metadata_workers(youtube_id) do
+    with [{worker, :self}] <- Registry.lookup(YtSearch.MetadataWorkers, youtube_id) do
+      GenServer.stop(worker, {:shutdown, :test_request})
+    end
+
+    with [{worker, :self}] <-
+           Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
+      GenServer.stop(worker, {:shutdown, :test_request})
+    end
+
+    with [{worker, :self}] <-
+           Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
+      GenServer.stop(worker, {:shutdown, :test_request})
+    end
+  end
+
   test "it gets the mp4 url on quest useragents, supporting ttl", %{
     conn: conn,
     slot: slot,
     ets_table: table
   } do
-    Tesla.Mock.mock(fn
+    Tesla.Mock.mock_global(fn
       %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
         calls = :ets.update_counter(table, :ytdlp_cmd_2, 1, {:ytdlp_cmd_2, 0})
 
@@ -65,6 +82,8 @@ defmodule YtSearchWeb.SlotTest do
     )
     |> YtSearch.Repo.update!()
 
+    stop_metadata_workers(slot.youtube_id)
+
     conn =
       build_conn()
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
@@ -74,7 +93,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn, slot: slot} do
-    Tesla.Mock.mock(fn
+    Tesla.Mock.mock_global(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         Tesla.Mock.json(
           @run1
@@ -98,7 +117,7 @@ defmodule YtSearchWeb.SlotTest do
   @expected_stream_url "https://manifest.googlevideo.com/api/manifest/hls_variant/expire/#{@custom_expire}/ei/IvrTZLKgGf_Y1sQPk4KOuAE/ip/2804%3A14d%3A5492%3A8fe8%3A%3A1001/id/jfKfPfyJRdk.2/source/yt_live_broadcast/requiressl/yes/hfr/1/playlist_duration/3600/manifest_duration/3600/demuxed/1/maudio/1/vprv/1/go/1/pacing/0/nvgoi/1/short_key/1/ncsapi/1/keepalive/yes/fexp/24007246%2C51000023/dover/13/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cdemuxed%2Cmaudio%2Cvprv%2Cgo%2Citag%2Cplaylist_type/sig/AOq0QJ8wRQIhANBnLbXAZIDegOLck5OxexbCOmLLVMKOtqukyUpwVnr1AiAHdQByc0Hm-MPN26SmyYflKk9LA905ahxukvjccfzR5w%3D%3D/file/index.m3u8?host=manifest.googlevideo.com"
 
   test "it gets m3u8 url on streams", %{conn: conn, slot: slot} do
-    Tesla.Mock.mock(fn
+    Tesla.Mock.mock_global(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         Tesla.Mock.json(
           @run_stream
@@ -255,7 +274,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "it gives 404 on invalid youtube ids", %{conn: conn, slot: slot} do
-    Tesla.Mock.mock(fn
+    Tesla.Mock.mock_global(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         json(
           %{

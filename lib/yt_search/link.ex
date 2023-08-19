@@ -93,35 +93,24 @@ defmodule YtSearch.Mp4Link do
   end
 
   defp fetch_mp4_link(slot) do
-    Mutex.under(Mp4LinkMutex, slot.youtube_id, fn ->
-      # refetch to prevent double fetch
+    case YtSearch.MetadataExtractor.Worker.mp4_link(slot.youtube_id) do
+      {:ok, {link_string, expires_at_unix_timestamp, meta}} ->
+        {:ok, insert(slot.youtube_id, link_string, expires_at_unix_timestamp, meta)}
 
-      case fetch_by_id(slot.youtube_id) do
-        {:ok, nil} ->
-          # get mp4 from ytdlp
-          case Youtube.fetch_mp4_link(slot.youtube_id) do
-            {:ok, {link_string, expires_at_unix_timestamp, meta}} ->
-              {:ok, insert(slot.youtube_id, link_string, expires_at_unix_timestamp, meta)}
+      {:error, :video_unavailable} ->
+        insert_video_not_found(slot.youtube_id)
+        {:error, :video_unavailable}
 
-            {:error, :video_unavailable} ->
-              insert_video_not_found(slot.youtube_id)
-              {:error, :video_unavailable}
+      {:error, :no_valid_video_formats_found} ->
+        # TODO this should be a different status code
+        insert_video_not_found(slot.youtube_id)
+        {:error, :video_unavailable}
 
-            {:error, :no_valid_video_formats_found} ->
-              # TODO this should be a different status code
-              insert_video_not_found(slot.youtube_id)
-              {:error, :video_unavailable}
-
-            {:error, %Tesla.Env{} = resp} ->
-              Logger.warning("got an error from upstream: #{inspect(resp)}")
-              insert_video_not_found(slot.youtube_id)
-              {:error, :video_unavailable}
-          end
-
-        value ->
-          value
-      end
-    end)
+      {:error, %Tesla.Env{} = resp} ->
+        Logger.warning("got an error from upstream: #{inspect(resp)}")
+        insert_video_not_found(slot.youtube_id)
+        {:error, :video_unavailable}
+    end
   end
 
   defmodule Janitor do
