@@ -5,6 +5,7 @@ defmodule YtSearchWeb.SlotTest do
   alias YtSearch.Mp4Link
   alias YtSearch.Repo
   import Ecto.Query
+  alias YtSearch.Test.Data
 
   @youtube_id "Jouh2mdt1fI"
 
@@ -52,7 +53,7 @@ defmodule YtSearchWeb.SlotTest do
     slot: slot,
     ets_table: table
   } do
-    Tesla.Mock.mock_global(fn
+    Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
         calls = :ets.update_counter(table, :ytdlp_cmd_2, 1, {:ytdlp_cmd_2, 0})
 
@@ -96,7 +97,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn, slot: slot} do
-    Tesla.Mock.mock_global(fn
+    Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         Tesla.Mock.json(
           @run1
@@ -120,7 +121,7 @@ defmodule YtSearchWeb.SlotTest do
   @expected_stream_url "https://manifest.googlevideo.com/api/manifest/hls_variant/expire/#{@custom_expire}/ei/IvrTZLKgGf_Y1sQPk4KOuAE/ip/2804%3A14d%3A5492%3A8fe8%3A%3A1001/id/jfKfPfyJRdk.2/source/yt_live_broadcast/requiressl/yes/hfr/1/playlist_duration/3600/manifest_duration/3600/demuxed/1/maudio/1/vprv/1/go/1/pacing/0/nvgoi/1/short_key/1/ncsapi/1/keepalive/yes/fexp/24007246%2C51000023/dover/13/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cdemuxed%2Cmaudio%2Cvprv%2Cgo%2Citag%2Cplaylist_type/sig/AOq0QJ8wRQIhANBnLbXAZIDegOLck5OxexbCOmLLVMKOtqukyUpwVnr1AiAHdQByc0Hm-MPN26SmyYflKk9LA905ahxukvjccfzR5w%3D%3D/file/index.m3u8?host=manifest.googlevideo.com"
 
   test "it gets m3u8 url on streams", %{conn: conn, slot: slot} do
-    Tesla.Mock.mock_global(fn
+    Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         Tesla.Mock.json(
           @run_stream
@@ -277,7 +278,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "it gives 404 on invalid youtube ids", %{conn: conn, slot: slot} do
-    Tesla.Mock.mock_global(fn
+    Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         json(
           %{

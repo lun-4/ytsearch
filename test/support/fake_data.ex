@@ -7,7 +7,7 @@ defmodule YtSearch.Test.Data do
     %Tesla.Env{status: 200, headers: [{"content-type", "image/webp"}], body: png()}
   end
 
-  def default_global_mock do
+  def default_global_mock(extra_fn \\ nil) do
     Tesla.Mock.mock_global(fn
       %{method: :get, url: "https://i.ytimg.com" <> _} ->
         png_response()
@@ -17,6 +17,11 @@ defmodule YtSearch.Test.Data do
 
       %{method: :get, url: "https://yt3.googleusercontent.com/ytc" <> _} ->
         png_response()
+
+      env ->
+        unless extra_fn == nil do
+          extra_fn.(env)
+        end
     end)
   end
 end
