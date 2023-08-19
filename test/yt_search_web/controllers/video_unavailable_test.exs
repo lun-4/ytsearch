@@ -14,9 +14,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   @notfound_channel_id "UCMsgXPD3wzzt8RxHJmXHHHH"
 
   setup do
-    Data.default_global_mock()
-
-    mock(fn
+    Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams/#{@test_youtube_id}"} ->
         json(Jason.decode!(@piped_video_output), status: 500)
 

@@ -4,7 +4,6 @@ defmodule YtSearchWeb.SlotController do
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
   alias YtSearch.Subtitle
-  alias YtSearch.Youtube
   alias YtSearchWeb.UserAgent
 
   def fetch_video(conn, %{"slot_id" => slot_id_query}) do
@@ -113,27 +112,13 @@ defmodule YtSearchWeb.SlotController do
 
     case subtitles_for(slot) do
       :no_requested_subtitles ->
-        Mutex.under(SubtitleMutex, slot.youtube_id, fn ->
-          case subtitles_for(slot) do
-            :no_requested_subtitles ->
-              if recursing do
-                Logger.warning("should not recurse twice into requesting subtitles")
-                nil
-              else
-                Youtube.fetch_subtitles(slot.youtube_id)
-                do_subtitles(slot, true)
-              end
-
-            :no_available_subtitles ->
-              nil
-
-            :no_subtitles_found ->
-              nil
-
-            data ->
-              data
-          end
-        end)
+        if recursing do
+          Logger.warning("should not recurse twice into requesting subtitles")
+          nil
+        else
+          YtSearch.MetadataExtractor.Worker.subtitles(slot.youtube_id)
+          do_subtitles(slot, true)
+        end
 
       :no_available_subtitles ->
         nil
