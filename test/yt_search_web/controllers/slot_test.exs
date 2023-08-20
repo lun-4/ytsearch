@@ -29,23 +29,11 @@ defmodule YtSearchWeb.SlotTest do
   @run1_original_url "https://pipedproxy-cdg.kavin.rocks/videoplayback?expire=#{@custom_expire}&ei=Id3TZI2vOZ-lobIP_dmBiA4&ip=2804%3A14d%3A5492%3A8fe8%3A%3A1001&id=o-AHJX6AwsW-zQGeS4Eyu1Bdv-yjYJr1bEu-We0EmP4NDb&itag=22&source=youtube&requiressl=yes&mh=xI&mm=31%2C29&mn=sn-oxunxg8pjvn-gxjl%2Csn-gpv7knee&ms=au%2Crdu&mv=m&mvi=1&pl=52&initcwndbps=835000&spc=UWF9f3ylca2q7Fjk8ujpSFMzTN3TUXs&vprv=1&svpuc=1&mime=video%2Fmp4&cnr=14&ratebypass=yes&dur=666.435&lmt=1689626995182173&mt=1691606033&fvip=2&fexp=24007246%2C24362688&c=ANDROID&txp=5532434&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRgIhAPypX1tk8JHpuo_QPe9KKVaiy-hbIBIXyq5qBBg963rzAiEAsnlp-AkDLpOmwhcgCQ1TKRrs-EtMl230VM_9SbNGg14%3D&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=AG3C_xAwRAIgP3rzSh2MwDq2ZxW1Pcgfcf-pki_ahrDfZ1HFz4_5CpgCIHwqgkD-lup0L9EpoGyYEWjtM4XQEJjbppRu1aPaXV2A&cpn=iZTa_BP8GjO4tg7g&host=rr1---sn-oxunxg8pjvn-gxjl.googlevideo.com"
   @run2 @run1 |> String.replace(@run1_original_url, "https://mp5.com")
 
-  defp stop_metadata_workers(youtube_id) do
-    with [{worker, :self}] <- Registry.lookup(YtSearch.MetadataWorkers, youtube_id),
-         true <- Process.alive?(worker) do
-      GenServer.stop(worker, {:shutdown, :test_request})
-    end
-
-    with [{worker, :self}] <-
-           Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}),
-         true <- Process.alive?(worker) do
-      GenServer.stop(worker, {:shutdown, :test_request})
-    end
-
-    with [{worker, :self}] <-
-           Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}),
-         true <- Process.alive?(worker) do
-      GenServer.stop(worker, {:shutdown, :test_request})
-    end
+  defp stop_metadata_workers(_youtube_id) do
+    DynamicSupervisor.which_children(YtSearch.MetadataSupervisor)
+    |> Enum.each(fn {_id, child, _type, _modules} ->
+      DynamicSupervisor.terminate_child(YtSearch.MetadataSupervisor, child)
+    end)
   end
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{
