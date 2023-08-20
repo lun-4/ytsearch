@@ -173,6 +173,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
         {:error, YtSearch.Mp4Link.insert_error(youtube_id, err)}
 
       _ ->
+        Logger.error("an error happened while fetching link. #{inspect(error)}")
         {:error, YtSearch.Mp4Link.insert_error(youtube_id, :video_unavailable)}
     end
   end
