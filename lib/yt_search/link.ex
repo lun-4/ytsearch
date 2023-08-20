@@ -115,19 +115,7 @@ defmodule YtSearch.Mp4Link do
   end
 
   defp fetch_mp4_link(slot) do
-    case YtSearch.MetadataExtractor.Worker.mp4_link(slot.youtube_id) do
-      {:ok, link} ->
-        {:ok, link}
-
-      {:error, :video_unavailable} ->
-        {:error, :video_unavailable}
-
-      {:error, :no_valid_video_formats_found} ->
-        {:error, :video_unavailable}
-
-      {:error, %Tesla.Env{}} ->
-        {:error, :video_unavailable}
-    end
+    YtSearch.MetadataExtractor.Worker.mp4_link(slot.youtube_id)
   end
 
   defmodule Janitor do

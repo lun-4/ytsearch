@@ -97,22 +97,6 @@ defmodule YtSearchWeb.SlotController do
 
       {:error, %Mp4Link{} = link} ->
         redirect_to(conn, link)
-
-      # TODO are these error cases needed now?
-
-      {:error, :video_unavailable} ->
-        Logger.warning("unavailable (video unavailable)")
-
-        conn
-        |> put_status(404)
-        |> text("video unavailable")
-
-      {:error, :upcoming_video} ->
-        Logger.warning("unavailable (upcoming video)")
-
-        conn
-        |> put_status(404)
-        |> text("video unavailable (upcoming video)")
     end
   end
 

@@ -170,13 +170,11 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
     case error do
       {:error, err} ->
-        YtSearch.Mp4Link.insert_error(youtube_id, err)
+        {:error, YtSearch.Mp4Link.insert_error(youtube_id, err)}
 
       _ ->
-        YtSearch.Mp4Link.insert_error(youtube_id, :video_unavailable)
+        {:error, YtSearch.Mp4Link.insert_error(youtube_id, :video_unavailable)}
     end
-
-    error
   end
 
   defp handle_request(request_type, _from, state) do

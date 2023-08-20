@@ -328,8 +328,8 @@ defmodule YtSearchWeb.SlotTest do
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
       |> get(~p"/api/v2/s/#{slot.id}")
 
-    assert get_resp_header(conn, "yts-failure-code") == ["E01"]
     assert conn.status == 200
     assert response_content_type(conn, :mp4)
+    assert get_resp_header(conn, "yts-failure-code") == ["E01"]
   end
 end
