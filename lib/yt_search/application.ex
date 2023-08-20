@@ -42,6 +42,7 @@ defmodule YtSearch.Application do
         },
         {Cachex, name: :tabs},
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
+        {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
         {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
       ] ++ maybe_janitors()
