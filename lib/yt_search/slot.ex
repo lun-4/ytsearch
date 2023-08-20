@@ -55,15 +55,12 @@ defmodule YtSearch.Slot do
       }
       |> Repo.insert!()
     else
-      if TTL.expired?(maybe_slot) do
-        # we want this youtube id created, but the slot for it is expired...
-        # instead of deleting it or generating a new one, renew it
-        # by setting inserted_at to current timestamp
-        maybe_slot.id
-        |> refresh()
-      else
-        maybe_slot
-      end
+      # we want to create a slot for this ytid, but we already
+      # got one, doesn't matter if it's expired or not.
+
+      # refresh it
+      maybe_slot.id
+      |> refresh()
     end
   end
 
@@ -72,7 +69,7 @@ defmodule YtSearch.Slot do
     slot = Repo.one(query)
 
     unless slot == nil do
-      Logger.info("refreshed video id #{slot.id}")
+      Logger.info("refreshing video id #{slot.id}")
 
       slot
       |> Ecto.Changeset.change(
