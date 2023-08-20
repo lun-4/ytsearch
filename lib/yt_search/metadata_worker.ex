@@ -54,20 +54,27 @@ defmodule YtSearch.Metadata.Worker do
   end
 
   @impl true
-  def handle_info(:vibe_check, %{last_reply: last_reply} = state) do
-    # if state.last_reply - now is over 60, exit
+  def handle_info(:vibe_check, %{youtube_id: youtube_id, last_reply: last_reply} = state) do
+    # if state.last_reply - now is over 60, schedule a future exit in 60 seconds
     # if not, schedule 60000
 
     now = System.monotonic_time(:second)
     time_since_last_reply = now - last_reply
 
     if time_since_last_reply > 60 do
-      {:stop, {:shutdown, :intended_suicide}, state}
+      Registry.unregister(YtSearch.MetadataWorkers, youtube_id)
+      Process.send_after(self(), :suicide, 30000)
     else
       # schedule next exit if we arent supposed to die yet
       schedule_deffered_exit()
-      {:noreply, state}
     end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:suicide, state) do
+    {:stop, {:shutdown, :intended_suicide}, state}
   end
 
   @impl true

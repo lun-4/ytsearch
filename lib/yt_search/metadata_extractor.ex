@@ -89,7 +89,10 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   @impl true
-  def handle_info(:vibe_check, %{last_reply: last_reply} = state) do
+  def handle_info(
+        :vibe_check,
+        %{type: type, youtube_id: youtube_id, last_reply: last_reply} = state
+      ) do
     # if state.last_reply - now is over 30, exit
     # if not, schedule 30000
 
@@ -97,12 +100,19 @@ defmodule YtSearch.MetadataExtractor.Worker do
     time_since_last_reply = now - last_reply
 
     if time_since_last_reply > 60 do
-      {:stop, {:shutdown, :intended_suicide}, state}
+      Registry.unregister(YtSearch.MetadataWorkers, {type, youtube_id})
+      Process.send_after(self(), :suicide, 30000)
     else
       # schedule next exit if we arent supposed to die yet
       schedule_deffered_exit()
-      {:noreply, state}
     end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:suicide, state) do
+    {:stop, {:shutdown, :intended_suicide}, state}
   end
 
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
