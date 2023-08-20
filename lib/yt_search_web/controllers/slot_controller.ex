@@ -36,6 +36,10 @@ defmodule YtSearchWeb.SlotController do
   @error_video_directory Path.join(:code.priv_dir(:yt_search), "static/redirect_errors")
 
   defp show_error_video(conn, error_code) do
+    conn =
+      conn
+      |> put_resp_header("yts-failure-code", error_code)
+
     # let ops override error videos so actual file sending is offloaded
     external_url =
       case System.fetch_env("YTS_ERROR_VIDEO_URL_#{error_code}") do
