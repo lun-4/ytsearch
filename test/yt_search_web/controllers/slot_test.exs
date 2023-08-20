@@ -84,7 +84,18 @@ defmodule YtSearchWeb.SlotTest do
     )
     |> YtSearch.Repo.update!()
 
-    stop_metadata_workers(slot.youtube_id)
+    # instead of stopping, just unregister them both
+    [{worker, :self}] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
+    :ok = GenServer.call(worker, :unregister)
+    [] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
+
+    [{extractor, :self}] =
+      Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
+
+    :ok = GenServer.call(extractor, :unregister)
+
+    [] =
+      Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
 
     conn =
       build_conn()

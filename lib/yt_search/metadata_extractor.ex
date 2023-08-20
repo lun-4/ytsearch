@@ -84,6 +84,18 @@ defmodule YtSearch.MetadataExtractor.Worker do
     handle_request(:subtitles, from, state)
   end
 
+  @impl true
+  @doc "this should only be called in tests"
+  def handle_call(:unregister, _from, %{type: type, youtube_id: youtube_id} = state) do
+    if Mix.env() == :test do
+      Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
+    else
+      raise "unregister is an invalid call on non-test environments"
+    end
+
+    {:reply, :ok, state}
+  end
+
   defp schedule_deffered_exit() do
     Process.send_after(self(), :vibe_check, 60000)
   end
