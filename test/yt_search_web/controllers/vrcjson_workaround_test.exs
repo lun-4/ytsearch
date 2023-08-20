@@ -1,13 +1,14 @@
 defmodule YtSearchWeb.VRCJSONWorkaroundTest do
   use YtSearchWeb.ConnCase, async: true
   import Tesla.Mock
+  alias YtSearch.Test.Data
 
   @test_output File.read!(
                  "test/support/piped_outputs/peaceful_summer_night_chill_summer_lofi_search.json"
                )
 
   test "it does the thing", %{conn: conn} do
-    mock(fn
+    Data.default_global_mock(fn
       %{method: :get, url: "example.org" <> _} ->
         json(Jason.decode!(@test_output))
     end)
