@@ -16,7 +16,11 @@ defmodule YtSearchWeb.SlotTest do
 
   setup do
     slot = Slot.create(@youtube_id, 3600)
-    stop_metadata_workers(slot.youtube_id)
+
+    on_exit(fn ->
+      stop_metadata_workers(slot.youtube_id)
+    end)
+
     %{slot: slot}
   end
 
