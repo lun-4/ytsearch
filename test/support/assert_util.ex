@@ -1,8 +1,10 @@
 defmodule YtSearch.AssertUtil do
   import ExUnit.Assertions
 
-  def image(temporary_path) do
+  def image(temporary_path, wanted_width \\ 8) do
     {output, 0} = System.cmd("identify", [temporary_path])
+
+    assert String.contains?(output, "#{wanted_width}-bit")
 
     split_word =
       cond do
