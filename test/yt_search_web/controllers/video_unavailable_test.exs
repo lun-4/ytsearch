@@ -54,8 +54,8 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       |> get(~p"/a/2/sr/#{slot.id}")
 
     assert response_content_type(conn, :mp4)
-    # idk how to assert video content
     assert response(conn, 200) != nil
+    assert get_resp_header(conn, "yts-failure-code") == ["E01"]
   end
 
   test "it successfully gives out 404 on unavailable video for m3u8 link", %{

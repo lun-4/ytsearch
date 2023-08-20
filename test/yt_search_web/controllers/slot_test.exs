@@ -277,7 +277,7 @@ defmodule YtSearchWeb.SlotTest do
     assert Repo.one(from s in Slot, where: s.id == ^slot.id, select: s) == nil
   end
 
-  test "it gives 404 on invalid youtube ids", %{conn: conn, slot: slot} do
+  test "it gives 200 on invalid youtube ids", %{conn: conn, slot: slot} do
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
         json(
@@ -289,15 +289,13 @@ defmodule YtSearchWeb.SlotTest do
         )
     end)
 
-    1..10
-    |> Enum.each(fn _ ->
-      conn =
-        conn
-        |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-        |> get(~p"/api/v2/s/#{slot.id}")
+    conn =
+      conn
+      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+      |> get(~p"/api/v2/s/#{slot.id}")
 
-      assert conn.status == 404
-      assert conn.resp_body == "video unavailable"
-    end)
+    assert get_resp_header(conn, "yts-failure-code") == ["E01"]
+    assert conn.status == 200
+    assert response_content_type(conn, :mp4)
   end
 end
