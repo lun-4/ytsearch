@@ -62,7 +62,16 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   @impl true
   def init({type, youtube_id}) do
-    {:ok, %{type: type, youtube_id: youtube_id, mp4_link: nil, subtitle: nil}}
+    schedule_deffered_exit()
+
+    {:ok,
+     %{
+       type: type,
+       youtube_id: youtube_id,
+       mp4_link: nil,
+       subtitle: nil,
+       last_reply: System.monotonic_time(:second)
+     }}
   end
 
   @impl true
@@ -80,7 +89,10 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   @impl true
-  def handle_info(:vibe_check, %{last_reply: last_reply} = state) do
+  def handle_info(
+        :vibe_check,
+        %{type: type, youtube_id: youtube_id, last_reply: last_reply} = state
+      ) do
     # if state.last_reply - now is over 30, exit
     # if not, schedule 30000
 
@@ -88,12 +100,19 @@ defmodule YtSearch.MetadataExtractor.Worker do
     time_since_last_reply = now - last_reply
 
     if time_since_last_reply > 60 do
-      {:stop, {:shutdown, :intended_suicide}, state}
+      Registry.unregister(YtSearch.MetadataWorkers, {type, youtube_id})
+      Process.send_after(self(), :suicide, 30000)
     else
       # schedule next exit if we arent supposed to die yet
       schedule_deffered_exit()
-      {:noreply, state}
     end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:suicide, state) do
+    {:stop, {:shutdown, :intended_suicide}, state}
   end
 
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
@@ -113,7 +132,16 @@ defmodule YtSearch.MetadataExtractor.Worker do
       url = wanted_video_result["url"]
       uri = url |> URI.parse()
       expiry_timestamp = Youtube.expiry_from_uri(uri)
-      {:ok, {url |> Youtube.unproxied_piped_url(), expiry_timestamp, wanted_video_result}}
+
+      link =
+        YtSearch.Mp4Link.insert(
+          youtube_id,
+          url |> Youtube.unproxied_piped_url(),
+          expiry_timestamp,
+          wanted_video_result
+        )
+
+      {:ok, link}
     else
       Logger.warning("no valid formats found for #{youtube_id}")
       {:error, :no_valid_video_formats_found}
@@ -137,8 +165,17 @@ defmodule YtSearch.MetadataExtractor.Worker do
     nil
   end
 
-  defp process_error(error, %{type: :mp4_link} = _state) do
+  defp process_error(error, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
     Logger.error("failed to fetch link: #{inspect(error)}.")
+
+    case error do
+      {:error, err} ->
+        YtSearch.Mp4Link.insert_error(youtube_id, err)
+
+      _ ->
+        YtSearch.Mp4Link.insert_error(youtube_id, :video_unavailable)
+    end
+
     error
   end
 
@@ -153,14 +190,22 @@ defmodule YtSearch.MetadataExtractor.Worker do
       unless result == nil do
         {:reply, result, new_state}
       else
-        schedule_deffered_exit()
-
         with {:ok, meta} <- YtSearch.Metadata.Worker.fetch_for(state.youtube_id),
              {:ok, result} <- process_metadata(meta, state) do
+          # TODO remove copypaste
+          new_state =
+            new_state
+            |> Map.put(state.type, {:ok, result})
+
           {:reply, {:ok, result}, new_state}
         else
           {:error, _} = error ->
             reply = process_error(error, state)
+
+            new_state =
+              new_state
+              |> Map.put(state.type, reply)
+
             {:reply, reply, new_state}
         end
       end
