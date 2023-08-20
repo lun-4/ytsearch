@@ -9,47 +9,42 @@ defmodule YtSearch.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Start the Telemetry supervisor
-      YtSearchWeb.Telemetry,
-      # Start the Ecto repository
-      YtSearch.Repo,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: YtSearch.PubSub},
-      # Start Finch
-      # {Finch, name: YtSearch.Finch},
-      # Start the Endpoint (http/https)
-      YtSearchWeb.Endpoint,
-      # Start a worker by calling: YtSearch.Worker.start_link(arg)
-      # {YtSearch.Worker, arg}
-      {Mutex, name: Mp4LinkMutex},
-      %{
-        id: ThumbnailMutex,
-        start: {Mutex, :start_link, [[name: ThumbnailMutex]]}
-      },
-      %{
-        id: SubtitleMutex,
-        start: {Mutex, :start_link, [[name: SubtitleMutex]]}
-      },
-      %{
-        id: SearchMutex,
-        start: {Mutex, :start_link, [[name: SearchMutex]]}
-      },
-      %{
-        id: PlaylistEntryCreatorMutex,
-        start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
-      },
-      {Cachex, name: :tabs},
-      Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
-      # Tinycron.new(YtSearch.Slot.Janitor, every: 10 * 60, jitter: (-3 * 60)..(3 * 60)),
-      Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
-      Tinycron.new(YtSearch.Mp4Link.Janitor, every: 10 * 60, jitter: (-2 * 60)..(5 * 60)),
-      Tinycron.new(YtSearchWeb.HelloController.Refresher, every: 3 * 60, jitter: -60..60),
-      Tinycron.new(YtSearch.Thumbnail.Janitor, every: 10 * 60, jitter: (-2 * 60)..(4 * 60)),
-      {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
-      {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
-      {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
-    ]
+    children =
+      [
+        # Start the Telemetry supervisor
+        YtSearchWeb.Telemetry,
+        # Start the Ecto repository
+        YtSearch.Repo,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: YtSearch.PubSub},
+        # Start Finch
+        # {Finch, name: YtSearch.Finch},
+        # Start the Endpoint (http/https)
+        YtSearchWeb.Endpoint,
+        # Start a worker by calling: YtSearch.Worker.start_link(arg)
+        # {YtSearch.Worker, arg}
+        {Mutex, name: Mp4LinkMutex},
+        %{
+          id: ThumbnailMutex,
+          start: {Mutex, :start_link, [[name: ThumbnailMutex]]}
+        },
+        %{
+          id: SubtitleMutex,
+          start: {Mutex, :start_link, [[name: SubtitleMutex]]}
+        },
+        %{
+          id: SearchMutex,
+          start: {Mutex, :start_link, [[name: SearchMutex]]}
+        },
+        %{
+          id: PlaylistEntryCreatorMutex,
+          start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
+        },
+        {Cachex, name: :tabs},
+        {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
+        {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
+        {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
+      ] ++ maybe_janitors()
 
     start_telemetry()
 
@@ -57,6 +52,21 @@ defmodule YtSearch.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: YtSearch.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp maybe_janitors do
+    unless Mix.env() == :test do
+      [
+        Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
+        # Tinycron.new(YtSearch.Slot.Janitor, every: 10 * 60, jitter: (-3 * 60)..(3 * 60)),
+        Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
+        Tinycron.new(YtSearch.Mp4Link.Janitor, every: 10 * 60, jitter: (-2 * 60)..(5 * 60)),
+        Tinycron.new(YtSearchWeb.HelloController.Refresher, every: 3 * 60, jitter: -60..60),
+        Tinycron.new(YtSearch.Thumbnail.Janitor, every: 10 * 60, jitter: (-2 * 60)..(4 * 60))
+      ]
+    else
+      []
+    end
   end
 
   defp start_telemetry do
