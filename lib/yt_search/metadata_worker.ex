@@ -36,7 +36,7 @@ defmodule YtSearch.Metadata.Worker do
 
   @impl true
   def init(youtube_id) do
-    {:ok, %{youtube_id: youtube_id, metadata: nil, last_reply: nil}}
+    {:ok, %{youtube_id: youtube_id, metadata: nil, last_reply: System.monotonic_time(:second)}}
   end
 
   defp fetch_data(%{metadata: meta, youtube_id: youtube_id} = state) do

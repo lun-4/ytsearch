@@ -62,7 +62,14 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   @impl true
   def init({type, youtube_id}) do
-    {:ok, %{type: type, youtube_id: youtube_id, mp4_link: nil, subtitle: nil}}
+    {:ok,
+     %{
+       type: type,
+       youtube_id: youtube_id,
+       mp4_link: nil,
+       subtitle: nil,
+       last_reply: System.monotonic_time(:second)
+     }}
   end
 
   @impl true
