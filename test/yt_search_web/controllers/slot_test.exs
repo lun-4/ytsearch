@@ -103,6 +103,10 @@ defmodule YtSearchWeb.SlotTest do
       |> get(~p"/api/v2/s/#{slot.id}")
 
     assert get_resp_header(conn, "location") == ["https://mp5.com"]
+
+    # as i still hold a pid of the link, i can fetch it again and it should give the old url
+    {:ok, link} = YtSearch.MetadataExtractor.Worker.mp4_link(extractor)
+    assert link.mp4_link == @expected_run1_url
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn} do
