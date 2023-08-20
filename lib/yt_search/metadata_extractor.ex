@@ -62,6 +62,8 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   @impl true
   def init({type, youtube_id}) do
+    schedule_deffered_exit()
+
     {:ok,
      %{
        type: type,
@@ -170,8 +172,6 @@ defmodule YtSearch.MetadataExtractor.Worker do
       unless result == nil do
         {:reply, result, new_state}
       else
-        schedule_deffered_exit()
-
         with {:ok, meta} <- YtSearch.Metadata.Worker.fetch_for(state.youtube_id),
              {:ok, result} <- process_metadata(meta, state) do
           # TODO remove copypaste

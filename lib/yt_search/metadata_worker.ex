@@ -36,6 +36,7 @@ defmodule YtSearch.Metadata.Worker do
 
   @impl true
   def init(youtube_id) do
+    schedule_deffered_exit()
     {:ok, %{youtube_id: youtube_id, metadata: nil, last_reply: System.monotonic_time(:second)}}
   end
 
@@ -75,7 +76,6 @@ defmodule YtSearch.Metadata.Worker do
       state
       |> fetch_data
 
-    schedule_deffered_exit()
     {:reply, new_state.metadata, new_state}
   end
 end
