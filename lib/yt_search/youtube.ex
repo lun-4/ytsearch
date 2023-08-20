@@ -420,6 +420,7 @@ defmodule YtSearch.Youtube do
       |> Enum.map(fn task ->
         Task.await(task)
       end)
+      |> Enum.filter(fn result -> result != nil end)
 
     unless length(result) == 0 do
       {:ok, result}
