@@ -93,21 +93,16 @@ defmodule YtSearch.Mp4Link do
 
   defp fetch_mp4_link(slot) do
     case YtSearch.MetadataExtractor.Worker.mp4_link(slot.youtube_id) do
-      {:ok, {link_string, expires_at_unix_timestamp, meta}} ->
-        {:ok, insert(slot.youtube_id, link_string, expires_at_unix_timestamp, meta)}
+      {:ok, link} ->
+        {:ok, link}
 
       {:error, :video_unavailable} ->
-        insert_video_not_found(slot.youtube_id)
         {:error, :video_unavailable}
 
       {:error, :no_valid_video_formats_found} ->
-        # TODO this should be a different status code
-        insert_video_not_found(slot.youtube_id)
         {:error, :video_unavailable}
 
       {:error, %Tesla.Env{} = resp} ->
-        Logger.warning("got an error from upstream: #{inspect(resp)}")
-        insert_video_not_found(slot.youtube_id)
         {:error, :video_unavailable}
     end
   end

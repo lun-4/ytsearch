@@ -113,7 +113,16 @@ defmodule YtSearch.MetadataExtractor.Worker do
       url = wanted_video_result["url"]
       uri = url |> URI.parse()
       expiry_timestamp = Youtube.expiry_from_uri(uri)
-      {:ok, {url |> Youtube.unproxied_piped_url(), expiry_timestamp, wanted_video_result}}
+
+      link =
+        YtSearch.Mp4Link.insert(
+          youtube_id,
+          url |> Youtube.unproxied_piped_url(),
+          expiry_timestamp,
+          wanted_video_result
+        )
+
+      {:ok, link}
     else
       Logger.warning("no valid formats found for #{youtube_id}")
       {:error, :no_valid_video_formats_found}
@@ -137,8 +146,9 @@ defmodule YtSearch.MetadataExtractor.Worker do
     nil
   end
 
-  defp process_error(error, %{type: :mp4_link} = _state) do
+  defp process_error(error, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
     Logger.error("failed to fetch link: #{inspect(error)}.")
+    YtSearch.Mp4Link.insert_video_not_found(youtube_id)
     error
   end
 
@@ -157,10 +167,20 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
         with {:ok, meta} <- YtSearch.Metadata.Worker.fetch_for(state.youtube_id),
              {:ok, result} <- process_metadata(meta, state) do
+          # TODO remove copypaste
+          new_state =
+            new_state
+            |> Map.put(state.type, {:ok, result})
+
           {:reply, {:ok, result}, new_state}
         else
           {:error, _} = error ->
             reply = process_error(error, state)
+
+            new_state =
+              new_state
+              |> Map.put(state.type, reply)
+
             {:reply, reply, new_state}
         end
       end

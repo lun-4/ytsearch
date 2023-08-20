@@ -225,6 +225,40 @@ defmodule YtSearchWeb.SlotTest do
     end)
   end
 
+  test "links work under pressure and are only fetched once", %{slot: slot, ets_table: table} do
+    mock_global(fn
+      %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
+        # fake work
+        :timer.sleep(50)
+        calls = :ets.update_counter(table, :ytdlp_cmd_streams, 1, {:ytdlp_cmd_streams, 0})
+
+        unless calls > 1 do
+          json(%{
+            "hls" => "awooga",
+            "livestream" => true,
+            "videoStreams" => []
+          })
+        else
+          %Tesla.Env{status: 500, body: "called mock too much"}
+        end
+    end)
+
+    1..10
+    |> Enum.map(fn _ ->
+      Task.async(fn ->
+        Phoenix.ConnTest.build_conn()
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/api/v2/sr/#{slot.id}")
+      end)
+    end)
+    |> Enum.map(fn task ->
+      conn = Task.await(task)
+
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["awooga"]
+    end)
+  end
+
   @another_youtube_id "k2RuprlsXng"
   @even_another_youtube_id "D6enSGlTJYA"
 
