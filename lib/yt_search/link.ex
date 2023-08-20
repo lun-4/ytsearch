@@ -102,7 +102,7 @@ defmodule YtSearch.Mp4Link do
       {:error, :no_valid_video_formats_found} ->
         {:error, :video_unavailable}
 
-      {:error, %Tesla.Env{} = resp} ->
+      {:error, %Tesla.Env{}} ->
         {:error, :video_unavailable}
     end
   end
