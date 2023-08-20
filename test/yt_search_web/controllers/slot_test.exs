@@ -38,20 +38,26 @@ defmodule YtSearchWeb.SlotTest do
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{
     conn: conn,
-    slot: slot,
     ets_table: table
   } do
-    Data.default_global_mock(fn
-      %{method: :get, url: "example.org/streams/#{@youtube_id}"} ->
-        calls = :ets.update_counter(table, :ytdlp_cmd_2, 1, {:ytdlp_cmd_2, 0})
+    slot = insert(:slot)
 
-        Tesla.Mock.json(
-          case calls do
-            1 -> @run1
-            2 -> @run2
-          end
-          |> Jason.decode!()
-        )
+    Data.default_global_mock(fn
+      %{method: :get, url: "example.org/streams/" <> wanted_youtube_id} = env ->
+        if wanted_youtube_id == slot.youtube_id do
+          calls = :ets.update_counter(table, :ytdlp_cmd_2, 1, {:ytdlp_cmd_2, 0})
+
+          Tesla.Mock.json(
+            case calls do
+              1 -> @run1
+              2 -> @run2
+            end
+            |> Jason.decode!()
+          )
+        else
+          # ignore requests not to the generated slot
+          env
+        end
     end)
 
     conn =
@@ -65,7 +71,7 @@ defmodule YtSearchWeb.SlotTest do
              @expected_run1_url
            ]
 
-    {:ok, link} = YtSearch.Mp4Link.fetch_by_id(@youtube_id)
+    {:ok, link} = YtSearch.Mp4Link.fetch_by_id(slot.youtube_id)
     assert link != nil
 
     link

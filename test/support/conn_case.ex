@@ -28,6 +28,7 @@ defmodule YtSearchWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import YtSearchWeb.ConnCase
+      import YtSearch.Factory
     end
   end
 
