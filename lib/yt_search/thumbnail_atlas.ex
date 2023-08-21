@@ -56,7 +56,7 @@ defmodule YtSearch.Thumbnail.Atlas do
 
     args =
       thumbnail_paths ++
-        ["-tile", "8x4", "-geometry", "128x128!", "-background", "none"] ++
+        ["-tile", "8x4", "-depth", "8", "-geometry", "128x128!", "-background", "none"] ++
         [atlas_image_path]
 
     Logger.debug("calling montage with args #{inspect(args)}")
