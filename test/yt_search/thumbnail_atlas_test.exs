@@ -38,6 +38,6 @@ defmodule YtSearch.ThumbnailAtlasTest do
     # have to dump data somewhere
     temporary_path = Temp.path!()
     File.write!(temporary_path, resp.resp_body)
-    YtSearch.AssertUtil.image(temporary_path, 16)
+    YtSearch.AssertUtil.image(temporary_path)
   end
 end
