@@ -46,11 +46,9 @@ defmodule YtSearchWeb.SlotConsistencyTest do
       [] = Registry.lookup(YtSearch.MetadataWorkers, youtube_id)
     end
 
-    IO.puts("want #{youtube_id}")
-
     with [{extractor, :self}] <-
            Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
-      IO.puts("unregister #{inspect(extractor)}")
+      IO.puts("unregistering #{inspect(extractor)}")
       :ok = GenServer.call(extractor, :unregister)
 
       case Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
@@ -64,7 +62,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
     with [{extractor, :self}] <-
            Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
-      IO.puts("unregister #{inspect(extractor)}")
+      IO.puts("unregistering #{inspect(extractor)}")
       :ok = GenServer.call(extractor, :unregister)
 
       case Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
@@ -77,7 +75,6 @@ defmodule YtSearchWeb.SlotConsistencyTest do
     end
   end
 
-  @tag :slow
   test "it gets the mp4 url given multiple deregisters back and forth" do
     slot = insert(:slot)
 
@@ -132,7 +129,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
     end)
   end
 
-  @tag :skip
+  @tag :slow
   test "it gets the subtitle given multiple deregisters back and forth" do
     slot = insert(:slot)
 
@@ -169,30 +166,36 @@ defmodule YtSearchWeb.SlotConsistencyTest do
         end
     end)
 
-    1..500
+    1..1000
     |> Enum.map(fn _ ->
       Task.async(fn ->
-        # 70% of the requests are going to call upstream
-        if :rand.uniform(100) < 70 do
+        :timer.sleep(:rand.uniform(100))
+
+        unregister_metadata_workers(slot.youtube_id)
+        :timer.sleep(:rand.uniform(100))
+
+        conn =
+          Phoenix.ConnTest.build_conn()
+          |> put_req_header("user-agent", "UnityWebRequest")
+          |> get(~p"/api/v2/s/#{slot.id}")
+
+        if :rand.uniform(100) < 30 do
           from(s in Subtitle,
             where: s.youtube_id == ^slot.youtube_id
           )
           |> Repo.delete_all()
-        end
 
-        # 50% of the requests are going to have new processes
-        if :rand.uniform(100) < 50 do
           unregister_metadata_workers(slot.youtube_id)
+        else
+          :timer.sleep(:rand.uniform(100))
         end
 
-        Phoenix.ConnTest.build_conn()
-        |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v2/s/#{slot.id}")
-        |> json_response(200)
+        conn
       end)
     end)
     |> Enum.map(fn task ->
-      resp = Task.await(task)
+      conn = Task.await(task)
+      resp = json_response(conn, 200)
       assert resp["subtitle_data"] == "Among Us"
     end)
   end
