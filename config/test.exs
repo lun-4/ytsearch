@@ -8,6 +8,8 @@ import Config
 config :yt_search, YtSearch.Repo,
   database: Path.expand("../yt_search_test.db", Path.dirname(__ENV__.file)),
   pool_size: 1,
+  queue_target: 10000,
+  queue_timeout: 10000,
   pool: Ecto.Adapters.SQL.Sandbox
 
 # We don't run a server during test. If one is required,
