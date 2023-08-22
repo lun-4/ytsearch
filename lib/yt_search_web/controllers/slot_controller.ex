@@ -138,7 +138,7 @@ defmodule YtSearchWeb.SlotController do
   defp subtitles_for(slot) do
     subtitles = Subtitle.fetch(slot.youtube_id)
 
-    if Enum.count(subtitles) == 0 do
+    if Enum.empty?(subtitles) do
       :no_requested_subtitles
     else
       case valid_subtitle_from_list(subtitles) do

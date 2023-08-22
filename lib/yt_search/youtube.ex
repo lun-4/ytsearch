@@ -422,7 +422,7 @@ defmodule YtSearch.Youtube do
       end)
       |> Enum.filter(fn result -> result != nil end)
 
-    unless length(result) == 0 do
+    unless Enum.empty?(result) do
       {:ok, result}
     else
       {:error, :no_valid_subtitles_found}

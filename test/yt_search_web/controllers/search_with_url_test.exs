@@ -60,7 +60,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)
-      assert length(resp_json["search_results"]) == 0
+      assert Enum.empty?(resp_json["search_results"])
     end)
   end
 end
