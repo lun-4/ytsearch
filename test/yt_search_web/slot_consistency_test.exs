@@ -96,59 +96,28 @@ defmodule YtSearchWeb.SlotConsistencyTest do
         end
     end)
 
-    1..500
+    1..1000
     |> Enum.map(fn _ ->
       Task.async(fn ->
-        wanted_precondition = Enum.random([:unregister, :delete, :normal])
+        :timer.sleep(:rand.uniform(100))
+
+        unregister_metadata_workers(slot.youtube_id)
+        :timer.sleep(:rand.uniform(100))
 
         conn =
-          case wanted_precondition do
-            :unregister ->
-              unregister_metadata_workers(slot.youtube_id)
-              IO.puts("call")
+          Phoenix.ConnTest.build_conn()
+          |> get(~p"/a/2/sr/#{slot.id}")
 
-              conn =
-                Phoenix.ConnTest.build_conn()
-                |> get(~p"/a/2/sr/#{slot.id}")
+        if :rand.uniform(100) < 30 do
+          from(s in Mp4Link,
+            where: s.youtube_id == ^slot.youtube_id
+          )
+          |> Repo.delete_all()
 
-              unregister_metadata_workers(slot.youtube_id)
-              conn
-
-            :delete ->
-              if :rand.uniform(100) < 30 do
-                from(s in Mp4Link,
-                  where: s.youtube_id == ^slot.youtube_id
-                )
-                |> Repo.delete_all()
-
-                unregister_metadata_workers(slot.youtube_id)
-              else
-                :timer.sleep(:rand.uniform(100))
-              end
-
-              IO.puts("call")
-
-              conn =
-                Phoenix.ConnTest.build_conn()
-                |> get(~p"/a/2/sr/#{slot.id}")
-
-              unregister_metadata_workers(slot.youtube_id)
-              conn
-
-            :normal ->
-              :timer.sleep(:rand.uniform(200))
-
-              unregister_metadata_workers(slot.youtube_id)
-              IO.puts("call")
-              :timer.sleep(:rand.uniform(100))
-
-              conn =
-                Phoenix.ConnTest.build_conn()
-                |> get(~p"/a/2/sr/#{slot.id}")
-
-              unregister_metadata_workers(slot.youtube_id)
-              conn
-          end
+          unregister_metadata_workers(slot.youtube_id)
+        else
+          :timer.sleep(:rand.uniform(100))
+        end
 
         conn
       end)
