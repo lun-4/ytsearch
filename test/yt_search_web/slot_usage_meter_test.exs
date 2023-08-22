@@ -84,7 +84,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
     end)
   end
 
-  @tag :skip
+  @tag :slow
   test "correctly gives slot count" do
     counters = UsageMeter.tick()
     IO.inspect(counters)
