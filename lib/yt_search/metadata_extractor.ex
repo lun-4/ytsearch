@@ -37,7 +37,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
       case DynamicSupervisor.start_child(
              YtSearch.MetadataSupervisor,
              %{
-               id: {type, youtube_id},
+               id: __MODULE__,
                start:
                  {__MODULE__, :start_link,
                   [
