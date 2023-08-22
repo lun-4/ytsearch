@@ -55,14 +55,28 @@ defmodule YtSearch.Mp4Link do
         # (inserted_at + @ttl) = expiry
         # guaranteeding we expire it at the same time youtube expires it
         value
-        |> Ecto.Changeset.change(
-          inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
-        )
+        |> Map.put(:inserted_at, DateTime.from_unix!(expires_at) |> DateTime.to_naive())
       else
         value
       end
     end)
-    |> Repo.insert!()
+    |> then(fn link ->
+      Repo.insert!(
+        link,
+        on_conflict: [
+          set:
+            [
+              youtube_metadata: link.youtube_metadata,
+              mp4_link: link.mp4_link
+            ] ++
+              if link.inserted_at == nil do
+                []
+              else
+                [inserted_at: link.inserted_at]
+              end
+        ]
+      )
+    end)
   end
 
   @error_atom_from_string %{
