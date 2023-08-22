@@ -89,9 +89,10 @@ defmodule YtSearch.Repo.Migrations.MakeSlotsYoutubeIdProperlyUnique do
 
       stream =
         repo().stream(
-          from s in OldSlot,
+          from(s in OldSlot,
             select: s,
             order_by: [desc: fragment("unixepoch(?)", s.inserted_at)]
+          )
         )
 
       repo().transaction(fn ->
