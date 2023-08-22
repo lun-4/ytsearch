@@ -127,27 +127,28 @@ defmodule YtSearchWeb.SlotController do
     |> json(%{subtitle_data: subtitle_data})
   end
 
+  defp valid_subtitle_from_list(subtitles) do
+    subtitles
+    |> Enum.filter(fn sub ->
+      sub.language != "notfound"
+    end)
+    |> Enum.at(0)
+  end
+
   defp subtitles_for(slot) do
     subtitles = Subtitle.fetch(slot.youtube_id)
 
-    if length(subtitles) == 0 do
+    if Enum.count(subtitles) == 0 do
       :no_requested_subtitles
     else
-      selected =
-        subtitles
-        |> Enum.filter(fn sub ->
-          sub.language != "notfound"
-        end)
-        |> Enum.at(0)
-
-      case selected do
+      case valid_subtitle_from_list(subtitles) do
         nil -> :no_subtitles_found
         subtitle -> subtitle.subtitle_data
       end
     end
   end
 
-  defp do_subtitles(slot, recursing \\ false) do
+  defp do_subtitles(slot) do
     # 1. fetch once, to see if we dont need to acquire the mutex
     # 2. fetch again inside the mutex, in the case another process was
     # already fetching the subtitles
@@ -156,16 +157,22 @@ defmodule YtSearchWeb.SlotController do
 
     case subtitles_for(slot) do
       :no_requested_subtitles ->
-        if recursing do
-          Logger.warning("should not recurse twice into requesting subtitles")
-          nil
-        else
-          YtSearch.MetadataExtractor.Worker.subtitles(slot.youtube_id)
-          do_subtitles(slot, true)
-        end
+        case YtSearch.MetadataExtractor.Worker.subtitles(slot.youtube_id) do
+          {:ok, subtitles} ->
+            subtitles
+            |> valid_subtitle_from_list()
+            |> then(fn maybe_subtitle ->
+              if maybe_subtitle == nil do
+                nil
+              else
+                maybe_subtitle.subtitle_data
+              end
+            end)
 
-      :no_available_subtitles ->
-        nil
+          value ->
+            Logger.warning("expected subtitles, got #{inspect(value)}, retrying...")
+            do_subtitles(slot)
+        end
 
       :no_subtitles_found ->
         nil

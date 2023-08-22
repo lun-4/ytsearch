@@ -162,12 +162,11 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     with {:ok, subtitles} <- Youtube.extract_subtitles(meta) do
-      subtitles
-      |> Enum.each(fn {subtitle, data} ->
-        YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
-      end)
-
-      {:ok, :ok}
+      {:ok,
+       subtitles
+       |> Enum.map(fn {subtitle, data} ->
+         YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
+       end)}
     end
   end
 
