@@ -173,7 +173,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
   defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     Logger.error("failed to fetch subtitles: #{inspect(error)}. setting it as not found")
     YtSearch.Subtitle.insert(youtube_id, "notfound", nil)
-    nil
+    {:ok, []}
   end
 
   defp process_error(error, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
