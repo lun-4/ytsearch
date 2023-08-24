@@ -153,7 +153,7 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
-  defp do_subtitles(slot) do
+  defp do_subtitles(slot, recursing \\ false) do
     # 1. fetch once, to see if we dont need to acquire the mutex
     # 2. fetch again inside the mutex, in the case another process was
     # already fetching the subtitles
@@ -176,7 +176,13 @@ defmodule YtSearchWeb.SlotController do
 
           value ->
             Logger.warning("expected subtitles, got #{inspect(value)}, retrying...")
-            do_subtitles(slot)
+
+            if recursing do
+              Logger.warning("already retried once, fast-failing!")
+              nil
+            else
+              do_subtitles(slot, true)
+            end
         end
 
       :no_subtitles_found ->
