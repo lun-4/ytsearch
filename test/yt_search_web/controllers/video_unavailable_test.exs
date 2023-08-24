@@ -14,6 +14,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   @unavailable_channel_id "UCMsgXPD3wzzt8RxHJmXH7hQ"
   @notfound_channel_id "UCMsgXPD3wzzt8RxHJmXHHHH"
   @music_premium_id "dlpKSIvHKKM"
+  @no_subtitles_id "4trwogriouregjkl"
 
   setup do
     Data.default_global_mock(fn
@@ -22,6 +23,9 @@ defmodule YtSearchWeb.VideoUnavailableTest do
 
       %{method: :get, url: "example.org/streams/#{@music_premium_id}"} ->
         json(Jason.decode!(@music_premium_output), status: 500)
+
+      %{method: :get, url: "example.org/streams/#{@no_subtitles_id}"} ->
+        json(%{"subtitles" => []})
 
       %{method: :get, url: "example.org/channel/#{@unavailable_channel_id}"} ->
         json(Jason.decode!(@unavailable_channel_output), status: 500)
@@ -33,6 +37,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     %{
       slot: Slot.create(@test_youtube_id, 0),
       music_premium_slot: Slot.create(@music_premium_id, 0),
+      no_subtitles_slot: Slot.create(@no_subtitles_id, 0),
       unavailable_channel_slot: ChannelSlot.from(@unavailable_channel_id),
       notfound_channel_slot: ChannelSlot.from(@notfound_channel_id)
     }
@@ -48,6 +53,33 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       |> get(~p"/a/2/sl/#{slot.id}")
 
     resp_json = json_response(conn, 200)
+    assert resp_json["subtitle_data"] == nil
+  end
+
+  test "it successfully gives out nil on no subtitles found", %{
+    no_subtitles_slot: slot
+  } do
+    1..10
+    |> Enum.map(fn _ ->
+      Task.async(fn ->
+        Phoenix.ConnTest.build_conn()
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/a/2/sl/#{slot.id}")
+      end)
+    end)
+    |> Enum.map(fn task ->
+      conn = Task.await(task)
+
+      resp_json = json_response(conn, 200)
+      assert resp_json["subtitle_data"] == nil
+    end)
+
+    resp_json =
+      Phoenix.ConnTest.build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/2/sl/#{slot.id}")
+      |> json_response(200)
+
     assert resp_json["subtitle_data"] == nil
   end
 
