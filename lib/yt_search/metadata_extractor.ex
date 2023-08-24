@@ -184,8 +184,11 @@ defmodule YtSearch.MetadataExtractor.Worker do
         {:error, YtSearch.Mp4Link.insert_error(youtube_id, err)}
 
       _ ->
-        Logger.error("an error happened while fetching link. #{inspect(error)}")
-        {:error, YtSearch.Mp4Link.insert_error(youtube_id, :video_unavailable)}
+        Logger.error(
+          "an error happened while fetching link. #{inspect(error)}, using internal_error reason"
+        )
+
+        {:error, YtSearch.Mp4Link.insert_error(youtube_id, :internal_error)}
     end
   end
 
@@ -209,8 +212,8 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
           {:reply, {:ok, result}, new_state}
         else
-          {:error, _} = error ->
-            reply = process_error(error, state)
+          value ->
+            reply = process_error(value, state)
 
             new_state =
               new_state
