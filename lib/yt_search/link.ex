@@ -99,7 +99,7 @@ defmodule YtSearch.Mp4Link do
 
   @spec insert_error(String.t(), atom()) :: Mp4Link.t()
   def insert_error(youtube_id, reason) do
-    reason_string = error_string_from_atom(reason) || "internal_error"
+    reason_string = error_string_from_atom(reason) || error_string_from_atom(:internal_error)
 
     %__MODULE__{
       youtube_id: youtube_id,
