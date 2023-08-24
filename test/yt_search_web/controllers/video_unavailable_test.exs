@@ -9,14 +9,19 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   @piped_video_output File.read!("test/support/piped_outputs/unavailable.json")
   @unavailable_channel_output File.read!("test/support/piped_outputs/unavailable_channel.json")
   @notfound_channel_output File.read!("test/support/piped_outputs/notfound_channel.json")
+  @music_premium_output File.read!("test/support/piped_outputs/music_premium_video.json")
 
   @unavailable_channel_id "UCMsgXPD3wzzt8RxHJmXH7hQ"
   @notfound_channel_id "UCMsgXPD3wzzt8RxHJmXHHHH"
+  @music_premium_id "dlpKSIvHKKM"
 
   setup do
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams/#{@test_youtube_id}"} ->
         json(Jason.decode!(@piped_video_output), status: 500)
+
+      %{method: :get, url: "example.org/streams/#{@music_premium_id}"} ->
+        json(Jason.decode!(@music_premium_output), status: 500)
 
       %{method: :get, url: "example.org/channel/#{@unavailable_channel_id}"} ->
         json(Jason.decode!(@unavailable_channel_output), status: 500)
@@ -27,6 +32,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
 
     %{
       slot: Slot.create(@test_youtube_id, 0),
+      music_premium_slot: Slot.create(@music_premium_id, 0),
       unavailable_channel_slot: ChannelSlot.from(@unavailable_channel_id),
       notfound_channel_slot: ChannelSlot.from(@notfound_channel_id)
     }
@@ -56,6 +62,20 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     assert response_content_type(conn, :mp4)
     assert response(conn, 200) != nil
     assert get_resp_header(conn, "yts-failure-code") == ["E01"]
+  end
+
+  test "it successfully gives out 200 on unavailable video for mp4 link on music premium video",
+       %{
+         conn: conn,
+         music_premium_slot: slot
+       } do
+    conn =
+      conn
+      |> get(~p"/a/2/sr/#{slot.id}")
+
+    assert response_content_type(conn, :mp4)
+    assert response(conn, 200) != nil
+    assert get_resp_header(conn, "yts-failure-code") == ["E03"]
   end
 
   test "it successfully gives out 404 on unavailable video for m3u8 link", %{
