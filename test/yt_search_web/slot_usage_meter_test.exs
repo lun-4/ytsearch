@@ -60,7 +60,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
   end
 
   defp time_travel_slots_to_expiration(duration) do
-    expiration_seconds = (2.5 * duration) |> trunc
+    expiration_seconds = (4 * duration) |> trunc
 
     {count, updated_slots} =
       from(
@@ -84,7 +84,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
     end)
   end
 
-  @tag :skip
+  @tag :slow
   test "correctly gives slot count" do
     counters = UsageMeter.tick()
     IO.inspect(counters)

@@ -70,6 +70,7 @@ defmodule YtSearchWeb.Endpoint do
       values = get_resp_header(conn, "content-type")
       [x_request_id] = get_resp_header(conn, "x-request-id")
 
+      # TODO convert this to with
       case values do
         [type] ->
           case type do

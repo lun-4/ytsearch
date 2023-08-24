@@ -18,8 +18,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
   end
 
   @tag timeout: :infinity
-  # this is a heavy load test, so it must be skipped
-  @tag :skip
+  @tag :slow
   test "it can still generate an id when a lot were already generated" do
     cutoff_point =
       unless System.get_env("HARD_TIME") != nil do

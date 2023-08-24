@@ -16,6 +16,7 @@ defmodule YtSearch.Mp4Link do
   schema "links" do
     field(:mp4_link, :string)
     field(:youtube_metadata, :string)
+    field(:error_reason, :string)
     timestamps()
   end
 
@@ -54,21 +55,58 @@ defmodule YtSearch.Mp4Link do
         # (inserted_at + @ttl) = expiry
         # guaranteeding we expire it at the same time youtube expires it
         value
-        |> Ecto.Changeset.change(
-          inserted_at: DateTime.from_unix!(expires_at) |> DateTime.to_naive()
-        )
+        |> Map.put(:inserted_at, DateTime.from_unix!(expires_at) |> DateTime.to_naive())
       else
         value
       end
     end)
-    |> Repo.insert!()
+    |> then(fn link ->
+      Repo.insert!(
+        link,
+        on_conflict: [
+          set:
+            [
+              youtube_metadata: link.youtube_metadata,
+              mp4_link: link.mp4_link
+            ] ++
+              if link.inserted_at == nil do
+                []
+              else
+                [inserted_at: link.inserted_at]
+              end
+        ]
+      )
+    end)
   end
 
-  def insert_video_not_found(youtube_id) do
+  @error_atom_from_string %{
+    "E01" => :video_unavailable,
+    "E02" => :no_valid_formats_found,
+    "E03" => :internal_error
+  }
+
+  @error_string_from_atom @error_atom_from_string
+                          |> Enum.map(fn {k, v} -> {v, k} end)
+                          |> Enum.into(%{})
+
+  def error_atom_from_string(str) do
+    @error_atom_from_string[str]
+  end
+
+  def error_string_from_atom(atom) do
+    @error_string_from_atom[atom]
+  end
+
+  @spec insert_error(String.t(), atom()) :: Mp4Link.t()
+  def insert_error(youtube_id, reason) do
+    Logger.warning("link for yt id #{youtube_id} failed for #{inspect(reason)}")
+    reason_string = error_string_from_atom(reason) || error_string_from_atom(:internal_error)
+
     %__MODULE__{
       youtube_id: youtube_id,
       youtube_metadata: nil,
-      mp4_link: nil
+      mp4_link: nil,
+      error_reason: reason_string
     }
     |> Repo.insert!()
   end
@@ -92,19 +130,7 @@ defmodule YtSearch.Mp4Link do
   end
 
   defp fetch_mp4_link(slot) do
-    case YtSearch.MetadataExtractor.Worker.mp4_link(slot.youtube_id) do
-      {:ok, link} ->
-        {:ok, link}
-
-      {:error, :video_unavailable} ->
-        {:error, :video_unavailable}
-
-      {:error, :no_valid_video_formats_found} ->
-        {:error, :video_unavailable}
-
-      {:error, %Tesla.Env{}} ->
-        {:error, :video_unavailable}
-    end
+    YtSearch.MetadataExtractor.Worker.mp4_link(slot.youtube_id)
   end
 
   defmodule Janitor do

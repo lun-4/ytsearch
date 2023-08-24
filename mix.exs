@@ -66,7 +66,9 @@ defmodule YtSearch.MixProject do
       {:hammer, "~> 6.1"},
       {:tesla, "~> 1.7"},
       {:hackney, "~> 1.18"},
-      {:recon, "~> 2.5"}
+      {:recon, "~> 2.5"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_machina, "~> 2.4", only: :test}
     ]
   end
 
@@ -81,7 +83,12 @@ defmodule YtSearch.MixProject do
       setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      lint: [
+        "format --check-formatted",
+        "deps.unlock --check-unused",
+        "credo --all --strict"
+      ]
     ]
   end
 end

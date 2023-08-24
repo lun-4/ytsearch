@@ -12,7 +12,9 @@ defmodule YtSearch.Repo.Migrations.UseIntsAsSlotTimestamps do
       )
     end
 
-    create index(:slots_v2, [:inserted_at_v2], comment: "fast queries for the slow case for slots")
+    create index(:slots_v2, [:inserted_at_v2],
+             comment: "fast queries for the slow case for slots"
+           )
 
     execute("UPDATE slots_v2 SET inserted_at_v2 = unixepoch(inserted_at)")
   end

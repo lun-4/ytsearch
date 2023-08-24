@@ -82,7 +82,7 @@ defmodule YtSearchWeb.SearchController do
           end)
 
         is_valid_slot =
-          unless length(valid_slots) == 0 do
+          unless Enum.empty?(valid_slots) do
             valid_slots
             |> Enum.reduce(fn x, acc ->
               x and acc

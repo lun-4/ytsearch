@@ -37,7 +37,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
       case DynamicSupervisor.start_child(
              YtSearch.MetadataSupervisor,
              %{
-               id: {type, youtube_id},
+               id: __MODULE__,
                start:
                  {__MODULE__, :start_link,
                   [
@@ -82,6 +82,18 @@ defmodule YtSearch.MetadataExtractor.Worker do
   @impl true
   def handle_call(:subtitles, from, state) do
     handle_request(:subtitles, from, state)
+  end
+
+  @impl true
+  @doc "this should only be called in tests"
+  def handle_call(:unregister, _from, %{type: type, youtube_id: youtube_id} = state) do
+    if Mix.env() == :test do
+      Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
+    else
+      raise "unregister is an invalid call on non-test environments"
+    end
+
+    {:reply, :ok, state}
   end
 
   defp schedule_deffered_exit() do
@@ -150,25 +162,34 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     with {:ok, subtitles} <- Youtube.extract_subtitles(meta) do
-      subtitles
-      |> Enum.each(fn {subtitle, data} ->
-        YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
-      end)
-
-      {:ok, :ok}
+      {:ok,
+       subtitles
+       |> Enum.map(fn {subtitle, data} ->
+         YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
+       end)}
     end
   end
 
   defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     Logger.error("failed to fetch subtitles: #{inspect(error)}. setting it as not found")
     YtSearch.Subtitle.insert(youtube_id, "notfound", nil)
-    nil
+    {:ok, []}
   end
 
   defp process_error(error, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
     Logger.error("failed to fetch link: #{inspect(error)}.")
-    YtSearch.Mp4Link.insert_video_not_found(youtube_id)
-    error
+
+    case error do
+      {:error, err} ->
+        {:error, YtSearch.Mp4Link.insert_error(youtube_id, err)}
+
+      _ ->
+        Logger.error(
+          "an error happened while fetching link. #{inspect(error)}, using internal_error reason"
+        )
+
+        {:error, YtSearch.Mp4Link.insert_error(youtube_id, :internal_error)}
+    end
   end
 
   defp handle_request(request_type, _from, state) do
@@ -191,8 +212,8 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
           {:reply, {:ok, result}, new_state}
         else
-          {:error, _} = error ->
-            reply = process_error(error, state)
+          value ->
+            reply = process_error(value, state)
 
             new_state =
               new_state

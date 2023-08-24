@@ -33,28 +33,75 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
+  @error_video_directory Path.join(:code.priv_dir(:yt_search), "static/redirect_errors")
+
+  defp show_error_video(conn, error_code) do
+    conn =
+      conn
+      |> put_resp_header("yts-failure-code", error_code)
+
+    # let ops override error videos so actual file sending is offloaded
+    external_url =
+      case System.fetch_env("YTS_ERROR_VIDEO_URL_#{error_code}") do
+        :error -> nil
+        {:ok, ""} -> nil
+        {:ok, url} -> url
+      end
+
+    unless conn.assigns[:want_stream] do
+      if external_url == nil do
+        conn
+        |> put_resp_content_type("video/mp4", nil)
+        |> send_file(
+          200,
+          Path.join(
+            @error_video_directory,
+            "yts_error_message_#{error_code |> String.downcase()}.mp4"
+          )
+        )
+      else
+        conn
+        |> redirect(external: external_url)
+      end
+    else
+      # we can't redirect to a video when the quest player is in stream mode
+      # so... 404 it
+      conn
+      |> put_status(404)
+      |> text("error happened: #{error_code}")
+    end
+  end
+
+  defp redirect_to(conn, link) do
+    cond do
+      link == nil ->
+        # redirect to E00
+        show_error_video(conn, "E00")
+
+      link.mp4_link == nil ->
+        show_error_video(conn, link.error_reason)
+
+      true ->
+        conn
+        |> redirect(external: link.mp4_link)
+    end
+  end
+
   defp handle_quest_video(conn, slot) do
     case Mp4Link.maybe_fetch_upstream(slot) do
       {:ok, nil} ->
         raise "should not happen"
 
       {:ok, link} ->
-        conn
-        |> redirect(external: link.mp4_link)
+        redirect_to(conn, link)
 
       {:error, :video_unavailable} ->
-        Logger.warning("unavailable (video unavailable)")
+        # TODO we should not return this value. find out what happens when it does
+        Logger.error("THIS CONDITION SHOULD NOT HAPPEN. PLEASE INVESTIGATE")
+        redirect_to(conn, nil)
 
-        conn
-        |> put_status(404)
-        |> text("video unavailable")
-
-      {:error, :upcoming_video} ->
-        Logger.warning("unavailable (upcoming video)")
-
-        conn
-        |> put_status(404)
-        |> text("video unavailable (upcoming video)")
+      {:error, %Mp4Link{} = link} ->
+        redirect_to(conn, link)
     end
   end
 
@@ -64,15 +111,17 @@ defmodule YtSearchWeb.SlotController do
     case Slot.fetch_by_id(slot_id) do
       nil ->
         Logger.warning("unavailable (not found)")
-
-        conn
-        |> put_status(404)
-        |> assign(:slot, nil)
-        |> render("slot.json")
+        redirect_to(conn, nil)
 
       slot ->
         handle_quest_video(conn, slot)
     end
+  end
+
+  def fetch_stream_redirect(conn, args) do
+    conn
+    |> assign(:want_stream, true)
+    |> fetch_redirect(args)
   end
 
   defp do_slot_metadata(conn, slot) do
@@ -83,20 +132,21 @@ defmodule YtSearchWeb.SlotController do
     |> json(%{subtitle_data: subtitle_data})
   end
 
+  defp valid_subtitle_from_list(subtitles) do
+    subtitles
+    |> Enum.filter(fn sub ->
+      sub.language != "notfound"
+    end)
+    |> Enum.at(0)
+  end
+
   defp subtitles_for(slot) do
     subtitles = Subtitle.fetch(slot.youtube_id)
 
-    if length(subtitles) == 0 do
+    if Enum.empty?(subtitles) do
       :no_requested_subtitles
     else
-      selected =
-        subtitles
-        |> Enum.filter(fn sub ->
-          sub.language != "notfound"
-        end)
-        |> Enum.at(0)
-
-      case selected do
+      case valid_subtitle_from_list(subtitles) do
         nil -> :no_subtitles_found
         subtitle -> subtitle.subtitle_data
       end
@@ -112,16 +162,28 @@ defmodule YtSearchWeb.SlotController do
 
     case subtitles_for(slot) do
       :no_requested_subtitles ->
-        if recursing do
-          Logger.warning("should not recurse twice into requesting subtitles")
-          nil
-        else
-          YtSearch.MetadataExtractor.Worker.subtitles(slot.youtube_id)
-          do_subtitles(slot, true)
-        end
+        case YtSearch.MetadataExtractor.Worker.subtitles(slot.youtube_id) do
+          {:ok, subtitles} ->
+            subtitles
+            |> valid_subtitle_from_list()
+            |> then(fn maybe_subtitle ->
+              if maybe_subtitle == nil do
+                nil
+              else
+                maybe_subtitle.subtitle_data
+              end
+            end)
 
-      :no_available_subtitles ->
-        nil
+          value ->
+            Logger.warning("expected subtitles, got #{inspect(value)}, retrying...")
+
+            if recursing do
+              Logger.warning("already retried once, fast-failing!")
+              nil
+            else
+              do_subtitles(slot, true)
+            end
+        end
 
       :no_subtitles_found ->
         nil

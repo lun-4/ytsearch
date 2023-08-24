@@ -85,4 +85,15 @@ defmodule YtSearch.Metadata.Worker do
 
     {:reply, new_state.metadata, new_state}
   end
+
+  @doc "this should only be called in tests"
+  def handle_call(:unregister, _from, %{youtube_id: youtube_id} = state) do
+    if Mix.env() == :test do
+      Registry.unregister(YtSearch.MetadataWorkers, youtube_id)
+    else
+      raise "unregister is an invalid call on non-test environments"
+    end
+
+    {:reply, :ok, state}
+  end
 end
