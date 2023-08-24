@@ -33,11 +33,7 @@ defmodule YtSearch.Mp4Link do
           Repo.delete!(link)
           {:ok, nil}
         else
-          if link.mp4_link == nil do
-            {:error, :video_unavailable}
-          else
-            {:ok, link}
-          end
+          {:ok, link}
         end
     end
   end

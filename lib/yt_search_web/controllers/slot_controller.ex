@@ -95,13 +95,12 @@ defmodule YtSearchWeb.SlotController do
       {:ok, link} ->
         redirect_to(conn, link)
 
-      {:error, :video_unavailable} ->
-        # TODO we should not return this value. find out what happens when it does
-        Logger.error("THIS CONDITION SHOULD NOT HAPPEN. PLEASE INVESTIGATE")
-        redirect_to(conn, nil)
-
       {:error, %Mp4Link{} = link} ->
         redirect_to(conn, link)
+
+      {:error, _} = error ->
+        Logger.error("failed to fetch upstream: #{inspect(error)}")
+        redirect_to(conn, nil)
     end
   end
 
