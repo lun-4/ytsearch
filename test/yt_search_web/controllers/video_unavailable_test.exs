@@ -11,10 +11,15 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   @notfound_channel_output File.read!("test/support/piped_outputs/notfound_channel.json")
   @music_premium_output File.read!("test/support/piped_outputs/music_premium_video.json")
 
+  @upcoming_video_json File.read!("test/support/piped_outputs/upcoming_video.json")
+  @upcoming_livestream_json File.read!("test/support/piped_outputs/upcoming_livestream.json")
+
   @unavailable_channel_id "UCMsgXPD3wzzt8RxHJmXH7hQ"
   @notfound_channel_id "UCMsgXPD3wzzt8RxHJmXHHHH"
   @music_premium_id "dlpKSIvHKKM"
   @no_subtitles_id "4trwogriouregjkl"
+  @upcoming_video_id "8t7q628947"
+  @upcoming_livestream_id "AAADKSJFKL38"
 
   setup do
     Data.default_global_mock(fn
@@ -32,6 +37,12 @@ defmodule YtSearchWeb.VideoUnavailableTest do
 
       %{method: :get, url: "example.org/channel/#{@notfound_channel_id}"} ->
         json(Jason.decode!(@notfound_channel_output), status: 500)
+
+      %{method: :get, url: "example.org/channel/#{@upcoming_video_id}"} ->
+        json(Jason.decode!(@upcoming_video_json), status: 500)
+
+      %{method: :get, url: "example.org/channel/#{@upcoming_livestream_id}"} ->
+        json(Jason.decode!(@upcoming_livestream_json), status: 500)
     end)
 
     %{
@@ -39,7 +50,9 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       music_premium_slot: Slot.create(@music_premium_id, 0),
       no_subtitles_slot: Slot.create(@no_subtitles_id, 0),
       unavailable_channel_slot: ChannelSlot.from(@unavailable_channel_id),
-      notfound_channel_slot: ChannelSlot.from(@notfound_channel_id)
+      notfound_channel_slot: ChannelSlot.from(@notfound_channel_id),
+      upcoming_livestream_slot: ChannelSlot.from(@upcoming_livestream_id),
+      upcoming_video_slot: ChannelSlot.from(@upcoming_video_id)
     }
   end
 
@@ -135,5 +148,31 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       |> get(~p"/a/2/c/#{channel_slot.id}")
 
     assert json_response(conn, 404)["detail"] == "channel not found"
+  end
+
+  test "it successfully gives out 200 on upcoming livestream",
+       %{
+         conn: conn,
+         upcoming_livestream_slot: slot
+       } do
+    conn =
+      conn
+      |> get(~p"/a/2/sl/#{slot.id}/index.m3u8")
+
+    assert text_response(conn, 404) == "error happened: E00"
+  end
+
+  test "it successfully gives out 200 on upcoming video",
+       %{
+         conn: conn,
+         upcoming_video_slot: slot
+       } do
+    conn =
+      conn
+      |> get(~p"/a/2/sr/#{slot.id}")
+
+    assert response_content_type(conn, :mp4)
+    assert response(conn, 200) != nil
+    assert get_resp_header(conn, "yts-failure-code") == ["E00"]
   end
 end

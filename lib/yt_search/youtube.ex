@@ -229,6 +229,18 @@ defmodule YtSearch.Youtube do
             Logger.warning("This video is only available to Music Premium members")
             {:error, :video_unavailable}
 
+          String.contains?(message, "Premieres in") ->
+            Logger.warning("it's a premiere! #{message}")
+            {:error, :video_unavailable}
+
+          String.contains?(message, "This live event will begin in") ->
+            Logger.warning("it's a premiere livestream! #{message}")
+            {:error, :video_unavailable}
+
+          String.contains?(message, "This age-restricted video cannot be watched") ->
+            Logger.warning("this video is age restricted!")
+            {:error, :video_unavailable}
+
           String.contains?(message, "This channel is not available") ->
             Logger.warning("this is an unavailable channel")
             {:error, :channel_unavailable}
