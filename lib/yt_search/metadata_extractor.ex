@@ -114,10 +114,9 @@ defmodule YtSearch.MetadataExtractor.Worker do
     if time_since_last_reply > 60 do
       Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
 
-      with [{maybe_self, :self}] <-
-             Registry.lookup(YtSearch.MetadataExtractors, {type, youtube_id}),
-           true <- maybe_self == self() do
-        Logger.error("expected to be unregister, yet wasn't.")
+      with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
+           true <- length > 0 do
+        Logger.warning("#{inspect(self())} message queue len is #{length}")
       end
 
       Process.send_after(self(), :suicide, 30000)
@@ -131,6 +130,13 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   @impl true
   def handle_info(:suicide, state) do
+    with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
+         true <- length > 0 do
+      Logger.error(
+        "#{inspect(self())}: stopping yet message queue len is #{length}, shouldn't happen. #{inspect(state)}"
+      )
+    end
+
     {:stop, {:shutdown, :intended_suicide}, state}
   end
 
