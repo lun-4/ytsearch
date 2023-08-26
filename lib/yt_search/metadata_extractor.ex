@@ -70,7 +70,8 @@ defmodule YtSearch.MetadataExtractor.Worker do
        youtube_id: youtube_id,
        mp4_link: nil,
        subtitle: nil,
-       last_reply: System.monotonic_time(:second)
+       last_reply: System.monotonic_time(:second),
+       will_die?: false
      }}
   end
 
@@ -111,21 +112,24 @@ defmodule YtSearch.MetadataExtractor.Worker do
     now = System.monotonic_time(:second)
     time_since_last_reply = now - last_reply
 
-    if time_since_last_reply > 60 do
-      Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
+    new_state =
+      if time_since_last_reply > 60 do
+        Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
 
-      with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
-           true <- length > 0 do
-        Logger.warning("#{inspect(self())} message queue len is #{length}")
+        with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
+             true <- length > 0 do
+          Logger.warning("#{inspect(self())} message queue len is #{length}")
+        end
+
+        Process.send_after(self(), {:suicide, last_reply}, 30000)
+        state |> Map.put(:will_die?, true)
+      else
+        # schedule next exit if we arent supposed to die yet
+        schedule_deffered_exit()
+        state
       end
 
-      Process.send_after(self(), {:suicide, last_reply}, 30000)
-    else
-      # schedule next exit if we arent supposed to die yet
-      schedule_deffered_exit()
-    end
-
-    {:noreply, state}
+    {:noreply, new_state}
   end
 
   @impl true
@@ -211,7 +215,13 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
-  defp handle_request(request_type, _from, state) do
+  defp handle_request(request_type, _from, %{will_die?: will_die?} = state) do
+    if will_die? do
+      Logger.error(
+        "#{inspect(self())}: should not be replying to clients when worker is going to die"
+      )
+    end
+
     unless request_type != state.type do
       new_state =
         state
