@@ -119,7 +119,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
         Logger.warning("#{inspect(self())} message queue len is #{length}")
       end
 
-      Process.send_after(self(), :suicide, 30000)
+      Process.send_after(self(), {:suicide, last_reply}, 30000)
     else
       # schedule next exit if we arent supposed to die yet
       schedule_deffered_exit()
@@ -129,11 +129,17 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   @impl true
-  def handle_info(:suicide, state) do
+  def handle_info({:suicide, last_reply}, %{last_reply: new_last_reply} = state) do
     with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
          true <- length > 0 do
       Logger.error(
         "#{inspect(self())}: stopping yet message queue len is #{length}, shouldn't happen. #{inspect(state)}"
+      )
+    end
+
+    if last_reply != new_last_reply do
+      Logger.error(
+        "#{inspect(self())}: intended_suicide but last_reply got updated. was #{last_reply}, is not #{new_last_reply}"
       )
     end
 
