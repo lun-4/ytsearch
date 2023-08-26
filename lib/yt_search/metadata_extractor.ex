@@ -98,7 +98,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   defp schedule_deffered_exit() do
-    Process.send_after(self(), :vibe_check, 60000)
+    Process.send_after(self(), :vibe_check, 60000 + Enum.random(2000..20000))
   end
 
   @impl true
@@ -121,7 +121,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
           Logger.warning("#{inspect(self())} message queue len is #{length}")
         end
 
-        Process.send_after(self(), {:suicide, last_reply}, 30000)
+        Process.send_after(self(), {:suicide, last_reply}, 30000 + Enum.random(2000..20000))
         state |> Map.put(:will_die?, true)
       else
         # schedule next exit if we arent supposed to die yet
