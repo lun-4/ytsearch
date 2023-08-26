@@ -112,7 +112,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
     time_since_last_reply = now - last_reply
 
     if time_since_last_reply > 60 do
-      Registry.unregister(YtSearch.MetadataWorkers, {type, youtube_id})
+      Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
       Process.send_after(self(), :suicide, 30000)
     else
       # schedule next exit if we arent supposed to die yet
