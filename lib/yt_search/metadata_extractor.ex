@@ -113,6 +113,13 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
     if time_since_last_reply > 60 do
       Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
+
+      with [{maybe_self, :self}] <-
+             Registry.lookup(YtSearch.MetadataExtractors, {type, youtube_id}),
+           true <- maybe_self == self() do
+        Logger.error("expected to be unregister, yet wasn't.")
+      end
+
       Process.send_after(self(), :suicide, 30000)
     else
       # schedule next exit if we arent supposed to die yet
