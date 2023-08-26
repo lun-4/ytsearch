@@ -134,8 +134,9 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   @impl true
   def handle_info({:suicide, last_reply}, %{last_reply: new_last_reply} = state) do
-    with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
-         true <- length > 0 do
+    {:message_queue_len, queue_length} = Process.info(self(), :message_queue_len)
+
+    if queue_length > 0 do
       Logger.error(
         "#{inspect(self())}: stopping yet message queue len is #{length}, shouldn't happen. #{inspect(state)}"
       )
@@ -148,6 +149,13 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
 
     {:stop, {:shutdown, :intended_suicide}, state}
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    Logger.warning(
+      "PROBE: Extractor Terminate. self=#{inspect(self())}, reason=#{inspect(reason)} state=#{inspect(state)}"
+    )
   end
 
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
