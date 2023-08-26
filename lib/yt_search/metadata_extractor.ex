@@ -138,7 +138,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
     if queue_length > 0 do
       Logger.error(
-        "#{inspect(self())}: stopping yet message queue len is #{length}, shouldn't happen. #{inspect(state)}"
+        "#{inspect(self())}: stopping yet message queue len is #{queue_length}, shouldn't happen. #{inspect(state)}"
       )
     end
 
