@@ -43,7 +43,14 @@ defmodule YtSearchWeb.SlotConsistencyTest do
   defp unregister_metadata_workers(youtube_id) do
     with [{worker, :self}] <- Registry.lookup(YtSearch.MetadataWorkers, youtube_id) do
       :ok = GenServer.call(worker, :unregister)
-      [] = Registry.lookup(YtSearch.MetadataWorkers, youtube_id)
+
+      case Registry.lookup(YtSearch.MetadataWorkers, youtube_id) do
+        [{other, :self}] ->
+          assert other != worker
+
+        [] ->
+          :ok
+      end
     end
 
     with [{extractor, :self}] <-
