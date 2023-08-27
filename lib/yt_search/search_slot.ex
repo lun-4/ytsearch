@@ -14,7 +14,7 @@ defmodule YtSearch.SearchSlot do
   @primary_key {:id, :integer, autogenerate: false}
 
   # 20 times to retry
-  def max_id_retries, do: 20
+  def max_id_retries, do: 2
   # 20 minutes
   def ttl, do: 20 * 60
   # this number must be synced with the world build
