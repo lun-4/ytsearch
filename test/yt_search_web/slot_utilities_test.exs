@@ -17,47 +17,76 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     IO.puts("took #{diff} ms running function")
   end
 
-  @tag timeout: :infinity
-  @tag :slow
-  test "it can still generate an id when a lot were already generated" do
-    cutoff_point =
-      unless System.get_env("HARD_TIME") != nil do
-        0.995
-      else
-        0.8
-      end
+  @slot_types [
+    YtSearch.Slot,
+    YtSearch.SearchSlot,
+    YtSearch.ChannelSlot,
+    YtSearch.PlaylistSlot
+  ]
 
-    # load a bunch of slots to test with
+  @slot_types
+  |> Enum.each(fn slot_type ->
+    @tag :slow
+    test "it can still generate an id when a lot were already generated #{inspect(slot_type)}" do
+      cutoff_point =
+        unless System.get_env("HARD_TIME") != nil do
+          0.995
+        else
+          0.8
+        end
 
-    0..((YtSearch.Slot.urls() * cutoff_point) |> trunc)
-    |> Enum.shuffle()
-    |> Enum.map(fn id ->
-      %{
-        id: id,
-        youtube_id: random_yt_id(),
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-        updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-        inserted_at_v2: DateTime.to_unix(DateTime.utc_now())
-      }
-    end)
-    |> Enum.chunk_every(5000)
-    |> Enum.each(fn batch ->
-      IO.puts("inserting #{length(batch)} slots (pre-test)")
+      # load a bunch of slots to test with
 
-      printtime(fn ->
-        Repo.insert_all(YtSearch.Slot, batch)
+      0..((unquote(slot_type).urls() * cutoff_point) |> trunc)
+      |> Enum.shuffle()
+      |> Enum.map(fn id ->
+        case unquote(slot_type) do
+          YtSearch.Slot ->
+            %{
+              id: id,
+              youtube_id: random_yt_id(),
+              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+              inserted_at_v2: DateTime.to_unix(DateTime.utc_now())
+            }
+
+          YtSearch.SearchSlot ->
+            %{
+              id: id,
+              slots_json: "[]",
+              query: "amongnus",
+              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+            }
+
+          s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
+            %{
+              id: id,
+              youtube_id: random_yt_id(),
+              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+            }
+        end
       end)
-    end)
+      |> Enum.chunk_every(5000)
+      |> Enum.each(fn batch ->
+        IO.puts("inserting #{length(batch)} slots (pre-test)")
 
-    # then see how things go on the second half (one by one id gen)
+        printtime(fn ->
+          Repo.insert_all(unquote(slot_type), batch)
+        end)
+      end)
 
-    harder_test(cutoff_point)
+      # then see how things go on the second half (one by one id gen)
 
-    # if it didnt error we gucci
-  end
+      harder_test(unquote(slot_type), cutoff_point)
 
-  defp harder_test(cutoff_point) do
-    ((YtSearch.Slot.urls() * cutoff_point) |> trunc)..YtSearch.Slot.urls()
+      # if it didnt error we gucci
+    end
+  end)
+
+  defp harder_test(slot_type, cutoff_point) do
+    ((slot_type.urls() * cutoff_point) |> trunc)..slot_type.urls()
     |> Enum.chunk_every(100)
     |> Enum.each(fn batch ->
       timings =
@@ -65,7 +94,16 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
         |> Enum.map(fn _ ->
           prev = System.monotonic_time()
 
-          YtSearch.Slot.create(random_yt_id(), 3600)
+          case slot_type do
+            YtSearch.Slot ->
+              slot_type.create(random_yt_id(), 3600)
+
+            YtSearch.SearchSlot ->
+              slot_type.from_playlist([], random_yt_id())
+
+            s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
+              s.from(random_yt_id())
+          end
 
           next = System.monotonic_time()
           diff = next - prev
