@@ -80,7 +80,7 @@ defmodule YtSearch.Slot do
     end
   end
 
-  def max_id_retries, do: 15
+  def max_id_retries, do: 2
   # 10 minutes to 12 hours
   # defaults to 1h for slots without duration
   def min_ttl, do: 10 * 60

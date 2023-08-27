@@ -9,7 +9,7 @@ defmodule YtSearch.ChannelSlot do
   @primary_key {:id, :integer, autogenerate: false}
 
   # 20 times to retry
-  def max_id_retries, do: 15
+  def max_id_retries, do: 1
   # 2 hours
   def ttl, do: 2 * 60 * 60
   # this number must be synced with the world build

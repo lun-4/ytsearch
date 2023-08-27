@@ -8,8 +8,8 @@ defmodule YtSearch.PlaylistSlot do
   @type t :: %__MODULE__{}
   @primary_key {:id, :integer, autogenerate: false}
 
-  # 20 times to retry
-  def max_id_retries, do: 20
+  # 1 times to retry
+  def max_id_retries, do: 1
   # 12 hours
   def ttl, do: 12 * 60 * 60
   # this number must be synced with the world build
