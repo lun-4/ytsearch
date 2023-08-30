@@ -113,7 +113,12 @@ defmodule YtSearchWeb.SlotController do
         redirect_to(conn, nil)
 
       slot ->
-        handle_quest_video(conn, slot)
+        if conn.assigns[:want_stream] do
+          conn
+          |> redirect(external: "https://youtube.com/watch?v=#{slot.youtube_id}")
+        else
+          handle_quest_video(conn, slot)
+        end
     end
   end
 

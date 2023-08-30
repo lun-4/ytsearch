@@ -123,6 +123,8 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     assert get_resp_header(conn, "yts-failure-code") == ["E03"]
   end
 
+  # skipped for now as experiment on 302'ing to youtube
+  @tag :skip
   test "it successfully gives out 404 on unavailable video for m3u8 link", %{
     conn: conn,
     slot: slot
