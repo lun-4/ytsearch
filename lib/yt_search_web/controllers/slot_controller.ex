@@ -129,11 +129,21 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp do_slot_metadata(conn, slot) do
-    # for now, just find subtitles, but this can return future metadata
-    subtitle_data = do_subtitles(slot)
+    subtitle_task =
+      Task.async(fn ->
+        do_subtitles(slot)
+      end)
+
+    sponsorblock_task =
+      Task.async(fn ->
+        do_sponsorblock(slot) |> Jason.decode!()
+      end)
+
+    subtitle_data = Task.await(subtitle_task)
+    sponsorblock_data = Task.await(sponsorblock_task)
 
     conn
-    |> json(%{subtitle_data: subtitle_data})
+    |> json(%{subtitle_data: subtitle_data, sponsorblock_segments: sponsorblock_data})
   end
 
   defp valid_subtitle_from_list(subtitles) do
@@ -194,6 +204,21 @@ defmodule YtSearchWeb.SlotController do
 
       data ->
         data
+    end
+  end
+
+  alias YtSearch.Sponsorblock.Segments
+
+  defp do_sponsorblock(slot) do
+    case Segments.fetch(slot.youtube_id) do
+      nil ->
+        with {:ok, segments_data} <-
+               YtSearch.MetadataExtractor.Worker.sponsorblock_segments(slot.youtube_id) do
+          segments_data.segments_json
+        end
+
+      %Segments{} = segments ->
+        segments.segments_json
     end
   end
 end

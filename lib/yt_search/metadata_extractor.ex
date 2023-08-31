@@ -23,6 +23,15 @@ defmodule YtSearch.MetadataExtractor.Worker do
     GenServer.call(worker, :subtitles, @default_timeout)
   end
 
+  def sponsorblock_segments(youtube_id) when is_binary(youtube_id) do
+    worker = worker_for(:sponsorblock_segments, youtube_id)
+    sponsorblock_segments(worker)
+  end
+
+  def sponsorblock_segments(worker) when is_pid(worker) do
+    GenServer.call(worker, :sponsorblock_segments, @default_timeout)
+  end
+
   def mp4_link(youtube_id) when is_binary(youtube_id) do
     worker = worker_for(:mp4_link, youtube_id)
     mp4_link(worker)
@@ -32,7 +41,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
     GenServer.call(worker, :mp4_link, @default_timeout)
   end
 
-  def worker_for(type, youtube_id) when type in [:subtitles, :mp4_link] do
+  def worker_for(type, youtube_id) when type in [:subtitles, :mp4_link, :sponsorblock_segments] do
     worker =
       case DynamicSupervisor.start_child(
              YtSearch.MetadataSupervisor,
@@ -77,13 +86,8 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   @impl true
-  def handle_call(:mp4_link, from, state) do
-    handle_request(:mp4_link, from, state)
-  end
-
-  @impl true
-  def handle_call(:subtitles, from, state) do
-    handle_request(:subtitles, from, state)
+  def handle_call(t, from, state) when t in [:mp4_link, :subtitles, :sponsorblock_segments] do
+    handle_request(t, from, state)
   end
 
   @impl true
@@ -200,6 +204,31 @@ defmodule YtSearch.MetadataExtractor.Worker do
          YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
        end)}
     end
+  end
+
+  alias YtSearch.Sponsorblock.Segments
+
+  defp process_metadata(
+         _metadata,
+         %{youtube_id: youtube_id, type: :sponsorblock_segments} = _state
+       ) do
+    with {:ok, response} <- Youtube.sponsorblock_segments(youtube_id),
+         :ok <- is_actual_list(response) do
+      {:ok, Segments.insert(youtube_id, response)}
+    end
+  end
+
+  defp is_actual_list(response) do
+    if is_list(response) do
+      :ok
+    else
+      {:error, :not_a_list}
+    end
+  end
+
+  defp process_error(error, %{youtube_id: youtube_id, type: :sponsorblock_segments} = _state) do
+    Logger.error("failed to fetch sponsorblock_segments: #{inspect(error)}. setting it as nil")
+    {:ok, Segments.insert(youtube_id, nil)}
   end
 
   defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = _state) do
