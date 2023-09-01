@@ -10,6 +10,8 @@ defmodule YtSearch.Sponsorblock do
     # final_url =
     #  "#{api_url}/api/skipSegments/#{first_hash}?categories=[\"sponsor\",\"intro\",\"outro\",\"selfpromo\",\"music_offtopic\",\"preview\"]"
 
-    get("#{api_url}/api/skipSegments?videoID=#{youtube_id}")
+    get(
+      "#{api_url}/api/skipSegments?videoID=#{youtube_id}&categories=[\"sponsor\",\"poi_highlight\"]"
+    )
   end
 end

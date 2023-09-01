@@ -1,5 +1,6 @@
 defmodule YtSearchWeb.SlotTest do
   use YtSearchWeb.ConnCase, async: false
+  require Logger
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
@@ -261,6 +262,7 @@ defmodule YtSearchWeb.SlotTest do
             %Tesla.Env{status: 500, body: "called mock too much"}
           end
         else
+          Logger.warning("mock: sb.example.org called with #{youtube_id}, not #{slot.youtube_id}")
           env
         end
 
