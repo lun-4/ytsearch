@@ -73,7 +73,6 @@ defmodule YtSearch.Youtube do
   end
 
   @youtube_url_regex ~r/(www\.youtube\.com|youtube\.com|youtu\.be)\/(.+)$/
-  @host_by_watch_query ["www.youtube.com", "youtube.com"]
   @host_by_path ["youtu.be"]
 
   @keys_to_copy [
@@ -136,10 +135,10 @@ defmodule YtSearch.Youtube do
   end
 
   defp youtube_id_from_uri(host, url_path) do
-    cond do
-      host in @host_by_watch_query ->
-        uri = URI.parse(url_path)
+    uri = URI.parse(url_path)
 
+    cond do
+      String.starts_with?(uri.path, "watch") ->
         unless uri.query == nil do
           query =
             uri.query
@@ -147,16 +146,30 @@ defmodule YtSearch.Youtube do
 
           {:ok, query["v"]}
         else
+          Logger.error("invalid /watch uri: #{inspect(uri)}")
           {:input_error, :invalid_format}
         end
+
+      String.starts_with?(uri.path, "live") ->
+        uri.path
+        |> String.split("/")
+        |> Enum.at(1)
+        |> then(fn maybe_youtube_id ->
+          if maybe_youtube_id != nil do
+            {:ok, maybe_youtube_id}
+          else
+            Logger.error("invalid live uri: #{inspect(uri)}")
+            {:input_error, :invalid_format}
+          end
+        end)
 
       host in @host_by_path ->
         video_id = url_path |> String.split("/") |> Enum.at(0)
         {:ok, video_id}
 
       true ->
-        Logger.error("invalid host: #{host}")
-        {:input_error, :invalid_host}
+        Logger.error("invalid uri: #{host} #{url_path}")
+        {:input_error, :invalid_format}
     end
   end
 
