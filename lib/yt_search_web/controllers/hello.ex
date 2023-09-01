@@ -7,7 +7,8 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.Thumbnail
   alias YtSearchWeb.Playlist
 
-  def hello(conn, _params) do
+  def hello(conn, params) do
+    __MODULE__.BuildReporter.increment(params["build_number"] || "<unknown>")
     trending_tab = fetch_trending_tab()
 
     conn
@@ -118,6 +119,25 @@ defmodule YtSearchWeb.HelloController do
       end
 
       Logger.info("trending tab refresher complete")
+    end
+  end
+
+  defmodule BuildReporter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_hello,
+        help: "hello heartbeat world tags",
+        labels: [:build_tag]
+      )
+    end
+
+    def increment(build_tag) do
+      Counter.inc(
+        name: :yts_hello,
+        labels: [build_tag]
+      )
     end
   end
 end
