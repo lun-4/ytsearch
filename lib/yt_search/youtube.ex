@@ -241,6 +241,10 @@ defmodule YtSearch.Youtube do
             Logger.warning("this video is age restricted!")
             {:error, :video_unavailable}
 
+          String.contains?(message, "who has blocked it on copyright grounds") ->
+            Logger.warning("this video is DMCA'd! #{message}")
+            {:error, :video_unavailable}
+
           String.contains?(message, "This channel is not available") ->
             Logger.warning("this is an unavailable channel")
             {:error, :channel_unavailable}
