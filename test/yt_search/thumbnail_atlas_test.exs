@@ -1,5 +1,5 @@
 defmodule YtSearch.ThumbnailAtlasTest do
-  use YtSearchWeb.ConnCase, async: true
+  use YtSearchWeb.ConnCase, async: false
 
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
