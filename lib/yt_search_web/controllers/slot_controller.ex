@@ -113,11 +113,17 @@ defmodule YtSearchWeb.SlotController do
         redirect_to(conn, nil)
 
       slot ->
-        if conn.assigns[:want_stream] do
-          conn
-          |> redirect(external: "https://youtube.com/watch?v=#{slot.youtube_id}")
-        else
-          handle_quest_video(conn, slot)
+        case UserAgent.for(conn) do
+          :unity ->
+            do_slot_metadata(conn, slot)
+
+          _ ->
+            if conn.assigns[:want_stream] do
+              conn
+              |> redirect(external: "https://youtube.com/watch?v=#{slot.youtube_id}")
+            else
+              handle_quest_video(conn, slot)
+            end
         end
     end
   end
