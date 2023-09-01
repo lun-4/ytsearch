@@ -394,7 +394,7 @@ defmodule YtSearch.Youtube do
   end
 
   def extract_subtitles(meta) do
-    subtitles = meta["subtitles"]
+    subtitles = meta["subtitles"] || []
 
     result =
       subtitles
