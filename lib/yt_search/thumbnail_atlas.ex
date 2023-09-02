@@ -18,6 +18,9 @@ defmodule YtSearch.Thumbnail.Atlas do
 
   @invalid_thumbnail_path Path.join(:code.priv_dir(:yt_search), "static/invalid_thumbnail.png")
 
+  defp montage,
+    do: Application.fetch_env!(:yt_search, YtSearch.ThumbnailAtlas)[:montage_command]
+
   def do_assemble(search_slot) do
     thumbnail_paths =
       search_slot
@@ -41,7 +44,7 @@ defmodule YtSearch.Thumbnail.Atlas do
             @invalid_thumbnail_path
 
           thumbnail ->
-            temporary_path = Temp.path!() <> ".png"
+            temporary_path = Temp.path!()
             File.write!(temporary_path, thumbnail.data)
             temporary_path
         end
@@ -59,16 +62,17 @@ defmodule YtSearch.Thumbnail.Atlas do
         ["-tile", "8x4", "-depth", "8", "-geometry", "128x128!", "-background", "none"] ++
         [atlas_image_path]
 
-    Logger.debug("calling montage with args #{inspect(args)}")
+    Logger.debug("calling #{montage()} with args #{inspect(args)}")
 
-    {output, 0} =
+    {output, exit_code} =
       System.cmd(
-        "montage",
+        montage(),
         args,
         stderr_to_stdout: true
       )
 
     Logger.debug("montage output: #{inspect(output)}")
+    0 = exit_code
 
     result = {:ok, "image/png", File.read!(atlas_image_path)}
 

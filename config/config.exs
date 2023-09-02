@@ -71,6 +71,8 @@ config :prometheus, YtSearch.Repo.Instrumenter,
 
 config :tesla, adapter: Tesla.Adapter.Hackney
 
+config :yt_search, YtSearch.ThumbnailAtlas, montage_command: "montage"
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
