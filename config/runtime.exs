@@ -26,6 +26,9 @@ if config_env() in [:dev, :prod] do
     sponsorblock_url: System.get_env("SPONSORBLOCK_URL") || "localhost:8081"
 end
 
+config :yt_search, YtSearch.ThumbnailAtlas,
+  montage_command: System.get_env("MONTAGE_COMMAND") || "montage"
+
 if config_env() == :prod do
   config :yt_search, YtSearch.Ratelimit,
     ytdlp_search: {
