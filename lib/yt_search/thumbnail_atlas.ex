@@ -72,6 +72,11 @@ defmodule YtSearch.Thumbnail.Atlas do
       )
 
     Logger.debug("montage output: #{inspect(output)}")
+
+    if exit_code != 0 do
+      Logger.error("failed to run #{montage()}. #{exit_code}. #{inspect(output)}")
+    end
+
     0 = exit_code
 
     result = {:ok, "image/png", File.read!(atlas_image_path)}
