@@ -48,6 +48,7 @@ config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 
 config :yt_search, YtSearch.Repo,
   cache_size: -128_000,
+  auto_vacuum: :incremental,
   telemetry_event: [YtSearch.Repo.Instrumenter]
 
 config :prometheus, YtSearch.Repo.Instrumenter,
