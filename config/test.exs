@@ -35,4 +35,4 @@ config :tesla, adapter: Tesla.Mock
 
 config :yt_search, YtSearch.Youtube, piped_url: "example.org", sponsorblock_url: "sb.example.org"
 
-config :yt_search, YtSearch.Ratelimit, ytdlp_search: {100, 100}
+config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1_000_000, 1}
