@@ -33,6 +33,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :tesla, adapter: Tesla.Mock
 
-config :yt_search, YtSearch.Youtube, piped_url: "example.org"
+config :yt_search, YtSearch.Youtube, piped_url: "example.org", sponsorblock_url: "sb.example.org"
 
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {100, 100}

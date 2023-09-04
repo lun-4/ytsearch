@@ -21,7 +21,9 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() in [:dev, :prod] do
-  config :yt_search, YtSearch.Youtube, piped_url: System.get_env("PIPED_URL") || "localhost:8080"
+  config :yt_search, YtSearch.Youtube,
+    piped_url: System.get_env("PIPED_URL") || "localhost:8080",
+    sponsorblock_url: System.get_env("SPONSORBLOCK_URL") || "localhost:8081"
 end
 
 config :yt_search, YtSearch.ThumbnailAtlas,

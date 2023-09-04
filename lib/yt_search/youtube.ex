@@ -10,6 +10,10 @@ defmodule YtSearch.Youtube do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:piped_url]
   end
 
+  defp sponsorblock() do
+    Application.fetch_env!(:yt_search, YtSearch.Youtube)[:sponsorblock_url]
+  end
+
   defmodule CallCounter do
     use Prometheus.Metric
 
@@ -497,5 +501,55 @@ defmodule YtSearch.Youtube do
         latency
       )
     end
+  end
+
+  defp sponsorblock_call(call_type, func, id, list_field, opts \\ []) do
+    CallCounter.inc(call_type)
+
+    start_ts = System.monotonic_time(:millisecond)
+    result = func.(sponsorblock(), id)
+    end_ts = System.monotonic_time(:millisecond)
+    Latency.register(call_type, end_ts - start_ts)
+
+    case result do
+      {:ok, %{status: 200} = response} ->
+        {:ok,
+         response.body
+         |> then(fn body ->
+           limit = Keyword.get(opts, :limit)
+
+           result =
+             unless list_field == nil do
+               body[list_field]
+             else
+               body
+             end
+
+           if is_list(result) and limit != nil do
+             result |> Enum.slice(0, limit)
+           else
+             result
+           end
+         end)
+         |> vrcjson_workaround}
+
+      {:ok, %{status: 404}} ->
+        {:error, :not_found}
+
+      {:ok, %Tesla.Env{} = response} ->
+        {:error, response}
+
+      {:error, _} = error_value ->
+        error_value
+    end
+  end
+
+  def sponsorblock_segments(youtube_id) do
+    sponsorblock_call(
+      :sponsorblock_segments,
+      &YtSearch.Sponsorblock.skip_segments/2,
+      youtube_id,
+      nil
+    )
   end
 end
