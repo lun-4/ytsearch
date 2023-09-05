@@ -55,7 +55,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
     with [{extractor, :self}] <-
            Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
-      IO.puts("unregistering #{inspect(extractor)}")
+      Logger.debug("unregistering #{inspect(extractor)}")
       :ok = GenServer.call(extractor, :unregister)
 
       case Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
@@ -69,7 +69,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
     with [{extractor, :self}] <-
            Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
-      IO.puts("unregistering #{inspect(extractor)}")
+      Logger.debug("unregistering #{inspect(extractor)}")
       :ok = GenServer.call(extractor, :unregister)
 
       case Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
