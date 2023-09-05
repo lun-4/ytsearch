@@ -1,4 +1,4 @@
-defmodule YtSearchWeb.SlotConsistencyTest do
+defmodule YtSearchWeb.SearchConsistencyTest do
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Test.Data
   import Tesla.Mock
