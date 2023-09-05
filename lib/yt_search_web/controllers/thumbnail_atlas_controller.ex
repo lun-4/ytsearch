@@ -4,11 +4,17 @@ defmodule YtSearchWeb.AtlasController do
   alias YtSearch.Thumbnail.Atlas
 
   def fetch(conn, %{"search_slot_id" => search_slot_id}) do
-    {:ok, mimetype, binary_data} = do_fetch(search_slot_id)
+    case do_fetch(search_slot_id) do
+      {:ok, mimetype, binary_data} ->
+        conn
+        |> put_resp_content_type(mimetype, nil)
+        |> resp(200, binary_data)
 
-    conn
-    |> put_resp_content_type(mimetype, nil)
-    |> resp(200, binary_data)
+      {:error, :unknown_search_slot} ->
+        conn
+        |> put_status(404)
+        |> text("search slot not found")
+    end
   end
 
   def do_fetch(search_slot_id) do
