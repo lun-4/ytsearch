@@ -63,7 +63,7 @@ defmodule YtSearch.Metadata.Worker do
 
     if time_since_last_reply > 60 do
       Registry.unregister(YtSearch.MetadataWorkers, youtube_id)
-      Process.send_after(self(), :suicide, 30000)
+      Process.send_after(self(), {:suicide, last_reply}, 30000 + Enum.random(2000..20000))
     else
       # schedule next exit if we arent supposed to die yet
       schedule_deffered_exit()
@@ -73,7 +73,13 @@ defmodule YtSearch.Metadata.Worker do
   end
 
   @impl true
-  def handle_info(:suicide, state) do
+  def handle_info({:suicide, old_last_reply}, %{last_reply: new_last_reply} = state) do
+    if old_last_reply != new_last_reply do
+      Logger.error(
+        "PROBE #{inspect(self())}: intended_suicide but last_reply got updated. was #{old_last_reply}, now is #{new_last_reply}"
+      )
+    end
+
     {:stop, {:shutdown, :intended_suicide}, state}
   end
 
