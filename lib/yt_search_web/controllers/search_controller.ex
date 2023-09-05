@@ -105,6 +105,7 @@ defmodule YtSearchWeb.SearchController do
             end
           end)
 
+          SearchSlot.refresh(data.id)
           data
         else
           nil
