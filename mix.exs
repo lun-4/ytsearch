@@ -84,11 +84,20 @@ defmodule YtSearch.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      testall: [
+        "ecto.create --quiet",
+        "ecto.migrate --quiet",
+        "test --include slow --include slower"
+      ],
       lint: [
         "format --check-formatted",
         "deps.unlock --check-unused",
         "credo --all --strict"
       ]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [testall: :test]]
   end
 end
