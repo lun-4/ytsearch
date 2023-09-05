@@ -56,7 +56,7 @@ defmodule YtSearch.Application do
   end
 
   defp maybe_janitors do
-    unless Mix.env() == :test do
+    if Mix.env() != :test do
       [
         Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
         # Tinycron.new(YtSearch.Slot.Janitor, every: 10 * 60, jitter: (-3 * 60)..(3 * 60)),

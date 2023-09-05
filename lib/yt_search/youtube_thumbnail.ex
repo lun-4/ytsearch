@@ -9,7 +9,7 @@ defmodule YtSearch.Youtube.Thumbnail do
   end
 
   def fetch_piped_in_background(youtube_id, data) do
-    unless data["thumbnail"] == nil do
+    if data["thumbnail"] != nil do
       # TODO wrap up in a supervisor?
       # reasons for that: handle network failures
       # reasons against: moar codes, also need to fast fail after some amnt of retries

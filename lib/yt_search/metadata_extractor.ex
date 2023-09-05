@@ -176,7 +176,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
         wanted_video_result
       end
 
-    unless wanted_video_result == nil do
+    if wanted_video_result != nil do
       url = wanted_video_result["url"]
       uri = url |> URI.parse()
       expiry_timestamp = Youtube.expiry_from_uri(uri)
@@ -260,14 +260,14 @@ defmodule YtSearch.MetadataExtractor.Worker do
       )
     end
 
-    unless request_type != state.type do
+    if request_type == state.type do
       new_state =
         state
         |> Map.put(:last_reply, System.monotonic_time(:second))
 
       result = state[state.type]
 
-      unless result == nil do
+      if result != nil do
         {:reply, result, new_state}
       else
         with {:ok, meta} <- YtSearch.Metadata.Worker.fetch_for(state.youtube_id),

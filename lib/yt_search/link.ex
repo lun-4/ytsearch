@@ -46,7 +46,7 @@ defmodule YtSearch.Mp4Link do
       mp4_link: mp4_link
     }
     |> then(fn value ->
-      unless expires_at == nil do
+      if expires_at != nil do
         # if youtube gives expiry timestamp, use it so that
         # (inserted_at + @ttl) = expiry
         # guaranteeding we expire it at the same time youtube expires it

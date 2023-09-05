@@ -48,7 +48,13 @@ defmodule YtSearchWeb.SlotController do
         {:ok, url} -> url
       end
 
-    unless conn.assigns[:want_stream] do
+    if conn.assigns[:want_stream] do
+      # we can't redirect to a video when the quest player is in stream mode
+      # so... 404 it
+      conn
+      |> put_status(404)
+      |> text("error happened: #{error_code}")
+    else
       if external_url == nil do
         conn
         |> put_resp_content_type("video/mp4", nil)
@@ -63,12 +69,6 @@ defmodule YtSearchWeb.SlotController do
         conn
         |> redirect(external: external_url)
       end
-    else
-      # we can't redirect to a video when the quest player is in stream mode
-      # so... 404 it
-      conn
-      |> put_status(404)
-      |> text("error happened: #{error_code}")
     end
   end
 
