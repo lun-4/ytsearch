@@ -238,6 +238,13 @@ defmodule YtSearch.Youtube do
             Logger.warning("this is an unavailable youtube id")
             {:error, :video_unavailable}
 
+          String.contains?(
+            message,
+            "This video is no longer available because the YouTube account associated"
+          ) ->
+            Logger.warning("video dead because channel dead")
+            {:error, :video_unavailable}
+
           String.contains?(message, "This channel does not exist") ->
             Logger.warning("this is a non existing channel")
             {:error, :channel_not_found}
