@@ -121,11 +121,6 @@ defmodule YtSearch.MetadataExtractor.Worker do
       if time_since_last_reply > 60 do
         Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
 
-        with {:message_queue_len, length} <- Process.info(self(), :message_queue_len),
-             true <- length > 0 do
-          Logger.warning("#{inspect(self())} message queue len is #{length}")
-        end
-
         Process.send_after(self(), {:suicide, last_reply}, 30000 + Enum.random(2000..20000))
         state |> Map.put(:will_die?, true)
       else
