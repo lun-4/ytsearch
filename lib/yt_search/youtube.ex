@@ -444,7 +444,7 @@ defmodule YtSearch.Youtube do
           url = subtitle["url"]
           Logger.debug("subtitle, calling #{url}")
 
-          case Tesla.get(url) do
+          case Tesla.get(url, opts: [adapter: [recv_timeout: 3000]]) do
             {:ok, %{status: 200} = response} ->
               {subtitle, response.body}
 

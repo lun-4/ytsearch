@@ -7,11 +7,9 @@ defmodule YtSearch.Sponsorblock do
   plug Tesla.Middleware.JSON
 
   def skip_segments(api_url, youtube_id) do
-    # final_url =
-    #  "#{api_url}/api/skipSegments/#{first_hash}?categories=[\"sponsor\",\"intro\",\"outro\",\"selfpromo\",\"music_offtopic\",\"preview\"]"
-
     get(
-      "#{api_url}/api/skipSegments?videoID=#{youtube_id}&categories=[\"sponsor\",\"poi_highlight\"]"
+      "#{api_url}/api/skipSegments?videoID=#{youtube_id}&categories=[\"sponsor\",\"poi_highlight\"]",
+      opts: [adapter: [recv_timeout: 3000]]
     )
   end
 end
