@@ -11,7 +11,7 @@ defmodule YtSearchWeb.TrendingTabTest do
 
   test "trending tab works", %{conn: conn} do
     Tesla.Mock.mock(fn
-      %{method: :get, url: "example.org/trending?region=US"} ->
+      %{method: :get, url: "example.org/trending", query: [region: "US"]} ->
         Tesla.Mock.json(
           @test_output
           |> Jason.decode!()

@@ -7,7 +7,7 @@ defmodule YtSearch.Piped do
   plug Tesla.Middleware.JSON
 
   def search(url, text) do
-    get("#{url}/search?q=#{text}&filter=all")
+    get("#{url}/search", query: [q: text, filter: "all"])
   end
 
   def channel(url, id) do
@@ -23,6 +23,6 @@ defmodule YtSearch.Piped do
   end
 
   def trending(url, region) do
-    get("#{url}/trending?region=#{region}")
+    get("#{url}/trending", query: [region: region])
   end
 end

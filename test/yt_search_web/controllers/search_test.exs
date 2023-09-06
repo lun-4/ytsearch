@@ -116,14 +116,12 @@ defmodule YtSearchWeb.SearchTest do
     # TODO review if we can enable async tests by moving away from mock
     # and into Tesla.Mock
 
-    # TODO refactor to use pattern matching
     mock(fn
-      %{method: :get, url: "example.org" <> suffix} ->
-        if String.contains?(suffix, "/channel/") do
-          json(Jason.decode!(@piped_channel_output))
-        else
-          json(Jason.decode!(@piped_search_output))
-        end
+      %{method: :get, url: "example.org/channel/" <> _whatever} ->
+        json(Jason.decode!(@piped_channel_output))
+
+      %{method: :get, url: "example.org/search" <> _whatever} ->
+        json(Jason.decode!(@piped_search_output))
     end)
 
     conn =
@@ -179,7 +177,7 @@ defmodule YtSearchWeb.SearchTest do
   test "ytdlp ratelimiting works" do
     # need to use mock_global because this test involved multiple process
     Tesla.Mock.mock_global(fn
-      %{method: :get, url: "example.org/search?q=amongus_test&filter=all"} ->
+      %{method: :get, url: "example.org/search", query: [q: "amongus_test", filter: "all"]} ->
         Process.sleep(2)
         json(Jason.decode!(@piped_search_output))
 
@@ -263,5 +261,22 @@ defmodule YtSearchWeb.SearchTest do
 
     rjson = json_response(conn, 200)
     assert length(rjson["search_results"]) == 19
+  end
+
+  test "it encodes the search query properly", %{conn: conn} do
+    Data.default_global_mock(fn
+      %{method: :get, url: "example.org/search", query: [q: "amongus_test#3", filter: "all"]} ->
+        json(Jason.decode!(@piped_search_output))
+
+      %{method: :get, url: "example.org/search?q=amongus_test#3&filter=all"} ->
+        json(%{"error" => "query and filter are required parameters"}, status: 400)
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/2/s?q=amongus_test%233")
+
+    json_response(conn, 200)
   end
 end

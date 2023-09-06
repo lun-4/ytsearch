@@ -13,7 +13,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
       %{method: :get, url: "example.org/streams/#{@test_youtube_id}"} ->
         json(Jason.decode!(@piped_video_output))
 
-      %{method: :get, url: "example.org/search?q=" <> _} ->
+      %{method: :get, url: "example.org/search" <> _} ->
         json(%{items: []})
     end)
   end
