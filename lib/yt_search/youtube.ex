@@ -148,7 +148,12 @@ defmodule YtSearch.Youtube do
             uri.query
             |> URI.decode_query()
 
-          {:ok, query["v"]}
+          if query["v"] do
+            {:ok, query["v"]}
+          else
+            Logger.error("invalid query params: #{inspect(query)}")
+            {:input_error, :invalid_format}
+          end
         else
           Logger.error("invalid /watch uri: #{inspect(uri)}")
           {:input_error, :invalid_format}

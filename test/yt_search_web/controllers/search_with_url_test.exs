@@ -34,7 +34,8 @@ defmodule YtSearchWeb.SearchWithURLTest do
 
   @invalid_test_cases [
     "#{@test_youtube_id}",
-    "youtube.com/#{@test_youtube_id}"
+    "youtube.com/#{@test_youtube_id}",
+    "www.youtube.com/watch/?/v=#{@test_youtube_id}"
   ]
 
   test "it gets single video result" do
