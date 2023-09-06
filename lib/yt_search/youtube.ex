@@ -232,6 +232,7 @@ defmodule YtSearch.Youtube do
           end
 
         message = body["message"] || ""
+        Logger.warning("piped errored with message: #{inspect(message)}")
 
         cond do
           String.contains?(message, "Video unavailable") ->
@@ -255,6 +256,9 @@ defmodule YtSearch.Youtube do
 
           String.contains?(message, "Premieres in") ->
             Logger.warning("it's a premiere! #{message}")
+            {:error, :video_unavailable}
+
+          String.contains?(message, "This video is a paid video") ->
             {:error, :video_unavailable}
 
           String.contains?(message, "This live event will begin in") ->
