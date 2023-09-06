@@ -277,6 +277,9 @@ defmodule YtSearch.Youtube do
             Logger.warning("this is an unavailable channel")
             {:error, :channel_unavailable}
 
+          String.contains?(message, "Could not get channel name") ->
+            {:error, :channel_unavailable}
+
           true ->
             {:error, response}
         end
