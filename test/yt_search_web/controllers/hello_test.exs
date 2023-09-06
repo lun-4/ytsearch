@@ -7,6 +7,10 @@ defmodule YtSearchWeb.HelloTest do
     "trending_tab.json"
   ]
 
+  setup do
+    YtSearch.Test.Data.default_global_mock()
+  end
+
   @test_cases
   |> Enum.map(fn path -> "test/support/piped_outputs/#{path}" end)
   |> Enum.map(fn path -> {path, File.read!(path)} end)
