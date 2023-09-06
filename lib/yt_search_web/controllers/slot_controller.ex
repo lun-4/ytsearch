@@ -135,6 +135,9 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp do_slot_metadata(conn, slot) do
+    slot.id
+    |> Slot.refresh()
+
     subtitle_task =
       Task.async(fn ->
         do_subtitles(slot)
