@@ -127,7 +127,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v2/search?search=urban+rescue+ranch")
+      |> get(~p"/api/v3/search?search=urban+rescue+ranch")
 
     resp_json = json_response(conn, 200)
     verify_search_results(resp_json)
@@ -136,7 +136,7 @@ defmodule YtSearchWeb.SearchTest do
 
     conn =
       conn
-      |> get("/api/v2/s/#{second_slot_id}")
+      |> get("/api/v3/s/#{second_slot_id}")
 
     assert get_resp_header(conn, "location") == ["https://youtube.com/watch?v=ClEcGfH1250"]
 
@@ -146,7 +146,7 @@ defmodule YtSearchWeb.SearchTest do
 
     conn =
       conn
-      |> get("/a/2/c/#{first_slot_id}")
+      |> get("/a/3/c/#{first_slot_id}")
 
     verify_channel_results(json_response(conn, 200))
   end
@@ -160,7 +160,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/2/s?q=urban+rescue+ranch")
+      |> get(~p"/a/3/s?q=urban+rescue+ranch")
 
     assert verify_search_results(json_response(conn, 200))
   end
@@ -168,7 +168,7 @@ defmodule YtSearchWeb.SearchTest do
   test "fails on non-UnityWebRequest", %{conn: conn} do
     conn =
       conn
-      |> get(~p"/a/2/s?q=urban+rescue+ranch")
+      |> get(~p"/a/3/s?q=urban+rescue+ranch")
 
     rjson = json_response(conn, 400)
     assert rjson["error"]
@@ -198,7 +198,7 @@ defmodule YtSearchWeb.SearchTest do
         Task.async(fn ->
           Phoenix.ConnTest.build_conn()
           |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/a/2/s?q=amongus_test")
+          |> get(~p"/a/3/s?q=amongus_test")
         end)
       end)
       |> Enum.map(fn task ->
@@ -221,7 +221,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/2/s?q=amongus_test")
+      |> get(~p"/a/3/s?q=amongus_test")
 
     resp_json = json_response(conn, 200)
     verify_search_results(resp_json)
@@ -238,7 +238,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/2/s?q=whatever")
+      |> get(~p"/a/3/s?q=whatever")
 
     rjson = json_response(conn, 200)
     # the original response containns 20, the channel entry is the only removed
@@ -257,7 +257,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/2/s?q=whatever")
+      |> get(~p"/a/3/s?q=whatever")
 
     rjson = json_response(conn, 200)
     assert length(rjson["search_results"]) == 19
@@ -275,7 +275,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/2/s?q=amongus_test%233")
+      |> get(~p"/a/3/s?q=amongus_test%233")
 
     json_response(conn, 200)
   end

@@ -23,7 +23,7 @@ defmodule YtSearchWeb.HelloTest do
 
       conn =
         conn
-        |> get(~p"/api/v2/hello")
+        |> get(~p"/api/v3/hello")
 
       resp_json = json_response(conn, 200)
       assert resp_json["online"] == true
