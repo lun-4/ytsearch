@@ -61,7 +61,6 @@ defmodule YtSearch.Subtitle do
         )
         |> Repo.all()
         |> Enum.map(fn subtitle ->
-          IO.inspect(subtitle)
           Repo.delete(subtitle)
           1
         end)
