@@ -171,6 +171,43 @@ defmodule YtSearchWeb.SlotConsistencyTest do
           Logger.warning("invalid ytid #{youtube_id}")
           env
         end
+
+      %{method: :get, url: "sb.example.org/api/skipSegments?videoID=" <> rest} = env ->
+        youtube_id = rest |> String.split("&") |> Enum.at(0)
+
+        if youtube_id == slot.youtube_id do
+          json([
+            %{
+              "category" => "intro",
+              "actionType" => "skip",
+              "segment" => [
+                0,
+                1.925
+              ],
+              "UUID" => "24950dd1f8dc6bacac09a9bba19fee28064e2cf94101b4ec0e2003e2199ef7f57",
+              "videoDuration" => 1626.561,
+              "locked" => 0,
+              "votes" => 0,
+              "description" => ""
+            },
+            %{
+              "category" => "sponsor",
+              "actionType" => "skip",
+              "segment" => [
+                90.343,
+                132.37
+              ],
+              "UUID" => "94cb65e5148e662bb9b8aebfe14948fec4e2624e49f0c847d9591c4a12b2fa187",
+              "videoDuration" => 1626.561,
+              "locked" => 1,
+              "votes" => 10,
+              "description" => ""
+            }
+          ])
+        else
+          Logger.warning("mock: sb.example.org called with #{youtube_id}, not #{slot.youtube_id}")
+          env
+        end
     end)
 
     1..1000
