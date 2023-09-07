@@ -96,7 +96,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
           case slot_type do
             YtSearch.Slot ->
-              slot_type.create(random_yt_id(), 3600)
+              slot_type.create(random_yt_id(), "AAA", 3600)
 
             YtSearch.SearchSlot ->
               slot_type.from_playlist([], random_yt_id())
@@ -129,7 +129,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
   test "it renews an existing expired slot" do
     youtube_id = random_yt_id()
-    slot = Slot.create(youtube_id, 1)
+    slot = Slot.create(youtube_id, nil, 1)
 
     changed_slot =
       slot
@@ -144,7 +144,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil
 
-    same_slot = YtSearch.Slot.create(youtube_id, 1)
+    same_slot = YtSearch.Slot.create(youtube_id, "asdd", 1)
     assert same_slot.id == slot.id
     assert same_slot.inserted_at > changed_slot.inserted_at
     assert same_slot.inserted_at_v2 > changed_slot.inserted_at_v2

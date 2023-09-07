@@ -16,7 +16,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   setup do
-    slot = Slot.create(@youtube_id, 3600)
+    slot = Slot.create(@youtube_id, "among us", 3600)
 
     on_exit(fn ->
       stop_metadata_workers(slot.youtube_id)
@@ -330,6 +330,7 @@ defmodule YtSearchWeb.SlotTest do
     end)
     |> Enum.map(fn task ->
       resp = Task.await(task)
+      assert resp["title"] != nil
       assert resp["subtitle_data"] == "Among Us ORIGINAL"
       assert length(resp["sponsorblock_segments"]) == 2
     end)
@@ -450,14 +451,14 @@ defmodule YtSearchWeb.SlotTest do
   test "correctly rerolls ids" do
     :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
 
-    slot = Slot.create(@another_youtube_id, 3600)
+    slot = Slot.create(@another_youtube_id, "among", 3600)
     assert slot.id == 71186
 
     # go with the same seed, causing it to go down the reroll route
 
     :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
 
-    slot = Slot.create(@even_another_youtube_id, 3600)
+    slot = Slot.create(@even_another_youtube_id, "amonged", 3600)
     assert slot.id == 47635
   end
 

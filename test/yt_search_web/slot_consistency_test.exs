@@ -17,7 +17,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
   end
 
   setup do
-    slot = Slot.create(@youtube_id, 3600)
+    slot = Slot.create(@youtube_id, "a", 3600)
 
     on_exit(fn ->
       stop_metadata_workers(slot.youtube_id)

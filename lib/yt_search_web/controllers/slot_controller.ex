@@ -154,7 +154,11 @@ defmodule YtSearchWeb.SlotController do
     sponsorblock_data = Task.await(sponsorblock_task)
 
     conn
-    |> json(%{subtitle_data: subtitle_data, sponsorblock_segments: sponsorblock_data})
+    |> json(%{
+      title: slot.title,
+      subtitle_data: subtitle_data,
+      sponsorblock_segments: sponsorblock_data
+    })
   end
 
   defp valid_subtitle_from_list(subtitles) do

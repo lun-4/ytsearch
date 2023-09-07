@@ -67,13 +67,15 @@ defmodule YtSearchWeb.Playlist do
   defp do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id) do
     case entity_type do
       t when t in [:video, :short, :livestream, :playlist] ->
+        title = data["title"] || data["name"]
+
         slot =
           case t do
             :playlist ->
               YtSearch.PlaylistSlot.from(youtube_id)
 
             _ ->
-              YtSearch.Slot.create(youtube_id, data["duration"])
+              YtSearch.Slot.create(youtube_id, title, data["duration"])
           end
 
         channel_id =
@@ -104,7 +106,7 @@ defmodule YtSearchWeb.Playlist do
 
         %{
           type: entity_type,
-          title: data["title"] || data["name"],
+          title: title,
           youtube_id: youtube_id,
           duration: data["duration"],
           channel_name: channel_name,

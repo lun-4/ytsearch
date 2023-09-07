@@ -49,9 +49,9 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     end)
 
     %{
-      slot: Slot.create(@test_youtube_id, 0),
-      music_premium_slot: Slot.create(@music_premium_id, 0),
-      no_subtitles_slot: Slot.create(@no_subtitles_id, 0),
+      slot: Slot.create(@test_youtube_id, "among", 0),
+      music_premium_slot: Slot.create(@music_premium_id, "among2", 0),
+      no_subtitles_slot: Slot.create(@no_subtitles_id, "among3", 0),
       unavailable_channel_slot: ChannelSlot.from(@unavailable_channel_id),
       notfound_channel_slot: ChannelSlot.from(@notfound_channel_id),
       upcoming_livestream_slot: ChannelSlot.from(@upcoming_livestream_id),

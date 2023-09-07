@@ -12,6 +12,7 @@ defmodule YtSearch.Slot do
 
   schema "slots_v2" do
     field(:youtube_id, :string)
+    field(:title, :string)
     field(:video_duration, :integer)
     timestamps()
 
@@ -43,8 +44,8 @@ defmodule YtSearch.Slot do
     |> TTL.maybe?(__MODULE__)
   end
 
-  @spec create(String.t(), Integer.t() | nil) :: Slot.t()
-  def create(youtube_id, video_duration) do
+  @spec create(String.t(), String.t() | nil, Integer.t() | nil) :: Slot.t()
+  def create(youtube_id, title, video_duration) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
     maybe_slot = Repo.one(query)
@@ -55,6 +56,7 @@ defmodule YtSearch.Slot do
       %__MODULE__{
         youtube_id: youtube_id,
         id: new_id,
+        title: title,
         video_duration:
           case video_duration do
             nil -> default_ttl()

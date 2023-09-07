@@ -8,6 +8,7 @@ defmodule YtSearch.Factory do
     %YtSearch.Slot{
       id: id,
       youtube_id: sequence("youtube"),
+      title: sequence("title"),
       video_duration: 300
     }
   end
