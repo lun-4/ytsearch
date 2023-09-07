@@ -39,7 +39,6 @@ defmodule YtSearchWeb.SearchController do
     escaped_query =
       search_query
       |> String.trim()
-      |> URI.encode()
 
     case search_text(escaped_query) do
       {:ok, response} ->
