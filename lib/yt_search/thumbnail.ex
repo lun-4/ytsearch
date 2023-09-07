@@ -20,8 +20,8 @@ defmodule YtSearch.Thumbnail do
     Repo.one(query)
   end
 
-  # 2 hours
-  def ttl_seconds(), do: 2 * 60 * 60
+  # 24 hours
+  def ttl_seconds(), do: 24 * 60 * 60
 
   def insert(id, mimetype, blob) do
     %__MODULE__{id: id, mime_type: mimetype, data: blob}
