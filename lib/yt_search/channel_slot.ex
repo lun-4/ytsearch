@@ -30,8 +30,11 @@ defmodule YtSearch.ChannelSlot do
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    Repo.all(query)
+    |> Enum.filter(fn channel_slot ->
+      TTL.maybe?(channel_slot, __MODULE__) != nil
+    end)
+    |> Enum.at(0)
   end
 
   @spec from(String.t()) :: Slot.t()
