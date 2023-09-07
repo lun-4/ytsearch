@@ -35,6 +35,14 @@ defmodule YtSearch.Slot do
     |> TTL.maybe?(__MODULE__)
   end
 
+  @spec fetch_by_youtube_id(String.t()) :: Slot.t() | nil
+  def fetch_by_youtube_id(youtube_id) do
+    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+
+    Repo.one(query)
+    |> TTL.maybe?(__MODULE__)
+  end
+
   @spec create(String.t(), Integer.t() | nil) :: Slot.t()
   def create(youtube_id, video_duration) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s

@@ -80,14 +80,14 @@ defmodule YtSearch.SearchSlot do
     search_slot
     |> get_slots
     |> Enum.map(fn maybe_slot ->
-      {slot_type, slot_id} =
+      {slot_type, youtube_id} =
         case maybe_slot do
           # old version of the field
-          [entity_type, id] ->
-            {entity_type, id}
+          data when is_list(data) ->
+            {nil, nil}
 
           slot when is_map(slot) ->
-            {slot["type"], slot["slot_id"]}
+            {slot["type"], slot["youtube_id"]}
         end
 
       # assumes all slot types are "strict ttl" as in,
@@ -95,18 +95,22 @@ defmodule YtSearch.SearchSlot do
       # are going to be obliterated any time now
       case slot_type do
         t when t in ["video", "short", "livestream"] ->
-          Slot.fetch_by_id(slot_id)
+          Slot.fetch_by_youtube_id(youtube_id)
 
         "playlist" ->
-          PlaylistSlot.fetch(slot_id)
+          PlaylistSlot.fetch_by_youtube_id(youtube_id)
 
         "channel" ->
-          ChannelSlot.fetch(slot_id)
+          ChannelSlot.fetch_by_youtube_id(youtube_id)
+
+        nil ->
+          nil
 
         _ ->
           raise "invalid type for search slot entry: #{inspect(slot_type)}"
       end
     end)
+    |> Enum.filter(fn result -> result != nil end)
   end
 
   def from_playlist(playlist, search_query) do
