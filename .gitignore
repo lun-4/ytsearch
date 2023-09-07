@@ -30,3 +30,5 @@ yt_search-*.tar
 *.db-*
 
 release/
+
+.envrc
