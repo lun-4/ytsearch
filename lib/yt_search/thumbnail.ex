@@ -37,18 +37,20 @@ defmodule YtSearch.Thumbnail do
     import Ecto.Query
 
     def tick() do
-      Logger.debug("cleaning thumbnails...")
+      Logger.info("cleaning thumbnails...")
 
       expiry_time =
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-Thumbnail.ttl_seconds())
+        |> DateTime.from_naive!("Etc/UTC")
+        |> DateTime.to_unix()
 
       deleted_count =
         from(s in Thumbnail,
           where:
-            s.inserted_at <
+            fragment("unixepoch(?)", s.inserted_at) <
               ^expiry_time,
-          limit: 30
+          limit: 20000
         )
         |> Repo.all()
         |> Enum.map(fn thumb ->

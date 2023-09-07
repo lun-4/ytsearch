@@ -8,7 +8,7 @@ defmodule YtSearch.Subtitle do
   # 12 hours ttl
   def ttl_seconds, do: 12 * 60 * 60
 
-  # @primary_key {:youtube_id, :string, autogenerate: false}
+  @primary_key false
 
   schema "subtitles" do
     field(:youtube_id, :string, primary_key: true, autogenerate: false)
@@ -44,19 +44,28 @@ defmodule YtSearch.Subtitle do
     import Ecto.Query
 
     def tick() do
-      Logger.debug("cleaning subtitles...")
+      Logger.info("cleaning subtitles...")
 
       expiry_time =
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-Subtitle.ttl_seconds())
+        |> DateTime.from_naive!("Etc/UTC")
+        |> DateTime.to_unix()
 
-      {deleted_count, _entities} =
+      deleted_count =
         from(s in Subtitle,
           where:
-            s.inserted_at <
-              ^expiry_time
+            fragment("unixepoch(?)", s.inserted_at) <
+              ^expiry_time,
+          limit: 5000
         )
-        |> Repo.delete_all()
+        |> Repo.all()
+        |> Enum.map(fn subtitle ->
+          IO.inspect(subtitle)
+          Repo.delete(subtitle)
+          1
+        end)
+        |> Enum.sum()
 
       Logger.info("deleted #{deleted_count} subtitles")
     end
