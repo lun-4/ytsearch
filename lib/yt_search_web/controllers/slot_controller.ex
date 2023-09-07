@@ -156,11 +156,23 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp valid_subtitle_from_list(subtitles) do
-    subtitles
-    |> Enum.filter(fn sub ->
-      sub.language != "notfound"
-    end)
-    |> Enum.at(0)
+    real_subtitles =
+      subtitles
+      |> Enum.filter(fn sub ->
+        sub.language != "notfound"
+      end)
+
+    original? =
+      real_subtitles
+      |> Enum.find(fn subtitle ->
+        String.ends_with?(subtitle.language, "-orig")
+      end)
+
+    if original? != nil do
+      original?
+    else
+      real_subtitles |> Enum.at(0)
+    end
   end
 
   defp subtitles_for(slot) do
