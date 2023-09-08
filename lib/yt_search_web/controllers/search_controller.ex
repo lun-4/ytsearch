@@ -90,6 +90,8 @@ defmodule YtSearchWeb.SearchController do
             end)
           end
 
+        Logger.info("attempting to reuse search slot #{data.id}, is valid? #{is_valid_slot}")
+
         if is_valid_slot do
           # TODO add refresh method to ChannelSlot and PlaylistSlot
           data
@@ -99,7 +101,8 @@ defmodule YtSearchWeb.SearchController do
               %YtSearch.Slot{} ->
                 YtSearch.Slot.refresh(slot.id)
 
-              _ ->
+              other_slot ->
+                Logger.info("not refreshing #{other_slot.id}, not done yet")
                 :ignore
             end
           end)
