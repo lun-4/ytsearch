@@ -81,15 +81,20 @@ defmodule YtSearch.SlotUtilities do
         order_by: [
           asc: fragment("unixepoch(?)", s.inserted_at)
         ],
-        limit: 1
+        limit: 10
 
-    case Repo.one(query) do
-      nil ->
+    Repo.all(query)
+    |> then(fn
+      [] ->
         raise "we should have already generated an entity id here"
 
-      entity ->
+      rows ->
+        entity =
+          rows
+          |> Enum.random()
+
         Repo.delete(entity)
         {:ok, entity.id}
-    end
+    end)
   end
 end
