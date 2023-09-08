@@ -15,7 +15,7 @@ defmodule YtSearchWeb.SearchConsistencyTest do
       slots: slots
     } do
       Data.default_global_mock(fn
-        %{method: :get, url: "example.org/search?q=" <> _suffix} ->
+        %{method: :get, url: "example.org/search"} ->
           json(%{
             "items" =>
               slots
