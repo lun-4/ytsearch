@@ -50,7 +50,7 @@ defmodule YtSearch.Thumbnail do
           where:
             fragment("unixepoch(?)", s.inserted_at) <
               ^expiry_time,
-          limit: 20000
+          limit: 5000
         )
         |> Repo.all()
         |> Enum.map(fn thumb ->
