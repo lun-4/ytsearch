@@ -53,9 +53,19 @@ defmodule YtSearch.Thumbnail do
           limit: 5000
         )
         |> Repo.all()
-        |> Enum.map(fn thumb ->
-          Repo.delete(thumb)
-          1
+        |> Enum.chunk_every(200)
+        |> Enum.map(fn chunk ->
+          chunk
+          |> Enum.map(fn thumb ->
+            Repo.delete(thumb)
+            1
+          end)
+          |> then(fn results ->
+            # let other ops run for a while
+            :timer.sleep(2000)
+            results
+          end)
+          |> Enum.sum()
         end)
         |> Enum.sum()
 
