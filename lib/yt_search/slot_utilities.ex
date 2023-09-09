@@ -81,7 +81,7 @@ defmodule YtSearch.SlotUtilities do
         order_by: [
           asc: fragment("unixepoch(?)", s.inserted_at)
         ],
-        limit: 10
+        limit: 50
 
     Repo.all(query)
     |> then(fn
