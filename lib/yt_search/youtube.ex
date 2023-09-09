@@ -173,7 +173,7 @@ defmodule YtSearch.Youtube do
         end)
 
       host in @host_by_path ->
-        video_id = url_path |> String.split("/") |> Enum.at(0)
+        video_id = url_path |> String.split("?") |> Enum.at(0) |> String.split("/") |> Enum.at(0)
         {:ok, video_id}
 
       true ->
