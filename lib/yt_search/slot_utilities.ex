@@ -62,16 +62,21 @@ defmodule YtSearch.SlotUtilities do
         order_by: [
           asc: s.inserted_at_v2
         ],
-        limit: 1
+        limit: 50
 
-    case Repo.one(query) do
-      nil ->
+    Repo.all(query)
+    |> then(fn
+      [] ->
         raise "we should have already generated an entity id here"
 
-      entity ->
+      rows ->
+        entity =
+          rows
+          |> Enum.random()
+
         Repo.delete(entity)
         {:ok, entity.id}
-    end
+    end)
   end
 
   defp use_last_slot_assumes_v1(module) do
