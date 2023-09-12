@@ -263,6 +263,10 @@ defmodule YtSearch.Youtube do
             Logger.warning("it's a premiere! #{message}")
             {:error, :video_unavailable}
 
+          String.contains?(message, "Premiere will begin shortly") ->
+            Logger.warning("it's a premiere! #{message}")
+            {:error, :video_unavailable}
+
           String.contains?(message, "This video is a paid video") ->
             {:error, :video_unavailable}
 
