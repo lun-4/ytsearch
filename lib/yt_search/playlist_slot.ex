@@ -4,6 +4,7 @@ defmodule YtSearch.PlaylistSlot do
   alias YtSearch.Repo
   alias YtSearch.TTL
   alias YtSearch.SlotUtilities
+  require Logger
 
   @type t :: %__MODULE__{}
   @primary_key {:id, :integer, autogenerate: false}
@@ -62,5 +63,20 @@ defmodule YtSearch.PlaylistSlot do
 
   def as_youtube_url(slot) do
     "https://www.youtube.com/playlist?list=#{slot.youtube_id}"
+  end
+
+  def refresh(playlist_slot_id) do
+    query = from s in __MODULE__, where: s.id == ^playlist_slot_id, select: s
+    playlist_slot = Repo.one(query)
+
+    unless playlist_slot == nil do
+      Logger.info("refreshing playlist id #{playlist_slot.id}")
+
+      playlist_slot
+      |> Ecto.Changeset.change(
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      )
+      |> YtSearch.Repo.update!()
+    end
   end
 end

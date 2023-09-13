@@ -2,6 +2,7 @@ defmodule YtSearchWeb.TrendingTabTest do
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
+  alias YtSearch.ChannelSlot
 
   @test_output File.read!("test/support/piped_outputs/trending_tab.json")
 
@@ -29,6 +30,7 @@ defmodule YtSearchWeb.TrendingTabTest do
     assert results |> Enum.at(3) |> Map.get("youtube_id") == "AsvGScyj4gw"
 
     {slot_id, ""} = results |> Enum.at(0) |> Map.get("slot_id") |> Integer.parse()
+    {channel_slot_id, ""} = results |> Enum.at(0) |> Map.get("channel_slot") |> Integer.parse()
 
     slot = Slot.fetch_by_id(slot_id)
 
@@ -37,6 +39,13 @@ defmodule YtSearchWeb.TrendingTabTest do
       |> Ecto.Changeset.change(
         inserted_at: slot.inserted_at |> NaiveDateTime.add(-(Slot.max_ttl() + 1), :second),
         inserted_at_v2: slot.inserted_at_v2 - Slot.max_ttl() + 1
+      )
+      |> YtSearch.Repo.update!()
+
+    channel_slot_before =
+      ChannelSlot.fetch(channel_slot_id)
+      |> Ecto.Changeset.change(
+        inserted_at: slot.inserted_at |> NaiveDateTime.add(-(Slot.max_ttl() + 1), :second)
       )
       |> YtSearch.Repo.update!()
 
@@ -58,6 +67,9 @@ defmodule YtSearchWeb.TrendingTabTest do
     assert slot_after.inserted_at_v2 > slot_before.inserted_at_v2
     assert slot_after.inserted_at > slot_before.inserted_at
     assert search_slot_after.inserted_at > search_slot_before.inserted_at
+
+    channel_slot_after = ChannelSlot.fetch(channel_slot_id)
+    assert channel_slot_after.inserted_at > channel_slot_before.inserted_at
 
     # re-request it
     conn =

@@ -4,6 +4,7 @@ defmodule YtSearch.ChannelSlot do
   alias YtSearch.Repo
   alias YtSearch.SlotUtilities
   alias YtSearch.TTL
+  require Logger
 
   @type t :: %__MODULE__{}
   @primary_key {:id, :integer, autogenerate: false}
@@ -74,6 +75,21 @@ defmodule YtSearch.ChannelSlot do
 
       youtube_id ->
         "https://www.youtube.com/channel/#{youtube_id}"
+    end
+  end
+
+  def refresh(channel_slot_id) do
+    query = from s in __MODULE__, where: s.id == ^channel_slot_id, select: s
+    channel_slot = Repo.one(query)
+
+    unless channel_slot == nil do
+      Logger.info("refreshing channel id #{channel_slot.id}")
+
+      channel_slot
+      |> Ecto.Changeset.change(
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      )
+      |> YtSearch.Repo.update!()
     end
   end
 end

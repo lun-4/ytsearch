@@ -78,6 +78,8 @@ defmodule YtSearchWeb.HelloController do
   end
 
   defmodule Refresher do
+    alias YtSearch.PlaylistSlot
+    alias YtSearch.ChannelSlot
     require Logger
 
     def tick() do
@@ -103,16 +105,32 @@ defmodule YtSearchWeb.HelloController do
               |> Enum.each(fn search_result ->
                 slot_id = search_result[:slot_id]
 
-                case search_result[:type] do
-                  :video ->
-                    slot = Slot.refresh(slot_id)
+                channel_slot = search_result[:channel_slot]
 
-                    unless slot == nil do
-                      Thumbnail.refresh(slot.youtube_id)
-                    end
+                unless channel_slot == nil do
+                  channel_slot
+                  |> Integer.parse()
+                  |> then(fn {result, ""} -> result end)
+                  |> ChannelSlot.refresh()
+                end
 
-                  _ ->
-                    nil
+                slot =
+                  case search_result[:type] do
+                    t when t in [:video, :short, :livestream] ->
+                      Slot.refresh(slot_id)
+
+                    :channel ->
+                      ChannelSlot.refresh(slot_id)
+
+                    :livestream ->
+                      PlaylistSlot.refresh(slot_id)
+
+                    _ ->
+                      nil
+                  end
+
+                unless slot == nil do
+                  Thumbnail.refresh(slot.youtube_id)
                 end
               end)
           end
