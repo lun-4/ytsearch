@@ -135,8 +135,10 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp do_slot_metadata(conn, slot) do
-    slot.id
-    |> Slot.refresh()
+    if NaiveDateTime.diff(slot.inserted_at, NaiveDateTime.utc_now(), :second) <= -60 do
+      slot.id
+      |> Slot.refresh()
+    end
 
     subtitle_task =
       Task.async(fn ->
