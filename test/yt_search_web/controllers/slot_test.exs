@@ -335,6 +335,7 @@ defmodule YtSearchWeb.SlotTest do
       resp = Task.await(task)
       assert resp["subtitle_data"] == "Among Us ORIGINAL"
       assert length(resp["sponsorblock_segments"]) == 2
+      assert resp["duration"] == slot.video_duration
     end)
   end
 
