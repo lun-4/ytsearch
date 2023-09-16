@@ -11,6 +11,7 @@ defmodule YtSearch.Subtitle do
   @primary_key false
 
   schema "subtitles" do
+    field(:id, :integer, primary_key: true, autogenerate: false)
     field(:youtube_id, :string, primary_key: true, autogenerate: false)
     field(:language, :string, primary_key: true)
     field(:subtitle_data, :string)
@@ -25,7 +26,7 @@ defmodule YtSearch.Subtitle do
 
   @spec insert(String.t(), String.t(), String.t() | nil) :: Subtitle.t()
   def insert(youtube_id, language, subtitle_data) do
-    %__MODULE__{youtube_id: youtube_id, language: language, subtitle_data: subtitle_data}
+    %__MODULE__{id: 0, youtube_id: youtube_id, language: language, subtitle_data: subtitle_data}
     |> Repo.insert!(
       on_conflict: [
         set: [
