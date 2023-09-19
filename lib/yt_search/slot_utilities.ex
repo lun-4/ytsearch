@@ -127,7 +127,7 @@ defmodule YtSearch.SlotUtilities do
         from(s in module,
           select: s,
           order_by: [
-            asc: fragment("unixepoch(?)", s.inserted_at)
+            asc: fragment("unixepoch(?)", s.used_at)
           ],
           limit: 50
         )
