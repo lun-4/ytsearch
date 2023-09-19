@@ -138,12 +138,24 @@ defmodule YtSearch.Slot do
     |> then(fn {:ok, slot} -> slot end)
   end
 
+  def refresh(slot_id) when is_number(slot_id) do
+    Logger.info("refreshing video id #{slot_id}")
+
+    slot =
+      from(s in __MODULE__, select: s, where: s.id == ^slot_id)
+      |> Repo.one()
+
+    slot
+    |> changeset(%{} |> put_expiration(slot))
+    |> Repo.update!()
+  end
+
   def refresh(%__MODULE__{} = slot) do
     Logger.info("refreshing video id #{slot.id}")
 
     slot
     |> put_expiration()
-    |> changeset
+    |> change
     |> Repo.update!()
   end
 
