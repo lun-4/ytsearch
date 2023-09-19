@@ -11,7 +11,7 @@ defmodule YtSearch.Slot do
 
   @primary_key {:id, :integer, autogenerate: false}
 
-  schema "slots_v2" do
+  schema "slots_v3" do
     field(:youtube_id, :string)
     field(:video_duration, :integer)
     timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
@@ -101,7 +101,16 @@ defmodule YtSearch.Slot do
         |> put_expiration()
         |> put_used()
         |> changeset
-        |> Repo.insert!()
+        |> Repo.insert!(
+          on_conflict: [
+            set: [
+              youtube_id: params.youtube_id,
+              video_duration: params.video_duration,
+              expires_at: params.expires_at,
+              used_at: params.used_at
+            ]
+          ]
+        )
       else
         maybe_slot
         |> refresh()
