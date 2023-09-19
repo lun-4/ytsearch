@@ -117,7 +117,7 @@ defmodule YtSearch.SlotUtilities do
     now = generate_unix_timestamp_integer()
 
     from(s in module,
-      where: fragment("unixepoch(?)", s.expires_at) < ^now,
+      where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
       select: s,
       limit: 1
     )
@@ -126,6 +126,7 @@ defmodule YtSearch.SlotUtilities do
       [] ->
         from(s in module,
           select: s,
+          where: not s.keepalive,
           order_by: [
             asc: fragment("unixepoch(?)", s.used_at)
           ],

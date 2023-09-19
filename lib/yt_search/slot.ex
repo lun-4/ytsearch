@@ -17,7 +17,7 @@ defmodule YtSearch.Slot do
     timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
     field(:expires_at, :naive_datetime)
     field(:used_at, :naive_datetime)
-    field(:keepalive, :bool)
+    field(:keepalive, :boolean)
   end
 
   @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
