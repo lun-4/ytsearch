@@ -163,42 +163,8 @@ defmodule YtSearch.Slot do
     Logger.info("used video id #{slot.id}")
 
     slot
-    |> put_used()
-    |> changeset
+    |> change(%{} |> put_used)
     |> Repo.update!()
-  end
-
-  @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
-  defp find_available_id() do
-    SlotUtilities.find_available_slot_id(__MODULE__)
-  end
-
-  defmodule Janitor do
-    require Logger
-
-    alias YtSearch.Repo
-
-    import Ecto.Query
-
-    def tick() do
-      Logger.debug("cleaning expired slots...")
-
-      expired_slots =
-        from(s in YtSearch.Slot, select: s)
-        |> Repo.all()
-        |> Enum.to_list()
-        |> Enum.map(fn slot ->
-          {slot, YtSearch.TTL.expired?(slot)}
-        end)
-        |> Enum.filter(fn {_slot, expired?} -> expired? end)
-        |> Enum.map(fn {expired_slot, true} ->
-          Repo.delete(expired_slot)
-        end)
-
-      deleted_count = length(expired_slots)
-
-      Logger.info("deleted #{deleted_count} slots")
-    end
   end
 
   def youtube_url(slot) do
