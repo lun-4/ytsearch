@@ -108,13 +108,21 @@ defmodule YtSearch.SlotUtilities do
     |> NaiveDateTime.truncate(:second)
   end
 
-  defp generate_unix_timestamp_integer do
+  def generate_unix_timestamp_integer do
     DateTime.to_unix(DateTime.utc_now())
   end
 
-  def generate_id_v3(module) do
-    spec = module.slot_spec()
+  def strict_ttl(entity) do
+    now = generate_unix_timestamp()
 
+    if NaiveDateTime.compare(entity.expires_at, now) != :lt do
+      entity
+    else
+      nil
+    end
+  end
+
+  def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
 
     from(s in module,

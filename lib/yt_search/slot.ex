@@ -25,7 +25,7 @@ defmodule YtSearch.Slot do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    |> SlotUtilities.strict_ttl()
   end
 
   @spec fetch_by_youtube_id(String.t()) :: Slot.t() | nil
@@ -33,7 +33,7 @@ defmodule YtSearch.Slot do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    |> SlotUtilities.strict_ttl()
   end
 
   def slot_spec() do

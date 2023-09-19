@@ -39,6 +39,7 @@ defmodule YtSearchWeb.HelloController do
   defp upstream_trending_tab do
     {:ok, data} = Youtube.trending()
 
+    # TODO do keepalive dance for trending tab
     results =
       data
       |> Playlist.from_piped_data()
