@@ -105,6 +105,7 @@ defmodule YtSearch.SlotUtilities do
 
   def generate_unix_timestamp do
     NaiveDateTime.utc_now()
+    |> NaiveDateTime.truncate(:second)
   end
 
   defp generate_unix_timestamp_integer do
@@ -139,8 +140,12 @@ defmodule YtSearch.SlotUtilities do
         end)
         |> Enum.shuffle()
         |> Enum.at(0)
-        |> then(fn id ->
-          {:ok, id}
+        |> then(fn
+          nil ->
+            raise "there are no N-oldest-used slots. this is an incorrect state"
+
+          id ->
+            {:ok, id}
         end)
 
       [expired_slot | _] ->

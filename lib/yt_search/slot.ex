@@ -58,6 +58,7 @@ defmodule YtSearch.Slot do
 
     NaiveDateTime.utc_now()
     |> NaiveDateTime.add(ttl)
+    |> NaiveDateTime.truncate(:second)
   end
 
   def put_expiration(params) do
@@ -67,7 +68,11 @@ defmodule YtSearch.Slot do
 
   defp put_used(params) do
     params
-    |> Map.put(:used_at, NaiveDateTime.utc_now())
+    |> Map.put(
+      :used_at,
+      NaiveDateTime.utc_now()
+      |> NaiveDateTime.truncate(:second)
+    )
   end
 
   def is_expired?(%__MODULE__{} = slot) do
@@ -89,23 +94,26 @@ defmodule YtSearch.Slot do
       if maybe_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
-        %{
-          id: new_id,
-          youtube_id: youtube_id,
-          video_duration:
-            case video_duration do
-              nil -> 10 * 60
-              duration -> duration |> trunc
-            end
-        }
-        |> put_expiration()
-        |> put_used()
+        params =
+          %{
+            id: new_id,
+            youtube_id: youtube_id,
+            video_duration:
+              case video_duration do
+                nil -> 10 * 60
+                duration -> duration |> trunc
+              end
+          }
+          |> put_expiration()
+          |> put_used()
+
+        params
         |> changeset
         |> Repo.insert!(
           on_conflict: [
             set: [
-              youtube_id: params.youtube_id,
-              video_duration: params.video_duration,
+              youtube_id: youtube_id,
+              video_duration: video_duration,
               expires_at: params.expires_at,
               used_at: params.used_at
             ]
