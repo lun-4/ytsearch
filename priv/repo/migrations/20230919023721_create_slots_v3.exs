@@ -7,14 +7,14 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
 
   def up do
     create table(:slots_v3, primary_key: false) do
-      add :id, :integer, autogenerate: false
+      add :id, :integer, autogenerate: false, primary_key: true
       add(:youtube_id, :string)
-      add(:video_duration, :integer)
+      add(:video_duration, :integer, null: false)
       timestamps()
 
-      add(:expires_at, :naive_datetime)
-      add(:used_at, :naive_datetime)
-      add(:keepalive, :boolean)
+      add(:expires_at, :naive_datetime, null: false)
+      add(:used_at, :naive_datetime, null: false)
+      add(:keepalive, :boolean, null: false)
     end
 
     create unique_index(:slots_v3, [:youtube_id])
