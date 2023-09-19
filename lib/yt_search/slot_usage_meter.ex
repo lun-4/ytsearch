@@ -35,19 +35,14 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
         count =
           case slot_type do
             YtSearch.Slot ->
-              # don't use Repo.stream because then we'd have to
-              # lock the databse for a long time, instead offload
-              # everythin to memory.
-              valid_slots =
-                from(s in YtSearch.Slot)
-                |> Repo.all()
-                |> Enum.to_list()
-                |> Enum.map(fn slot ->
-                  YtSearch.TTL.expired?(slot)
-                end)
-                |> Enum.filter(fn x -> !x end)
+              now = YtSearch.SlotUtilities.generate_unix_timestamp_integer()
 
-              length(valid_slots)
+              query =
+                from s in slot_type,
+                  where: fragment("unixepoch(?)", s.expires_at) > ^now,
+                  select: count("*")
+
+              Repo.one(query)
 
             _ ->
               expiry_time =
