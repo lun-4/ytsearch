@@ -30,12 +30,13 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
             youtube_id: random_yt_id(),
             expires_at: ~N[2020-01-01 00:00:00],
             used_at: ~N[2020-01-01 00:00:00],
+            video_duration: 60,
             inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
             updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
             keepalive: false
           }
         end)
-        |> Enum.chunk_every(5000)
+        |> Enum.chunk_every(1000)
         |> Enum.each(fn batch ->
           repo().insert_all(YtSearch.Slot, batch)
         end)
@@ -46,6 +47,6 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
   end
 
   def down do
-    remove table(:slots_v3)
+    drop table(:slots_v3)
   end
 end
