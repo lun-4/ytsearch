@@ -111,7 +111,7 @@ defmodule YtSearch.SlotUtilities do
     DateTime.to_unix(DateTime.utc_now())
   end
 
-  def create_slot_v3(module, opts) do
+  def generate_id_v3(module) do
     spec = module.slot_spec()
 
     now = generate_unix_timestamp_integer()
@@ -124,12 +124,26 @@ defmodule YtSearch.SlotUtilities do
     |> Repo.all()
     |> then(fn
       [] ->
-        # clear top-N-oldest
-        raise "TODO"
+        from(s in module,
+          select: s,
+          order_by: [
+            asc: fragment("unixepoch(?)", s.inserted_at)
+          ],
+          limit: 50
+        )
+        |> Repo.all()
+        |> Enum.map(fn slot ->
+          Repo.delete(slot)
+          slot.id
+        end)
+        |> Enum.shuffle()
+        |> Enum.at(0)
+        |> then(fn id ->
+          {:ok, id}
+        end)
 
       [expired_slot | _] ->
-        expired_slot
-        |> module.upsert!(opts)
+        {:ok, expired_slot.id}
     end)
   end
 end
