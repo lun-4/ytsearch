@@ -66,6 +66,11 @@ defmodule YtSearch.Slot do
     |> Map.put(:expires_at, expiration_for(params.video_duration))
   end
 
+  def put_expiration(params, %__MODULE__{} = slot) do
+    params
+    |> Map.put(:expires_at, expiration_for(slot.video_duration))
+  end
+
   defp put_used(params) do
     params
     |> Map.put(
@@ -79,14 +84,19 @@ defmodule YtSearch.Slot do
     NaiveDateTime.compare(NaiveDateTime.utc_now(), slot.expires_at) == :gt
   end
 
-  defp changeset(params) do
-    %__MODULE__{}
-    |> cast(params, [:id, :youtube_id, :video_duration])
-    |> validate_required([:youtube_id])
+  defp changeset(%__MODULE__{} = slot, params) do
+    slot
+    |> cast(params, [:id, :youtube_id, :video_duration, :expires_at, :used_at, :keepalive])
+    |> validate_required([:youtube_id, :video_duration, :expires_at, :used_at])
   end
 
-  @spec create(String.t(), Integer.t() | nil) :: Slot.t()
-  def create(youtube_id, video_duration) do
+  defp changeset(params) do
+    %__MODULE__{}
+    |> changeset(params)
+  end
+
+  @spec create(String.t(), Integer.t() | nil, boolean()) :: Slot.t()
+  def create(youtube_id, video_duration, keepalive \\ false) do
     Repo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
       maybe_slot = Repo.one(query)
@@ -102,7 +112,8 @@ defmodule YtSearch.Slot do
               case video_duration do
                 nil -> 10 * 60
                 duration -> duration |> trunc
-              end
+              end,
+            keepalive: keepalive
           }
           |> put_expiration()
           |> put_used()
