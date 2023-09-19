@@ -124,6 +124,7 @@ defmodule YtSearch.Slot do
         |> refresh()
       end
     end)
+    |> then(fn {:ok, slot} -> slot end)
   end
 
   def refresh(%__MODULE__{} = slot) do
