@@ -16,6 +16,7 @@ defmodule YtSearch.Slot do
     field(:video_duration, :integer)
     timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
     field(:expires_at, :naive_datetime)
+    field(:used_at, :naive_datetime)
     field(:keepalive, :bool)
   end
 
@@ -64,6 +65,11 @@ defmodule YtSearch.Slot do
     |> Map.put(:expires_at, expiration_for(params.video_duration))
   end
 
+  defp put_used(params) do
+    params
+    |> Map.put(:used_at, NaiveDateTime.utc_now())
+  end
+
   def is_expired?(%__MODULE__{} = slot) do
     NaiveDateTime.compare(NaiveDateTime.utc_now(), slot.expires_at) == :gt
   end
@@ -93,6 +99,7 @@ defmodule YtSearch.Slot do
             end
         }
         |> put_expiration()
+        |> put_used()
         |> changeset
         |> Repo.insert!()
       else
@@ -107,6 +114,15 @@ defmodule YtSearch.Slot do
 
     slot
     |> put_expiration()
+    |> changeset
+    |> Repo.update!()
+  end
+
+  def used(%__MODULE__{} = slot) do
+    Logger.info("used video id #{slot.id}")
+
+    slot
+    |> put_used()
     |> changeset
     |> Repo.update!()
   end
