@@ -126,7 +126,8 @@ defmodule YtSearch.Slot do
               youtube_id: youtube_id,
               video_duration: video_duration,
               expires_at: params.expires_at,
-              used_at: params.used_at
+              used_at: params.used_at,
+              keepalive: keepalive
             ]
           ]
         )
