@@ -37,15 +37,15 @@ defmodule YtSearchWeb.TrendingTabTest do
     slot_before =
       slot
       |> Ecto.Changeset.change(
-        inserted_at: slot.inserted_at |> NaiveDateTime.add(-(Slot.max_ttl() + 1), :second),
-        inserted_at_v2: slot.inserted_at_v2 - Slot.max_ttl() + 1
+        expires_at:
+          NaiveDateTime.utc_now() |> NaiveDateTime.add(-30) |> NaiveDateTime.truncate(:second)
       )
       |> YtSearch.Repo.update!()
 
     channel_slot_before =
       ChannelSlot.fetch(channel_slot_id)
       |> Ecto.Changeset.change(
-        inserted_at: slot.inserted_at |> NaiveDateTime.add(-(Slot.max_ttl() + 1), :second)
+        inserted_at: slot.inserted_at |> NaiveDateTime.add(-(ChannelSlot.ttl() + 1), :second)
       )
       |> YtSearch.Repo.update!()
 
@@ -64,8 +64,7 @@ defmodule YtSearchWeb.TrendingTabTest do
     assert search_slot_after != nil
 
     slot_after = Slot.fetch_by_id(slot_id)
-    assert slot_after.inserted_at_v2 > slot_before.inserted_at_v2
-    assert slot_after.inserted_at > slot_before.inserted_at
+    assert slot_after.expires_at > slot_before.expires_at
     assert search_slot_after.inserted_at > search_slot_before.inserted_at
 
     channel_slot_after = ChannelSlot.fetch(channel_slot_id)

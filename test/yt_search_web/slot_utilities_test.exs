@@ -2,6 +2,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.Repo
+  import Ecto.Query
 
   defp random_yt_id do
     :rand.uniform(100_000_000_000_000) |> to_string |> Base.encode64()
@@ -37,18 +38,39 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
       # load a bunch of slots to test with
 
+      case unquote(slot_type) do
+        YtSearch.Slot ->
+          from(s in YtSearch.Slot, select: s)
+          |> Repo.update_all(
+            set: [
+              expires_at:
+                NaiveDateTime.utc_now()
+                |> NaiveDateTime.add(600, :second)
+                |> NaiveDateTime.truncate(:second),
+              used_at:
+                NaiveDateTime.utc_now()
+                |> NaiveDateTime.truncate(:second),
+              keepalive: false
+            ]
+          )
+
+        _ ->
+          :ok
+      end
+
       0..((unquote(slot_type).urls() * cutoff_point) |> trunc)
       |> Enum.shuffle()
       |> Enum.map(fn id ->
         case unquote(slot_type) do
           YtSearch.Slot ->
-            %{
-              id: id,
-              youtube_id: random_yt_id(),
-              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              inserted_at_v2: DateTime.to_unix(DateTime.utc_now())
-            }
+            nil
+
+          # %{
+          #  id: id,
+          #  youtube_id: random_yt_id(),
+          #  inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+          #  updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+          # }
 
           YtSearch.SearchSlot ->
             %{
@@ -68,7 +90,8 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
             }
         end
       end)
-      |> Enum.chunk_every(5000)
+      |> Enum.filter(fn v -> v != nil end)
+      |> Enum.chunk_every(1000)
       |> Enum.each(fn batch ->
         IO.puts("inserting #{length(batch)} slots (pre-test)")
 
@@ -134,19 +157,18 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     changed_slot =
       slot
       |> Ecto.Changeset.change(
-        inserted_at: slot.inserted_at |> NaiveDateTime.add(-(Slot.min_ttl() + 1), :second),
-        inserted_at_v2: slot.inserted_at_v2 - Slot.min_ttl() + 1
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-1, :second)
+          |> NaiveDateTime.truncate(:second)
       )
       |> YtSearch.Repo.update!()
-
-    assert YtSearch.TTL.expired?(changed_slot)
 
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil
 
     same_slot = YtSearch.Slot.create(youtube_id, 1)
     assert same_slot.id == slot.id
-    assert same_slot.inserted_at > changed_slot.inserted_at
-    assert same_slot.inserted_at_v2 > changed_slot.inserted_at_v2
+    assert same_slot.expires_at > changed_slot.expires_at
   end
 end
