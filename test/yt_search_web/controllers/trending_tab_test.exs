@@ -8,6 +8,11 @@ defmodule YtSearchWeb.TrendingTabTest do
 
   setup do
     YtSearch.Test.Data.default_global_mock()
+
+    # prevent a /hello done by another test from interfering with this one
+    # (especially important as cachex does not have a sandbox mode akin to ecto sql)
+    Cachex.del(:tabs, "trending")
+    :ok
   end
 
   1..3
