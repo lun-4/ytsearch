@@ -104,7 +104,10 @@ defmodule YtSearchWeb.HelloController do
             results ->
               results
               |> Enum.each(fn search_result ->
-                slot_id = search_result[:slot_id]
+                slot_id =
+                  search_result[:slot_id]
+                  |> Integer.parse()
+                  |> then(fn {result, ""} -> result end)
 
                 channel_slot = search_result[:channel_slot]
 

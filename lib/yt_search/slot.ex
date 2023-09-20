@@ -170,4 +170,6 @@ defmodule YtSearch.Slot do
   def youtube_url(slot) do
     "https://youtube.com/watch?v=#{slot.youtube_id}"
   end
+
+  def urls, do: 0
 end
