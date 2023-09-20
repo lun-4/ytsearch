@@ -18,8 +18,11 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
     end
 
     create unique_index(:slots_v3, [:youtube_id])
-    # TODO indexes on expires_at,used_at
+
+    create index(:slots_v3, ["unixepoch(expires_at)"])
+    create index(:slots_v3, ["unixepoch(used_at)"])
     # TODO do i need index on keepalive?
+    # create index(:slots_v3, ["keepalive"])
 
     execute fn ->
       repo().transaction(fn ->
