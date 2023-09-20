@@ -83,7 +83,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
   end
 
   test "it gets the mp4 url given multiple deregisters back and forth" do
-    slot = insert(:slot)
+    slot = Data.insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams/" <> wanted_youtube_id} = env ->
@@ -138,7 +138,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
   @tag :slow
   test "it gets the subtitle given multiple deregisters back and forth" do
-    slot = insert(:slot)
+    slot = Data.insert_slot()
 
     mock_global(fn
       %{method: :get, url: "example.org/streams/" <> youtube_id} = env ->
