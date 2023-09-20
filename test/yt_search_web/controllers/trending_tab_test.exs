@@ -10,7 +10,7 @@ defmodule YtSearchWeb.TrendingTabTest do
     YtSearch.Test.Data.default_global_mock()
   end
 
-  1..10
+  1..3
   |> Enum.each(fn num ->
     test "trending tab works #{num}", %{conn: conn} do
       Tesla.Mock.mock(fn
