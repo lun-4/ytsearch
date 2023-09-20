@@ -4,7 +4,7 @@ defmodule YtSearchWeb.SearchConsistencyTest do
   import Tesla.Mock
 
   setup do
-    %{slots: 0..100 |> Enum.map(fn _ -> insert(:slot) end)}
+    %{slots: 0..100 |> Enum.map(fn _ -> Data.insert_slot() end)}
   end
 
   1..100
