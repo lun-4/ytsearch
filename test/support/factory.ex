@@ -10,7 +10,10 @@ defmodule YtSearch.Factory do
       youtube_id: sequence("youtube"),
       video_duration: 300,
       used_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-      expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+      expires_at:
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(60, :second)
+        |> NaiveDateTime.truncate(:second),
       keepalive: false
     }
   end
