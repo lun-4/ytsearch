@@ -115,7 +115,7 @@ defmodule YtSearch.SlotUtilities do
   def strict_ttl(entity) do
     now = generate_unix_timestamp()
 
-    if NaiveDateTime.compare(entity.expires_at, now) != :lt do
+    if NaiveDateTime.compare(entity.expires_at, now) == :gt do
       entity
     else
       nil
