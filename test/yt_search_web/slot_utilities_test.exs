@@ -38,24 +38,22 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
       # load a bunch of slots to test with
 
-      case unquote(slot_type) do
-        slot_module when slot_module in [YtSearch.Slot, YtSearch.ChannelSlot] ->
-          from(s in slot_module, select: s)
-          |> Repo.update_all(
-            set: [
-              expires_at:
-                NaiveDateTime.utc_now()
-                |> NaiveDateTime.add(600, :second)
-                |> NaiveDateTime.truncate(:second),
-              used_at:
-                NaiveDateTime.utc_now()
-                |> NaiveDateTime.truncate(:second),
-              keepalive: false
-            ]
-          )
+      slot_module = unquote(slot_type)
 
-        _ ->
-          :ok
+      if slot_module in [YtSearch.Slot, YtSearch.ChannelSlot] do
+        from(s in slot_module, select: s)
+        |> Repo.update_all(
+          set: [
+            expires_at:
+              NaiveDateTime.utc_now()
+              |> NaiveDateTime.add(600, :second)
+              |> NaiveDateTime.truncate(:second),
+            used_at:
+              NaiveDateTime.utc_now()
+              |> NaiveDateTime.truncate(:second),
+            keepalive: false
+          ]
+        )
       end
 
       0..((unquote(slot_type).urls() * cutoff_point) |> trunc)
