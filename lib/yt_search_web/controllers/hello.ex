@@ -5,6 +5,7 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.SearchSlot
   alias YtSearch.Youtube
   alias YtSearch.Thumbnail
+  alias YtSearch.Repo
   alias YtSearchWeb.Playlist
 
   def hello(conn, params) do
@@ -36,13 +37,25 @@ defmodule YtSearchWeb.HelloController do
     end
   end
 
+  import Ecto.Query
+
+  defp reset_all_keepalive do
+    [YtSearch.Slot]
+    |> Enum.each(fn module ->
+      from(s in module, select: s, where: s.keepalive)
+      |> Repo.update_all(set: [keepalive: false])
+    end)
+  end
+
   defp upstream_trending_tab do
+    reset_all_keepalive()
+
     {:ok, data} = Youtube.trending()
 
     # TODO do keepalive dance for trending tab
     results =
       data
-      |> Playlist.from_piped_data()
+      |> Playlist.from_piped_data(keeplive: true)
 
     search_slot =
       results

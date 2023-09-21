@@ -2,7 +2,7 @@ defmodule YtSearchWeb.Playlist do
   alias YtSearch.Youtube
   require Logger
 
-  def from_piped_data(json) do
+  def from_piped_data(json, opts \\ []) do
     json
     |> Enum.map(fn entry ->
       entity_type =
@@ -40,7 +40,7 @@ defmodule YtSearchWeb.Playlist do
       Logger.debug("processing for ytid #{youtube_id}")
 
       Mutex.under(PlaylistEntryCreatorMutex, "#{entity_type}:#{youtube_id}", fn ->
-        do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id)
+        do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id, opts)
       end)
     end)
   end
@@ -64,7 +64,7 @@ defmodule YtSearchWeb.Playlist do
     end
   end
 
-  defp do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id) do
+  defp do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id, opts) do
     case entity_type do
       t when t in [:video, :short, :livestream, :playlist] ->
         slot =
@@ -73,7 +73,7 @@ defmodule YtSearchWeb.Playlist do
               YtSearch.PlaylistSlot.from(youtube_id)
 
             _ ->
-              YtSearch.Slot.create(youtube_id, data["duration"])
+              YtSearch.Slot.create(youtube_id, data["duration"], opts)
           end
 
         channel_id =

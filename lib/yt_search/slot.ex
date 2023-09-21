@@ -66,6 +66,20 @@ defmodule YtSearch.Slot do
     |> Map.put(:expires_at, expiration_for(params.video_duration))
   end
 
+  def put_opts(params, opts) do
+    params
+    |> then(fn params ->
+      keepalive = Keyword.get(opts, :keepalive)
+
+      if keepalive != nil do
+        params
+        |> Map.put(:keepalive, keepalive)
+      else
+        params
+      end
+    end)
+  end
+
   def put_expiration(params, %__MODULE__{} = slot) do
     params
     |> Map.put(:expires_at, expiration_for(slot.video_duration))
@@ -95,8 +109,10 @@ defmodule YtSearch.Slot do
     |> changeset(params)
   end
 
-  @spec create(String.t(), Integer.t() | nil, boolean()) :: Slot.t()
-  def create(youtube_id, video_duration, keepalive \\ false) do
+  @spec create(String.t(), Integer.t() | nil, Keyword.t()) :: Slot.t()
+  def create(youtube_id, video_duration, opts \\ []) do
+    keepalive = opts |> Keyword.get(:keepalive, false)
+
     Repo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
       maybe_slot = Repo.one(query)
@@ -133,30 +149,31 @@ defmodule YtSearch.Slot do
         )
       else
         maybe_slot
-        |> refresh()
+        |> refresh(opts)
       end
     end)
     |> then(fn {:ok, slot} -> slot end)
   end
 
-  def refresh(slot_id) when is_number(slot_id) do
-    Logger.info("refreshing video id #{slot_id}")
+  def refresh(slot, opts \\ [])
+
+  def refresh(slot_id, opts) when is_number(slot_id) do
+    Logger.info("refreshing video by id #{slot_id}")
 
     slot =
       from(s in __MODULE__, select: s, where: s.id == ^slot_id)
       |> Repo.one()
 
     slot
-    |> changeset(%{} |> put_expiration(slot))
+    |> changeset(%{} |> put_expiration(slot) |> put_opts(opts))
     |> Repo.update!()
   end
 
-  def refresh(%__MODULE__{} = slot) do
-    Logger.info("refreshing video id #{slot.id}")
+  def refresh(%__MODULE__{} = slot, opts) do
+    Logger.info("refreshing video by slot #{slot.id}")
 
     slot
-    |> put_expiration()
-    |> change
+    |> change(%{} |> put_expiration(slot) |> put_opts(opts))
     |> Repo.update!()
   end
 
