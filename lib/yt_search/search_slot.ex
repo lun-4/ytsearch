@@ -104,6 +104,7 @@ defmodule YtSearch.SearchSlot do
           ChannelSlot.fetch_by_youtube_id(youtube_id)
 
         nil ->
+          Logger.warning("invalid type from #{inspect(maybe_slot)}")
           nil
 
         _ ->
