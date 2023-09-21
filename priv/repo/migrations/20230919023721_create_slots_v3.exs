@@ -81,7 +81,7 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
   end
 
   def down do
-    drop table(:slots_v3)
-    drop table(:channel_slots_v3)
+    drop_if_exists table(:slots_v3)
+    drop_if_exists table(:channel_slots_v3)
   end
 end
