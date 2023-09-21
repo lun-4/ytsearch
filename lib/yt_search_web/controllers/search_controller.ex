@@ -97,12 +97,14 @@ defmodule YtSearchWeb.SearchController do
           data
           |> SearchSlot.fetched_slots_from_search()
           |> Enum.each(fn slot ->
+            Logger.debug("attempt to refresh #{inspect(slot)}")
+
             case slot do
               %YtSearch.Slot{} ->
-                YtSearch.Slot.refresh(slot.id)
+                YtSearch.Slot.refresh(slot)
 
               other_slot ->
-                Logger.info("not refreshing #{other_slot.id}, not done yet")
+                Logger.info("not refreshing #{inspect(other_slot)}, not done yet")
                 :ignore
             end
           end)
