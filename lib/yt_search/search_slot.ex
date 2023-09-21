@@ -110,7 +110,6 @@ defmodule YtSearch.SearchSlot do
           raise "invalid type for search slot entry: #{inspect(slot_type)}"
       end
     end)
-    |> Enum.filter(fn result -> result != nil end)
   end
 
   def from_playlist(playlist, search_query) do
