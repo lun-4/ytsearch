@@ -69,7 +69,7 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
                 }
             end
           end)
-          |> Enum.chunk_every(1000)
+          |> Enum.chunk_every(100)
           |> Enum.each(fn batch ->
             repo().insert_all(module, batch)
           end)
