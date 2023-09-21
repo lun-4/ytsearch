@@ -1,12 +1,9 @@
 defmodule YtSearchWeb.HelloController do
   use YtSearchWeb, :controller
   require Logger
-  alias YtSearch.Slot
   alias YtSearch.SearchSlot
   alias YtSearch.Youtube
-  alias YtSearch.Thumbnail
   alias YtSearch.Repo
-  alias YtSearch.SlotUtilities
   alias YtSearchWeb.Playlist
 
   def hello(conn, params) do

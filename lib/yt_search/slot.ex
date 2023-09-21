@@ -4,7 +4,6 @@ defmodule YtSearch.Slot do
   import Ecto.Changeset
   require Logger
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
@@ -68,15 +67,6 @@ defmodule YtSearch.Slot do
   def put_expiration(params, %__MODULE__{} = slot) do
     params
     |> Map.put(:expires_at, expiration_for(slot.video_duration))
-  end
-
-  defp put_used(params) do
-    params
-    |> Map.put(
-      :used_at,
-      NaiveDateTime.utc_now()
-      |> NaiveDateTime.truncate(:second)
-    )
   end
 
   def is_expired?(%__MODULE__{} = slot) do

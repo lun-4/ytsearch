@@ -3,7 +3,6 @@ defmodule YtSearch.ChannelSlot do
   import Ecto.Query
   alias YtSearch.Repo
   alias YtSearch.SlotUtilities
-  alias YtSearch.TTL
   import Ecto.Changeset
   require Logger
 
