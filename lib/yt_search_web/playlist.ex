@@ -87,14 +87,14 @@ defmodule YtSearchWeb.Playlist do
           case entity_type do
             t when t in [:video, :livestream] ->
               # full videos should provide channel metadata
-              YtSearch.ChannelSlot.from(channel_id)
+              YtSearch.ChannelSlot.create(channel_id, opts)
 
             t when t in [:short, :playlist] ->
               # shorts dont give proper metadata about themselves at all
               # fuck shorts
               # make it optional
               unless channel_id == nil do
-                YtSearch.ChannelSlot.from(channel_id)
+                YtSearch.ChannelSlot.create(channel_id, opts)
               else
                 nil
               end
@@ -127,7 +127,7 @@ defmodule YtSearchWeb.Playlist do
         }
 
       :channel ->
-        slot = YtSearch.ChannelSlot.from(youtube_id)
+        slot = YtSearch.ChannelSlot.create(youtube_id, opts)
 
         %{
           type: :channel,

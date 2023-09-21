@@ -1,10 +1,69 @@
 defmodule YtSearch.SlotUtilities do
   import Ecto.Query
+  require Logger
   alias YtSearch.Repo
   alias YtSearch.TTL
 
   def find_available_slot_id(module) do
     find_available_slot_id(module, 1)
+  end
+
+  defp expiration_for(%{} = spec) do
+    NaiveDateTime.utc_now()
+    |> NaiveDateTime.add(spec.ttl)
+    |> NaiveDateTime.truncate(:second)
+  end
+
+  def put_simple_expiration(params, module) do
+    spec = module.slot_spec()
+
+    params
+    |> Map.put(:expires_at, expiration_for(spec))
+  end
+
+  def put_opts(params, opts) do
+    params
+    |> then(fn params ->
+      keepalive = Keyword.get(opts, :keepalive)
+
+      if keepalive != nil do
+        params
+        |> Map.put(:keepalive, keepalive)
+      else
+        params
+      end
+    end)
+  end
+
+  def put_used(params) do
+    params
+    |> Map.put(
+      :used_at,
+      NaiveDateTime.utc_now()
+      |> NaiveDateTime.truncate(:second)
+    )
+  end
+
+  # TODO understand used_at hookpoints
+  def mark_used(%module{} = slot) do
+    Logger.info("mark used #{inspect(module)} slot #{slot.id}")
+
+    slot
+    |> module.changeset(%{} |> put_used())
+    |> Repo.update!()
+  end
+
+  def refresh_expiration(%module{} = slot, opts) do
+    Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
+
+    slot
+    |> module.changeset(
+      %{}
+      |> put_simple_expiration(module)
+      |> put_opts(opts)
+      |> put_used()
+    )
+    |> Repo.update!()
   end
 
   @spec find_available_slot_id(atom()) ::

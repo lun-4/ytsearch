@@ -38,9 +38,8 @@ defmodule YtSearch.Slot do
 
   def slot_spec() do
     %{
-      max_id_retries: 2,
       # this number must be synced with the world build
-      max_urls: 100_000
+      max_ids: 100_000
     }
   end
 
@@ -64,20 +63,6 @@ defmodule YtSearch.Slot do
   def put_expiration(params) do
     params
     |> Map.put(:expires_at, expiration_for(params.video_duration))
-  end
-
-  def put_opts(params, opts) do
-    params
-    |> then(fn params ->
-      keepalive = Keyword.get(opts, :keepalive)
-
-      if keepalive != nil do
-        params
-        |> Map.put(:keepalive, keepalive)
-      else
-        params
-      end
-    end)
   end
 
   def put_expiration(params, %__MODULE__{} = slot) do
@@ -132,7 +117,7 @@ defmodule YtSearch.Slot do
             keepalive: keepalive
           }
           |> put_expiration()
-          |> put_used()
+          |> SlotUtilities.put_used()
 
         params
         |> changeset
@@ -165,7 +150,7 @@ defmodule YtSearch.Slot do
       |> Repo.one()
 
     slot
-    |> changeset(%{} |> put_expiration(slot) |> put_opts(opts))
+    |> changeset(%{} |> put_expiration(slot) |> SlotUtilities.put_opts(opts))
     |> Repo.update!()
   end
 
@@ -173,7 +158,7 @@ defmodule YtSearch.Slot do
     Logger.info("refreshing video by slot #{slot.id}")
 
     slot
-    |> change(%{} |> put_expiration(slot) |> put_opts(opts))
+    |> change(%{} |> put_expiration(slot) |> SlotUtilities.put_opts(opts))
     |> Repo.update!()
   end
 
@@ -181,7 +166,7 @@ defmodule YtSearch.Slot do
     Logger.info("used video id #{slot.id}")
 
     slot
-    |> change(%{} |> put_used)
+    |> change(%{} |> SlotUtilities.put_used())
     |> Repo.update!()
   end
 

@@ -2,6 +2,7 @@ defmodule YtSearchWeb.SearchController do
   use YtSearchWeb, :controller
 
   require Logger
+  alias YtSearch.SlotUtilities
   alias YtSearch.Youtube
   alias YtSearch.SearchSlot
   alias YtSearch.ChannelSlot
@@ -168,6 +169,8 @@ defmodule YtSearchWeb.SearchController do
         case slot
              |> search_text() do
           {:ok, resp} ->
+            slot |> SlotUtilities.mark_used()
+
             conn
             |> put_status(200)
             |> json(resp)
