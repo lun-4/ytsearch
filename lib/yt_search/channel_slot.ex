@@ -92,4 +92,6 @@ defmodule YtSearch.ChannelSlot do
       ttl: 2 * 60 * 60
     }
   end
+
+  def urls, do: 0
 end

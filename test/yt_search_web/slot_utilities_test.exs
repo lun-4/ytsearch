@@ -39,8 +39,8 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       # load a bunch of slots to test with
 
       case unquote(slot_type) do
-        YtSearch.Slot ->
-          from(s in YtSearch.Slot, select: s)
+        slot_module when slot_module in [YtSearch.Slot, YtSearch.ChannelSlot] ->
+          from(s in slot_module, select: s)
           |> Repo.update_all(
             set: [
               expires_at:
@@ -65,6 +65,9 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
           YtSearch.Slot ->
             nil
 
+          YtSearch.ChannelSlot ->
+            nil
+
           # %{
           #  id: id,
           #  youtube_id: random_yt_id(),
@@ -81,7 +84,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
               updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
             }
 
-          s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
+          YtSearch.PlaylistSlot ->
             %{
               id: id,
               youtube_id: random_yt_id(),
@@ -121,11 +124,14 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
             YtSearch.Slot ->
               slot_type.create(random_yt_id(), 3600)
 
+            YtSearch.ChannelSlot ->
+              slot_type.create(random_yt_id())
+
             YtSearch.SearchSlot ->
               slot_type.from_playlist([], random_yt_id())
 
-            s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
-              s.from(random_yt_id())
+            YtSearch.PlaylistSlot ->
+              YtSearch.PlaylistSlot.from(random_yt_id())
           end
 
           next = System.monotonic_time()
