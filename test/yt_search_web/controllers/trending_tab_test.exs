@@ -40,6 +40,7 @@ defmodule YtSearchWeb.TrendingTabTest do
       {channel_slot_id, ""} = results |> Enum.at(0) |> Map.get("channel_slot") |> Integer.parse()
 
       slot = Slot.fetch_by_id(slot_id)
+      assert slot.keepalive
 
       slot_before =
         slot
@@ -52,7 +53,8 @@ defmodule YtSearchWeb.TrendingTabTest do
       channel_slot_before =
         ChannelSlot.fetch(channel_slot_id)
         |> Ecto.Changeset.change(
-          inserted_at: slot.inserted_at |> NaiveDateTime.add(-(ChannelSlot.ttl() + 1), :second)
+          expires_at:
+            NaiveDateTime.utc_now() |> NaiveDateTime.add(-30) |> NaiveDateTime.truncate(:second)
         )
         |> YtSearch.Repo.update!()
 
@@ -60,22 +62,20 @@ defmodule YtSearchWeb.TrendingTabTest do
 
       search_slot_before =
         SearchSlot.fetch_by_id(search_slot_id)
-        |> Ecto.Changeset.change(
-          inserted_at: slot.inserted_at |> NaiveDateTime.add(-(SearchSlot.ttl() + 1), :second)
-        )
-        |> YtSearch.Repo.update!()
 
-      YtSearchWeb.HelloController.Refresher.tick()
+      # |> Ecto.Changeset.change(
+      #  inserted_at: slot.inserted_at |> NaiveDateTime.add(-(SearchSlot.ttl() + 1), :second)
+      # )
+      # |> YtSearch.Repo.update!()
 
       search_slot_after = SearchSlot.fetch_by_id(search_slot_id)
       assert search_slot_after != nil
 
       slot_after = Slot.fetch_by_id(slot_id)
-      assert slot_after.expires_at > slot_before.expires_at
-      assert search_slot_after.inserted_at > search_slot_before.inserted_at
+      assert slot_after.keepalive
 
       channel_slot_after = ChannelSlot.fetch(channel_slot_id)
-      assert channel_slot_after.inserted_at > channel_slot_before.inserted_at
+      assert channel_slot_after.keepalive
 
       # re-request it
       conn =

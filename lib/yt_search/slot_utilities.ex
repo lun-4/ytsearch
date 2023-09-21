@@ -53,7 +53,7 @@ defmodule YtSearch.SlotUtilities do
     |> Repo.update!()
   end
 
-  def refresh_expiration(%module{} = slot, opts) do
+  def refresh_expiration(%module{} = slot, opts \\ []) do
     Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
 
     slot
@@ -174,10 +174,14 @@ defmodule YtSearch.SlotUtilities do
   def strict_ttl(entity) do
     now = generate_unix_timestamp()
 
-    if NaiveDateTime.compare(entity.expires_at, now) == :gt do
+    if entity.keepalive do
       entity
     else
-      nil
+      if NaiveDateTime.compare(entity.expires_at, now) == :gt do
+        entity
+      else
+        nil
+      end
     end
   end
 

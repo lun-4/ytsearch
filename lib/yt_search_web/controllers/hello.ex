@@ -6,6 +6,7 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.Youtube
   alias YtSearch.Thumbnail
   alias YtSearch.Repo
+  alias YtSearch.SlotUtilities
   alias YtSearchWeb.Playlist
 
   def hello(conn, params) do
@@ -39,23 +40,22 @@ defmodule YtSearchWeb.HelloController do
 
   import Ecto.Query
 
-  defp reset_all_keepalive do
-    [YtSearch.Slot]
-    |> Enum.each(fn module ->
+  defp keepalived_slots do
+    [YtSearch.Slot, YtSearch.ChannelSlot]
+    |> Enum.map(fn module ->
       from(s in module, select: s, where: s.keepalive)
-      |> Repo.update_all(set: [keepalive: false])
+      |> Repo.all()
     end)
+    |> List.flatten()
   end
 
   defp upstream_trending_tab do
-    reset_all_keepalive()
-
     {:ok, data} = Youtube.trending()
 
     # TODO do keepalive dance for trending tab
     results =
       data
-      |> Playlist.from_piped_data(keeplive: true)
+      |> Playlist.from_piped_data(keepalive: true)
 
     search_slot =
       results
@@ -70,6 +70,7 @@ defmodule YtSearchWeb.HelloController do
     Mutex.under(SearchMutex, url, fn ->
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
+          old_keepalived_slots = keepalived_slots()
           {:ok, data} = upstream_trending_tab()
 
           Cachex.put(
@@ -83,78 +84,26 @@ defmodule YtSearchWeb.HelloController do
             ttl: 2 * 60 * 60 * 1000
           )
 
+          old_keepalived_slots
+          |> Enum.map(fn slot ->
+            slot
+            |> Ecto.Changeset.change(%{keepalive: false})
+            |> Repo.update()
+          end)
+          |> Enum.map(fn
+            {:error, changeset} ->
+              Logger.warning("failed to update, #{inspect(changeset)}")
+
+            {:ok, _} ->
+              :noop
+          end)
+
           {:ok, data}
 
         v ->
           v
       end
     end)
-  end
-
-  defmodule Refresher do
-    alias YtSearch.PlaylistSlot
-    alias YtSearch.ChannelSlot
-    require Logger
-
-    def tick() do
-      Logger.info("refreshing trending tab slots...")
-
-      case Cachex.get(:tabs, "trending") do
-        {:ok, nil} ->
-          nil
-
-        {:ok, :nothing} ->
-          nil
-
-        {:ok, data} ->
-          data[:slot_id]
-          |> SearchSlot.refresh()
-
-          case data[:search_results] do
-            nil ->
-              nil
-
-            results ->
-              results
-              |> Enum.each(fn search_result ->
-                slot_id =
-                  search_result[:slot_id]
-                  |> Integer.parse()
-                  |> then(fn {result, ""} -> result end)
-
-                channel_slot = search_result[:channel_slot]
-
-                unless channel_slot == nil do
-                  channel_slot
-                  |> Integer.parse()
-                  |> then(fn {result, ""} -> result end)
-                  |> ChannelSlot.refresh()
-                end
-
-                slot =
-                  case search_result[:type] do
-                    t when t in [:video, :short, :livestream] ->
-                      Slot.refresh(slot_id)
-
-                    :channel ->
-                      ChannelSlot.refresh(slot_id)
-
-                    :livestream ->
-                      PlaylistSlot.refresh(slot_id)
-
-                    _ ->
-                      nil
-                  end
-
-                unless slot == nil do
-                  Thumbnail.refresh(slot.youtube_id)
-                end
-              end)
-          end
-      end
-
-      Logger.info("trending tab refresher complete")
-    end
   end
 
   defmodule BuildReporter do
