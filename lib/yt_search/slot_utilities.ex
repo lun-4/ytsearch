@@ -44,6 +44,9 @@ defmodule YtSearch.SlotUtilities do
     )
   end
 
+  # TODO playlist slot on v2id
+  def mark_used(%YtSearch.PlaylistSlot{} = slot), do: slot
+
   # TODO understand used_at hookpoints
   def mark_used(%module{} = slot) do
     Logger.info("mark used #{inspect(module)} slot #{slot.id}")
