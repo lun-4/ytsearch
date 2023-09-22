@@ -39,42 +39,45 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
     create index(:channel_slots_v3, ["unixepoch(used_at)"])
 
     execute fn ->
-      repo().transaction(fn ->
-        [YtSearch.Slot, YtSearch.ChannelSlot]
-        |> Enum.each(fn module ->
-          0..(module.slot_spec().max_ids - 1)
-          |> Enum.map(fn id ->
-            case module do
-              YtSearch.Slot ->
-                %{
-                  id: id,
-                  youtube_id: random_yt_id(),
-                  expires_at: ~N[2020-01-01 00:00:00],
-                  used_at: ~N[2020-01-01 00:00:00],
-                  video_duration: 60,
-                  inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-                  updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-                  keepalive: false
-                }
+      repo().transaction(
+        fn ->
+          [YtSearch.Slot, YtSearch.ChannelSlot]
+          |> Enum.each(fn module ->
+            0..(module.slot_spec().max_ids - 1)
+            |> Enum.map(fn id ->
+              case module do
+                YtSearch.Slot ->
+                  %{
+                    id: id,
+                    youtube_id: random_yt_id(),
+                    expires_at: ~N[2020-01-01 00:00:00],
+                    used_at: ~N[2020-01-01 00:00:00],
+                    video_duration: 60,
+                    inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+                    updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+                    keepalive: false
+                  }
 
-              YtSearch.ChannelSlot ->
-                %{
-                  id: id,
-                  youtube_id: random_yt_id(),
-                  expires_at: ~N[2020-01-01 00:00:00],
-                  used_at: ~N[2020-01-01 00:00:00],
-                  inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-                  updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-                  keepalive: false
-                }
-            end
+                YtSearch.ChannelSlot ->
+                  %{
+                    id: id,
+                    youtube_id: random_yt_id(),
+                    expires_at: ~N[2020-01-01 00:00:00],
+                    used_at: ~N[2020-01-01 00:00:00],
+                    inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+                    updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+                    keepalive: false
+                  }
+              end
+            end)
+            |> Enum.chunk_every(100)
+            |> Enum.each(fn batch ->
+              repo().insert_all(module, batch, timeout: :infinity)
+            end)
           end)
-          |> Enum.chunk_every(100)
-          |> Enum.each(fn batch ->
-            repo().insert_all(module, batch)
-          end)
-        end)
-      end)
+        end,
+        timeout: :infinity
+      )
     end
 
     # TODO all other slot tables
