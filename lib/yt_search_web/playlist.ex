@@ -35,7 +35,7 @@ defmodule YtSearchWeb.Playlist do
     end)
     |> Enum.map(fn {entity_type, data} ->
       youtube_id = data["url"] |> youtube_id_from_url
-      thumbnail_metadata = Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data)
+      thumbnail_metadata = Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data, opts)
 
       Logger.debug("processing for ytid #{youtube_id}")
 

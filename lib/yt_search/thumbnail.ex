@@ -2,6 +2,8 @@ defmodule YtSearch.Thumbnail do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Repo
+  alias YtSearch.SlotUtilities
+  import Ecto.Changeset
   require Logger
 
   @type t :: %__MODULE__{}
@@ -12,6 +14,9 @@ defmodule YtSearch.Thumbnail do
     field(:mime_type, :string)
     field(:data, :binary)
     timestamps()
+    field(:expires_at, :naive_datetime)
+    field(:used_at, :naive_datetime)
+    field(:keepalive, :boolean)
   end
 
   @spec fetch(String.t()) :: Thumbnail.t()
@@ -20,11 +25,31 @@ defmodule YtSearch.Thumbnail do
     Repo.one(query)
   end
 
-  # 24 hours
-  def ttl_seconds(), do: 24 * 60 * 60
+  def changeset(%__MODULE__{} = slot, params) do
+    slot
+    |> cast(params, [:id, :mime_type, :data, :expires_at, :used_at, :keepalive])
+    |> validate_required([:id, :mime_type, :data, :expires_at, :used_at])
+  end
 
-  def insert(id, mimetype, blob) do
-    %__MODULE__{id: id, mime_type: mimetype, data: blob}
+  def slot_spec do
+    %{
+      # 24 hours
+      ttl: 24 * 60 * 60
+    }
+  end
+
+  def insert(id, mimetype, blob, opts) do
+    %__MODULE__{}
+    |> changeset(
+      %{
+        id: id,
+        mime_type: mimetype,
+        data: blob,
+        keepalive: Keyword.get(opts, :keepalive, false)
+      }
+      |> SlotUtilities.put_simple_expiration(__MODULE__)
+      |> SlotUtilities.put_used()
+    )
     |> Repo.insert!()
   end
 
@@ -39,18 +64,12 @@ defmodule YtSearch.Thumbnail do
     def tick() do
       Logger.info("cleaning thumbnails...")
 
-      expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-Thumbnail.ttl_seconds())
-        |> DateTime.from_naive!("Etc/UTC")
-        |> DateTime.to_unix()
+      now = SlotUtilities.generate_unix_timestamp_integer()
 
       deleted_count =
         from(s in Thumbnail,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 5000
+          where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
+          limit: 200
         )
         |> Repo.all()
         |> Enum.chunk_every(200)

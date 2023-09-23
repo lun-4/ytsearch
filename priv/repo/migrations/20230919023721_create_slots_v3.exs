@@ -120,7 +120,16 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
       )
     end
 
-    # TODO all other slot tables
+    default_expires_now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    alter table(:thumbnails) do
+      add :expires_at, :naive_datetime, default: default_expires_now
+      add :used_at, :naive_datetime, default: default_expires_now
+      add :keepalive, :boolean, default: false
+    end
+
+    create index(:thumbnails, ["unixepoch(expires_at)"])
+    create index(:thumbnails, ["unixepoch(used_at)"])
   end
 
   def down do

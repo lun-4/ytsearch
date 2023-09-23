@@ -83,9 +83,34 @@ defmodule YtSearchWeb.HelloController do
 
           old_keepalived_slots
           |> Enum.map(fn slot ->
-            slot
-            |> Ecto.Changeset.change(%{keepalive: false})
-            |> Repo.update()
+            %module{} = slot
+
+            any_match? =
+              data.search_results
+              |> Enum.map(fn
+                %{type: :channel, slot_id: slot_id_str} ->
+                  module == YtSearch.ChannelSlot and slot_id_str == "#{slot.id}"
+
+                %{type: video_type, slot_id: slot_id_str}
+                when video_type in [:video, :livestream, :short] ->
+                  module == YtSearch.Slot and slot_id_str == "#{slot.id}"
+
+                %{type: :playlist, slot_id: slot_id_str} ->
+                  module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}"
+              end)
+              |> Enum.filter(
+                fn match? -> match? end
+                |> Enum.at(0)
+              )
+
+            # if the old slot is not in the new refetched trending tab,
+            # its safe to unset keepalive on the old slot
+
+            if not any_match? do
+              slot
+              |> Ecto.Changeset.change(%{keepalive: false})
+              |> Repo.update()
+            end
           end)
           |> Enum.map(fn
             {:error, changeset} ->

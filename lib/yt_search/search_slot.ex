@@ -2,7 +2,6 @@ defmodule YtSearch.SearchSlot do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.Slot
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
@@ -102,7 +101,7 @@ defmodule YtSearch.SearchSlot do
   end
 
   @spec from_slots_json(String.t(), String.t(), Keyword.t()) :: SearchSlot.t()
-  defp from_slots_json(slots_json, search_query, opts \\ []) do
+  defp from_slots_json(slots_json, search_query, opts) do
     keepalive = Keyword.get(opts, :keepalive, false)
 
     Repo.transaction(fn ->
