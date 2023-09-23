@@ -120,7 +120,8 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
       )
     end
 
-    default_expires_now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    default_expires_now =
+      NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second) |> NaiveDateTime.to_iso8601()
 
     alter table(:thumbnails) do
       add :expires_at, :naive_datetime, default: default_expires_now
