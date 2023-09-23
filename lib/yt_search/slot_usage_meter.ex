@@ -34,7 +34,7 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
       |> Enum.map(fn slot_type ->
         count =
           case slot_type do
-            s when s in [YtSearch.Slot, YtSearch.ChannelSlot] ->
+            s when s in [YtSearch.Slot, YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
               now = YtSearch.SlotUtilities.generate_unix_timestamp_integer()
 
               query =

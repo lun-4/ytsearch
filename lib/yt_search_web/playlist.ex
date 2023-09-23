@@ -70,7 +70,7 @@ defmodule YtSearchWeb.Playlist do
         slot =
           case t do
             :playlist ->
-              YtSearch.PlaylistSlot.from(youtube_id)
+              YtSearch.PlaylistSlot.create(youtube_id, opts)
 
             _ ->
               YtSearch.Slot.create(youtube_id, data["duration"], opts)

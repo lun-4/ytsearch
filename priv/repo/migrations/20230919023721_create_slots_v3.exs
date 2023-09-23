@@ -38,10 +38,24 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
     create index(:channel_slots_v3, ["unixepoch(expires_at)"])
     create index(:channel_slots_v3, ["unixepoch(used_at)"])
 
+    create table(:playlist_slots_v3) do
+      add(:youtube_id, :string)
+      timestamps()
+
+      add(:expires_at, :naive_datetime, null: false)
+      add(:used_at, :naive_datetime, null: false)
+      add(:keepalive, :boolean, null: false)
+    end
+
+    create unique_index(:playlist_slots_v3, [:youtube_id])
+
+    create index(:playlist_slots_v3, ["unixepoch(expires_at)"])
+    create index(:playlist_slots_v3, ["unixepoch(used_at)"])
+
     execute fn ->
       repo().transaction(
         fn ->
-          [YtSearch.Slot, YtSearch.ChannelSlot]
+          [YtSearch.Slot, YtSearch.ChannelSlot, YtSearch.PlaylistSlot]
           |> Enum.each(fn module ->
             0..(module.slot_spec().max_ids - 1)
             |> Enum.map(fn id ->
@@ -58,7 +72,7 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
                     keepalive: false
                   }
 
-                YtSearch.ChannelSlot ->
+                s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
                   %{
                     id: id,
                     youtube_id: random_yt_id(),

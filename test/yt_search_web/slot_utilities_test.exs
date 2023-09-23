@@ -40,7 +40,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
       slot_module = unquote(slot_type)
 
-      if slot_module in [YtSearch.Slot, YtSearch.ChannelSlot] do
+      if slot_module in [YtSearch.Slot, YtSearch.ChannelSlot, YtSearch.PlaylistSlot] do
         from(s in slot_module, select: s)
         |> Repo.update_all(
           set: [
@@ -83,12 +83,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
             }
 
           YtSearch.PlaylistSlot ->
-            %{
-              id: id,
-              youtube_id: random_yt_id(),
-              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-            }
+            nil
         end
       end)
       |> Enum.filter(fn v -> v != nil end)
@@ -129,7 +124,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
               slot_type.from_playlist([], random_yt_id())
 
             YtSearch.PlaylistSlot ->
-              YtSearch.PlaylistSlot.from(random_yt_id())
+              YtSearch.PlaylistSlot.create(random_yt_id())
           end
 
           next = System.monotonic_time()
