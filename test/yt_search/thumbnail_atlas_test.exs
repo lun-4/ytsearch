@@ -11,7 +11,7 @@ defmodule YtSearch.ThumbnailAtlasTest do
 
   setup do
     # setup
-    thumb = Thumbnail.insert(@test_youtube_id, "image/webp", Data.png())
+    thumb = Thumbnail.insert(@test_youtube_id, "image/webp", Data.png(), [])
     slot = Slot.create(@test_youtube_id, 3600)
     channel_slot = ChannelSlot.create(@test_youtube_id)
 

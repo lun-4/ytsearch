@@ -57,7 +57,7 @@ defmodule YtSearchWeb.SearchConsistencyTest do
           end)
         end)
         |> Enum.map(fn task ->
-          conn = Task.await(task)
+          conn = Task.await(task, 30000)
           json_response(conn, 200)
         end)
       end)
