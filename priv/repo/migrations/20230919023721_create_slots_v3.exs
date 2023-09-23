@@ -138,5 +138,14 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
     drop_if_exists table(:channel_slots_v3)
     drop_if_exists table(:playlist_slots_v3)
     drop_if_exists table(:search_slots_v3)
+
+    drop index(:thumbnails, ["unixepoch(expires_at)"])
+    drop index(:thumbnails, ["unixepoch(used_at)"])
+
+    alter table(:thumbnails) do
+      remove :expires_at
+      remove :used_at
+      remove :keepalive
+    end
   end
 end
