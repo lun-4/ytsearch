@@ -174,17 +174,16 @@ defmodule YtSearch.SlotUtilities do
     DateTime.to_unix(DateTime.utc_now())
   end
 
+  def strict_ttl(nil), do: nil
+  def strict_ttl(%{keepalive: true} = entity), do: entity
+
   def strict_ttl(entity) do
     now = generate_unix_timestamp()
 
-    if entity.keepalive do
+    if NaiveDateTime.compare(entity.expires_at, now) == :gt do
       entity
     else
-      if NaiveDateTime.compare(entity.expires_at, now) == :gt do
-        entity
-      else
-        nil
-      end
+      nil
     end
   end
 

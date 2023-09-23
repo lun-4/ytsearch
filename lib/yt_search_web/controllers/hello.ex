@@ -56,7 +56,7 @@ defmodule YtSearchWeb.HelloController do
 
     search_slot =
       results
-      |> SearchSlot.from_playlist("yt://trending")
+      |> SearchSlot.from_playlist("yt://trending", keepalive: true)
 
     {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
   end

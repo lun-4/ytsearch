@@ -8,16 +8,6 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     :rand.uniform(100_000_000_000_000) |> to_string |> Base.encode64()
   end
 
-  defp printtime(func) do
-    prev = System.monotonic_time()
-    func.()
-    next = System.monotonic_time()
-    diff = next - prev
-    diff |> System.convert_time_unit(:native, :millisecond)
-
-    IO.puts("took #{diff} ms running function")
-  end
-
   @slot_types [
     YtSearch.Slot,
     YtSearch.SearchSlot,
@@ -40,63 +30,19 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
       slot_module = unquote(slot_type)
 
-      if slot_module in [YtSearch.Slot, YtSearch.ChannelSlot, YtSearch.PlaylistSlot] do
-        from(s in slot_module, select: s)
-        |> Repo.update_all(
-          set: [
-            expires_at:
-              NaiveDateTime.utc_now()
-              |> NaiveDateTime.add(600, :second)
-              |> NaiveDateTime.truncate(:second),
-            used_at:
-              NaiveDateTime.utc_now()
-              |> NaiveDateTime.truncate(:second),
-            keepalive: false
-          ]
-        )
-      end
-
-      0..((unquote(slot_type).urls() * cutoff_point) |> trunc)
-      |> Enum.shuffle()
-      |> Enum.map(fn id ->
-        case unquote(slot_type) do
-          YtSearch.Slot ->
-            nil
-
-          YtSearch.ChannelSlot ->
-            nil
-
-          # %{
-          #  id: id,
-          #  youtube_id: random_yt_id(),
-          #  inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-          #  updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-          # }
-
-          YtSearch.SearchSlot ->
-            %{
-              id: id,
-              slots_json: "[]",
-              query: "amongnus",
-              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-            }
-
-          YtSearch.PlaylistSlot ->
-            nil
-        end
-      end)
-      |> Enum.filter(fn v -> v != nil end)
-      |> Enum.chunk_every(1000)
-      |> Enum.each(fn batch ->
-        IO.puts("inserting #{length(batch)} slots (pre-test)")
-
-        printtime(fn ->
-          Repo.insert_all(unquote(slot_type), batch)
-        end)
-      end)
-
-      # then see how things go on the second half (one by one id gen)
+      from(s in slot_module, select: s)
+      |> Repo.update_all(
+        set: [
+          expires_at:
+            NaiveDateTime.utc_now()
+            |> NaiveDateTime.add(600, :second)
+            |> NaiveDateTime.truncate(:second),
+          used_at:
+            NaiveDateTime.utc_now()
+            |> NaiveDateTime.truncate(:second),
+          keepalive: false
+        ]
+      )
 
       harder_test(unquote(slot_type), cutoff_point)
 

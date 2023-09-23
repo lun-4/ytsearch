@@ -105,12 +105,14 @@ defmodule YtSearchWeb.SearchController do
                 YtSearch.Slot.refresh(slot)
 
               other_slot ->
-                Logger.info("not refreshing #{inspect(other_slot)}, not done yet")
-                :ignore
+                other_slot
+                |> SlotUtilities.refresh_expiration()
             end
           end)
 
-          SearchSlot.refresh(data.id)
+          data
+          |> SlotUtilities.refresh_expiration()
+
           data
         else
           nil
