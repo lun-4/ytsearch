@@ -136,7 +136,16 @@ defmodule YtSearch.SearchSlot do
         )
       else
         search_slot
-        |> SlotUtilities.refresh_expiration(opts)
+        |> changeset(
+          %{
+            slots_json: slots_json,
+            keepalive: keepalive
+          }
+          |> SlotUtilities.put_simple_expiration(__MODULE__)
+          |> SlotUtilities.put_opts(opts)
+          |> SlotUtilities.put_used()
+        )
+        |> Repo.update!()
       end
     end)
     |> then(fn {:ok, slot} -> slot end)
