@@ -98,10 +98,8 @@ defmodule YtSearchWeb.HelloController do
                 %{type: :playlist, slot_id: slot_id_str} ->
                   module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}"
               end)
-              |> Enum.filter(
-                fn match? -> match? end
-                |> Enum.at(0)
-              )
+              |> Enum.filter(fn match? -> match? end)
+              |> Enum.at(0)
 
             # if the old slot is not in the new refetched trending tab,
             # its safe to unset keepalive on the old slot
