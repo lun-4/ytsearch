@@ -100,6 +100,10 @@ defmodule YtSearchWeb.HelloController do
               end)
               |> Enum.filter(fn match? -> match? end)
               |> Enum.at(0)
+              |> then(fn
+                nil -> false
+                v -> v
+              end)
 
             # if the old slot is not in the new refetched trending tab,
             # its safe to unset keepalive on the old slot
@@ -108,6 +112,8 @@ defmodule YtSearchWeb.HelloController do
               slot
               |> Ecto.Changeset.change(%{keepalive: false})
               |> Repo.update()
+            else
+              {:ok, nil}
             end
           end)
           |> Enum.map(fn
