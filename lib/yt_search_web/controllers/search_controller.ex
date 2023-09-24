@@ -74,9 +74,13 @@ defmodule YtSearchWeb.SearchController do
       data ->
         # we want to have a search slot that contains valid slots within
         # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
-        valid_slots =
+
+        child_slots =
           data
           |> SearchSlot.fetched_slots_from_search()
+
+        valid_slots =
+          child_slots
           |> Enum.map(fn maybe_slot ->
             maybe_slot != nil
           end)
@@ -92,22 +96,29 @@ defmodule YtSearchWeb.SearchController do
           end
 
         Logger.info("attempting to reuse search slot #{data.id}, is valid? #{is_valid_slot}")
+        Logger.debug("valid_slots = #{inspect(valid_slots)}")
+        Logger.debug("child_slots = #{inspect(child_slots)}")
 
         if is_valid_slot do
-          # TODO add refresh method to ChannelSlot and PlaylistSlot
-          data
-          |> SearchSlot.fetched_slots_from_search()
-          |> Enum.each(fn slot ->
+          child_slots
+          |> Enum.reduce(%{}, fn slot, acc ->
             Logger.debug("attempt to refresh #{inspect(slot)}")
 
-            case slot do
-              %YtSearch.Slot{} ->
-                YtSearch.Slot.refresh(slot)
+            %module{} = slot
+            refreshed? = Map.get(acc, {module, slot.id})
 
-              other_slot ->
-                other_slot
-                |> SlotUtilities.refresh_expiration()
+            unless refreshed? do
+              case slot do
+                %YtSearch.Slot{} ->
+                  YtSearch.Slot.refresh(slot)
+
+                other_slot ->
+                  other_slot
+                  |> SlotUtilities.refresh_expiration()
+              end
             end
+
+            acc |> Map.put({module, slot.id}, true)
           end)
 
           data
