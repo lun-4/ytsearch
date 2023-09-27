@@ -558,7 +558,7 @@ defmodule YtSearchWeb.SlotTest do
     slot =
       slot
       |> Ecto.Changeset.change(
-        updated_at:
+        used_at:
           NaiveDateTime.utc_now()
           |> NaiveDateTime.add(-61, :second)
           |> NaiveDateTime.truncate(:second)
