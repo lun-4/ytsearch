@@ -53,7 +53,7 @@ defmodule YtSearchWeb.SearchConsistencyTest do
           Task.async(fn ->
             Phoenix.ConnTest.build_conn()
             |> put_req_header("user-agent", "UnityWebRequest")
-            |> get(~p"/api/v3/search?q=dslkgjaslfdkj")
+            |> get(~p"/api/v4/search?q=dslkgjaslfdkj")
           end)
         end)
         |> Enum.map(fn task ->
