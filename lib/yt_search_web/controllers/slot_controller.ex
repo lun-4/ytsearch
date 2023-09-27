@@ -135,7 +135,7 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp do_slot_metadata(conn, slot) do
-    if NaiveDateTime.diff(slot.updated_at, NaiveDateTime.utc_now(), :second) <= -60 do
+    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <= -60 do
       slot
       |> Slot.refresh()
     end
