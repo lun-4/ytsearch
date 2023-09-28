@@ -204,11 +204,16 @@ defmodule YtSearch.SlotUtilities do
           order_by: [
             asc: fragment("unixepoch(?)", s.used_at)
           ],
-          limit: 50
+          limit: 5
         )
         |> Repo.all()
         |> Enum.map(fn slot ->
-          Repo.delete(slot)
+          slot
+          |> module.changeset(%{
+            expires_at: ~N[2020-01-01 00:00:00]
+          })
+          |> Repo.update()
+
           slot.id
         end)
         |> Enum.shuffle()
