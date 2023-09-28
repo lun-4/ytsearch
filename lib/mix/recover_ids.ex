@@ -25,8 +25,7 @@ defmodule Mix.Tasks.YtSearch.RecoverIds do
   def run([]) do
     start_repo()
 
-    # [YtSearch.Slot, YtSearch.ChannelSlot, YtSearch.PlaylistSlot, YtSearch.SearchSlot]
-    [YtSearch.ChannelSlot]
+    [YtSearch.Slot, YtSearch.ChannelSlot, YtSearch.PlaylistSlot, YtSearch.SearchSlot]
     |> Enum.each(fn module ->
       IO.puts("working #{module}...")
 
