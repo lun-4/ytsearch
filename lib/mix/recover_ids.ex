@@ -2,6 +2,8 @@ defmodule Mix.Tasks.YtSearch.RecoverIds do
   use Mix.Task
   import Ecto.Query
 
+  @requirements ["app.start"]
+
   defp random_yt_id do
     :rand.uniform(100_000_000_000_000) |> to_string |> Base.encode64()
   end
