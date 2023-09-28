@@ -73,13 +73,13 @@ defmodule YtSearch.Slot do
     NaiveDateTime.compare(NaiveDateTime.utc_now(), slot.expires_at) == :gt
   end
 
-  defp changeset(%__MODULE__{} = slot, params) do
+  def changeset(%__MODULE__{} = slot, params) do
     slot
     |> cast(params, [:id, :youtube_id, :video_duration, :expires_at, :used_at, :keepalive])
     |> validate_required([:youtube_id, :video_duration, :expires_at, :used_at])
   end
 
-  defp changeset(params) do
+  def changeset(params) do
     %__MODULE__{}
     |> changeset(params)
   end
