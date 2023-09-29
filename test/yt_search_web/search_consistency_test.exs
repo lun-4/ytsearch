@@ -4,7 +4,7 @@ defmodule YtSearchWeb.SearchConsistencyTest do
   import Tesla.Mock
 
   setup do
-    %{slots: 0..100 |> Enum.map(fn _ -> insert(:slot) end)}
+    %{slots: 0..100 |> Enum.map(fn _ -> Data.insert_slot() end)}
   end
 
   1..100
@@ -53,11 +53,11 @@ defmodule YtSearchWeb.SearchConsistencyTest do
           Task.async(fn ->
             Phoenix.ConnTest.build_conn()
             |> put_req_header("user-agent", "UnityWebRequest")
-            |> get(~p"/api/v3/search?q=dslkgjaslfdkj")
+            |> get(~p"/api/v4/search?q=dslkgjaslfdkj")
           end)
         end)
         |> Enum.map(fn task ->
-          conn = Task.await(task)
+          conn = Task.await(task, 30000)
           json_response(conn, 200)
         end)
       end)

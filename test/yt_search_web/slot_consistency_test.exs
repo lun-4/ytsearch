@@ -83,7 +83,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
   end
 
   test "it gets the mp4 url given multiple deregisters back and forth" do
-    slot = insert(:slot)
+    slot = Data.insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams/" <> wanted_youtube_id} = env ->
@@ -110,7 +110,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
         conn =
           Phoenix.ConnTest.build_conn()
-          |> get(~p"/a/3/sr/#{slot.id}")
+          |> get(~p"/a/4/sr/#{slot.id}")
 
         if :rand.uniform(100) < 30 do
           from(s in Mp4Link,
@@ -138,7 +138,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
   @tag :slow
   test "it gets the subtitle given multiple deregisters back and forth" do
-    slot = insert(:slot)
+    slot = Data.insert_slot()
 
     mock_global(fn
       %{method: :get, url: "example.org/streams/" <> youtube_id} = env ->
@@ -221,7 +221,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
         conn =
           Phoenix.ConnTest.build_conn()
           |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/api/v3/s/#{slot.id}")
+          |> get(~p"/api/v4/s/#{slot.id}")
 
         if :rand.uniform(100) < 30 do
           from(s in Subtitle,

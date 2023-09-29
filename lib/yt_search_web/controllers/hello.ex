@@ -1,10 +1,9 @@
 defmodule YtSearchWeb.HelloController do
   use YtSearchWeb, :controller
   require Logger
-  alias YtSearch.Slot
   alias YtSearch.SearchSlot
   alias YtSearch.Youtube
-  alias YtSearch.Thumbnail
+  alias YtSearch.Repo
   alias YtSearchWeb.Playlist
 
   def hello(conn, params) do
@@ -36,16 +35,28 @@ defmodule YtSearchWeb.HelloController do
     end
   end
 
+  import Ecto.Query
+
+  defp keepalived_slots do
+    [YtSearch.Slot, YtSearch.ChannelSlot]
+    |> Enum.map(fn module ->
+      from(s in module, select: s, where: s.keepalive)
+      |> Repo.all()
+    end)
+    |> List.flatten()
+  end
+
   defp upstream_trending_tab do
     {:ok, data} = Youtube.trending()
 
+    # TODO do keepalive dance for trending tab
     results =
       data
-      |> Playlist.from_piped_data()
+      |> Playlist.from_piped_data(keepalive: true)
 
     search_slot =
       results
-      |> SearchSlot.from_playlist("yt://trending")
+      |> SearchSlot.from_playlist("yt://trending", keepalive: true)
 
     {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
   end
@@ -56,6 +67,7 @@ defmodule YtSearchWeb.HelloController do
     Mutex.under(SearchMutex, url, fn ->
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
+          old_keepalived_slots = keepalived_slots()
           {:ok, data} = upstream_trending_tab()
 
           Cachex.put(
@@ -69,75 +81,55 @@ defmodule YtSearchWeb.HelloController do
             ttl: 2 * 60 * 60 * 1000
           )
 
+          old_keepalived_slots
+          |> Enum.map(fn slot ->
+            %module{} = slot
+
+            any_match? =
+              data.search_results
+              |> Enum.map(fn
+                %{type: :channel, slot_id: slot_id_str} ->
+                  module == YtSearch.ChannelSlot and slot_id_str == "#{slot.id}"
+
+                %{type: video_type, slot_id: slot_id_str}
+                when video_type in [:video, :livestream, :short] ->
+                  module == YtSearch.Slot and slot_id_str == "#{slot.id}"
+
+                %{type: :playlist, slot_id: slot_id_str} ->
+                  module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}"
+              end)
+              |> Enum.filter(fn match? -> match? end)
+              |> Enum.at(0)
+              |> then(fn
+                nil -> false
+                v -> v
+              end)
+
+            # if the old slot is not in the new refetched trending tab,
+            # its safe to unset keepalive on the old slot
+
+            if not any_match? do
+              slot
+              |> Ecto.Changeset.change(%{keepalive: false})
+              |> Repo.update()
+            else
+              {:ok, nil}
+            end
+          end)
+          |> Enum.map(fn
+            {:error, changeset} ->
+              Logger.warning("failed to update, #{inspect(changeset)}")
+
+            {:ok, _} ->
+              :noop
+          end)
+
           {:ok, data}
 
         v ->
           v
       end
     end)
-  end
-
-  defmodule Refresher do
-    alias YtSearch.PlaylistSlot
-    alias YtSearch.ChannelSlot
-    require Logger
-
-    def tick() do
-      Logger.info("refreshing trending tab slots...")
-
-      case Cachex.get(:tabs, "trending") do
-        {:ok, nil} ->
-          nil
-
-        {:ok, :nothing} ->
-          nil
-
-        {:ok, data} ->
-          data[:slot_id]
-          |> SearchSlot.refresh()
-
-          case data[:search_results] do
-            nil ->
-              nil
-
-            results ->
-              results
-              |> Enum.each(fn search_result ->
-                slot_id = search_result[:slot_id]
-
-                channel_slot = search_result[:channel_slot]
-
-                unless channel_slot == nil do
-                  channel_slot
-                  |> Integer.parse()
-                  |> then(fn {result, ""} -> result end)
-                  |> ChannelSlot.refresh()
-                end
-
-                slot =
-                  case search_result[:type] do
-                    t when t in [:video, :short, :livestream] ->
-                      Slot.refresh(slot_id)
-
-                    :channel ->
-                      ChannelSlot.refresh(slot_id)
-
-                    :livestream ->
-                      PlaylistSlot.refresh(slot_id)
-
-                    _ ->
-                      nil
-                  end
-
-                unless slot == nil do
-                  Thumbnail.refresh(slot.youtube_id)
-                end
-              end)
-          end
-      end
-
-      Logger.info("trending tab refresher complete")
-    end
   end
 
   defmodule BuildReporter do

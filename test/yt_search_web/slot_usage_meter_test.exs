@@ -9,7 +9,41 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
   @one_by_one_test_insert false
 
   setup do
-    0..(YtSearch.Slot.urls() - 1)
+    from(s in YtSearch.Slot, select: s)
+    |> Repo.update_all(
+      set: [
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(600, :second)
+          |> NaiveDateTime.truncate(:second)
+      ]
+    )
+
+    [
+      {50000, 720},
+      {70000, 1800},
+      {90000, 3600},
+      {100_000, 7200}
+    ]
+    |> Enum.reduce([], fn {id_limit, wanted_duration}, acc ->
+      previous_id =
+        case acc do
+          [] -> 0
+          [previous_id | _] -> previous_id
+        end
+
+      from(s in YtSearch.Slot, select: s, where: s.id >= ^previous_id and s.id < ^id_limit)
+      |> Repo.update_all(
+        set: [
+          video_duration: wanted_duration
+        ]
+      )
+
+      [id_limit | acc]
+    end)
+
+    # 0..100_000
+    []
     |> Enum.map(fn id ->
       duration =
         cond do
@@ -19,6 +53,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
           true -> 7200
         end
 
+      # TODO batch update
       %{
         id: id,
         youtube_id: random_yt_id(),
@@ -43,8 +78,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
             youtube_id: el.youtube_id,
             video_duration: el.video_duration,
             inserted_at: el.inserted_at,
-            updated_at: el.updated_at,
-            inserted_at_v2: el.inserted_at_v2
+            updated_at: el.updated_at
           })
         end)
       else
@@ -60,7 +94,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
   end
 
   defp time_travel_slots_to_expiration(duration) do
-    expiration_seconds = (4 * duration) |> trunc
+    # expiration_seconds = (4 * duration) |> trunc
 
     {count, updated_slots} =
       from(
@@ -69,10 +103,8 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
         select: s.id
       )
       |> Repo.update_all(
-        inc: [inserted_at_v2: -expiration_seconds],
         set: [
-          inserted_at:
-            NaiveDateTime.local_now() |> NaiveDateTime.add(-expiration_seconds, :second)
+          expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(-2, :second)
         ]
       )
 

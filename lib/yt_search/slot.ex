@@ -1,30 +1,22 @@
 defmodule YtSearch.Slot do
   use Ecto.Schema
   import Ecto.Query
+  import Ecto.Changeset
   require Logger
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
 
   @primary_key {:id, :integer, autogenerate: false}
 
-  schema "slots_v2" do
+  schema "slots_v3" do
     field(:youtube_id, :string)
     field(:video_duration, :integer)
-    timestamps()
-
-    timestamps(
-      inserted_at: :inserted_at_v2,
-      updated_at: false,
-      type: :integer,
-      autogenerate: {__MODULE__, :gen_inserted_v2, []}
-    )
-  end
-
-  def gen_inserted_v2() do
-    DateTime.to_unix(DateTime.utc_now())
+    timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
+    field(:expires_at, :naive_datetime)
+    field(:used_at, :naive_datetime)
+    field(:keepalive, :boolean)
   end
 
   @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
@@ -32,7 +24,7 @@ defmodule YtSearch.Slot do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    |> SlotUtilities.strict_ttl()
   end
 
   @spec fetch_by_youtube_id(String.t()) :: Slot.t() | nil
@@ -40,98 +32,137 @@ defmodule YtSearch.Slot do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    |> SlotUtilities.strict_ttl()
   end
 
-  @spec create(String.t(), Integer.t() | nil) :: Slot.t()
-  def create(youtube_id, video_duration) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-
-    maybe_slot = Repo.one(query)
-
-    if maybe_slot == nil do
-      {:ok, new_id} = find_available_id()
-
-      %__MODULE__{
-        youtube_id: youtube_id,
-        id: new_id,
-        video_duration:
-          case video_duration do
-            nil -> default_ttl()
-            duration -> duration |> trunc
-          end
-      }
-      |> Repo.insert!()
-    else
-      # we want to create a slot for this ytid, but we already
-      # got one, doesn't matter if it's expired or not.
-
-      # refresh it
-      maybe_slot.id
-      |> refresh()
-    end
+  def slot_spec() do
+    %{
+      # this number must be synced with the world build
+      max_ids: 100_000
+    }
   end
 
-  def refresh(slot_id) do
-    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
-    slot = Repo.one(query)
+  @min_ttl 10 * 60
+  @default_ttl 30 * 60
+  @max_ttl 12 * 60 * 60
 
-    unless slot == nil do
-      Logger.info("refreshing video id #{slot.id}")
+  defp expiration_for(duration) do
+    ttl =
+      if duration != nil do
+        max(@min_ttl, min((4 * duration) |> trunc, @max_ttl))
+      else
+        @default_ttl
+      end
 
-      slot
-      |> Ecto.Changeset.change(
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-      )
-      |> Ecto.Changeset.change(inserted_at_v2: DateTime.to_unix(DateTime.utc_now()))
-      |> YtSearch.Repo.update!()
-    end
+    NaiveDateTime.utc_now()
+    |> NaiveDateTime.add(ttl)
+    |> NaiveDateTime.truncate(:second)
   end
 
-  def max_id_retries, do: 2
-  # 10 minutes to 12 hours
-  # defaults to 1h for slots without duration
-  def min_ttl, do: 10 * 60
-  def default_ttl, do: 60 * 60
-  def max_ttl, do: 12 * 60 * 60
-  # this number must be synced with the world build
-  # UPGRADE: slot retuning for /a/2
-  def urls, do: 100_000
-
-  @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
-  defp find_available_id() do
-    SlotUtilities.find_available_slot_id(__MODULE__)
+  def put_expiration(params) do
+    params
+    |> Map.put(:expires_at, expiration_for(params.video_duration))
   end
 
-  defmodule Janitor do
-    require Logger
+  def put_expiration(params, %__MODULE__{} = slot) do
+    params
+    |> Map.put(:expires_at, expiration_for(slot.video_duration))
+  end
 
-    alias YtSearch.Repo
+  def is_expired?(%__MODULE__{} = slot) do
+    NaiveDateTime.compare(NaiveDateTime.utc_now(), slot.expires_at) == :gt
+  end
 
-    import Ecto.Query
+  def changeset(%__MODULE__{} = slot, params) do
+    slot
+    |> cast(params, [:id, :youtube_id, :video_duration, :expires_at, :used_at, :keepalive])
+    |> validate_required([:youtube_id, :video_duration, :expires_at, :used_at])
+  end
 
-    def tick() do
-      Logger.debug("cleaning expired slots...")
+  def changeset(params) do
+    %__MODULE__{}
+    |> changeset(params)
+  end
 
-      expired_slots =
-        from(s in YtSearch.Slot, select: s)
-        |> Repo.all()
-        |> Enum.to_list()
-        |> Enum.map(fn slot ->
-          {slot, YtSearch.TTL.expired?(slot)}
-        end)
-        |> Enum.filter(fn {_slot, expired?} -> expired? end)
-        |> Enum.map(fn {expired_slot, true} ->
-          Repo.delete(expired_slot)
-        end)
+  @spec create(String.t(), Integer.t() | nil, Keyword.t()) :: Slot.t()
+  def create(youtube_id, video_duration, opts \\ []) do
+    keepalive = opts |> Keyword.get(:keepalive, false)
 
-      deleted_count = length(expired_slots)
+    Repo.transaction(fn ->
+      query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+      maybe_slot = Repo.one(query)
 
-      Logger.info("deleted #{deleted_count} slots")
-    end
+      if maybe_slot == nil do
+        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+
+        params =
+          %{
+            id: new_id,
+            youtube_id: youtube_id,
+            video_duration:
+              case video_duration do
+                nil -> 10 * 60
+                duration -> duration |> trunc
+              end,
+            keepalive: keepalive
+          }
+          |> put_expiration()
+          |> SlotUtilities.put_used()
+
+        params
+        |> changeset
+        |> Repo.insert!(
+          on_conflict: [
+            set: [
+              youtube_id: youtube_id,
+              video_duration: video_duration,
+              expires_at: params.expires_at,
+              used_at: params.used_at,
+              keepalive: keepalive
+            ]
+          ]
+        )
+      else
+        maybe_slot
+        |> refresh(opts)
+      end
+    end)
+    |> then(fn {:ok, slot} -> slot end)
+  end
+
+  def refresh(slot, opts \\ [])
+
+  def refresh(slot_id, opts) when is_number(slot_id) do
+    Logger.info("refreshing video by id #{slot_id}")
+
+    slot =
+      from(s in __MODULE__, select: s, where: s.id == ^slot_id)
+      |> Repo.one()
+
+    slot
+    |> changeset(%{} |> put_expiration(slot) |> SlotUtilities.put_opts(opts))
+    |> Repo.update!()
+  end
+
+  def refresh(%__MODULE__{} = slot, opts) do
+    Logger.info("refreshing video by slot #{slot.id}")
+
+    slot
+    |> change(%{} |> put_expiration(slot) |> SlotUtilities.put_opts(opts))
+    |> Repo.update!()
+  end
+
+  def used(%__MODULE__{} = slot) do
+    Logger.info("used video id #{slot.id}")
+
+    slot
+    |> change(%{} |> SlotUtilities.put_used())
+    |> Repo.update!()
   end
 
   def youtube_url(slot) do
     "https://youtube.com/watch?v=#{slot.youtube_id}"
   end
+
+  def urls, do: 0
 end

@@ -3,8 +3,8 @@ defmodule YtSearchWeb.ThumbnailTest do
 
   alias YtSearch.Youtube
   alias YtSearch.Thumbnail
-  import Ecto.Query
   alias YtSearch.Repo
+  alias YtSearch.SlotUtilities
 
   alias YtSearch.Test.Data
 
@@ -13,7 +13,7 @@ defmodule YtSearchWeb.ThumbnailTest do
   end
 
   test "correctly thumbnails a youtube thumbnail" do
-    {:ok, thumb} = Youtube.Thumbnail.maybe_download_thumbnail("a", "https://i.ytimg.com")
+    {:ok, thumb} = Youtube.Thumbnail.maybe_download_thumbnail("a", "https://i.ytimg.com", [])
     assert thumb.id == "a"
     repo_thumb = Thumbnail.fetch("a")
     assert repo_thumb.id == thumb.id
@@ -26,16 +26,16 @@ defmodule YtSearchWeb.ThumbnailTest do
   @youtube_id "Amongus"
 
   test "thumbnails are cleaned when theyre too old", _ctx do
-    thumb = Thumbnail.insert(@youtube_id, "image/png", Data.png())
+    thumb = Thumbnail.insert(@youtube_id, "image/png", Data.png(), [])
 
-    from(t in Thumbnail, where: t.id == ^thumb.id, select: t)
-    |> Repo.update_all(
-      set: [
-        inserted_at:
-          NaiveDateTime.utc_now()
-          |> NaiveDateTime.add(-Thumbnail.ttl_seconds() - 2)
-      ]
+    thumb
+    |> Ecto.Changeset.change(
+      expires_at:
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-10, :second)
+        |> NaiveDateTime.truncate(:second)
     )
+    |> Repo.update!()
 
     fetched = Thumbnail.fetch(@youtube_id)
     assert fetched.data == thumb.data
@@ -44,25 +44,26 @@ defmodule YtSearchWeb.ThumbnailTest do
   end
 
   test "thumbnails are refreshed" do
-    thumb = Thumbnail.insert(@youtube_id, "image/png", Data.png())
+    thumb = Thumbnail.insert(@youtube_id, "image/png", Data.png(), [])
 
-    from(t in Thumbnail, where: t.id == ^thumb.id, select: t)
-    |> Repo.update_all(
-      set: [
-        inserted_at:
-          NaiveDateTime.utc_now()
-          |> NaiveDateTime.add(-Thumbnail.ttl_seconds() - 2)
-      ]
+    thumb
+    |> Ecto.Changeset.change(
+      expires_at:
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-10, :second)
+        |> NaiveDateTime.truncate(:second)
     )
+    |> Repo.update!()
 
     fetched = Thumbnail.fetch(@youtube_id)
     assert fetched.data == thumb.data
 
-    Thumbnail.refresh(@youtube_id)
+    fetched
+    |> SlotUtilities.refresh_expiration()
 
     fetched2 = Thumbnail.fetch(@youtube_id)
     assert fetched2.data == thumb.data
-    assert NaiveDateTime.compare(fetched2.inserted_at, fetched.inserted_at) == :gt
+    assert NaiveDateTime.compare(fetched2.expires_at, fetched.expires_at) == :gt
 
     Thumbnail.Janitor.tick()
     assert Thumbnail.fetch(@youtube_id) != nil

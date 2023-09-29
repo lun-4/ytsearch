@@ -1,6 +1,7 @@
 defmodule YtSearch.Youtube.Thumbnail do
   require Logger
 
+  alias YtSearch.SlotUtilities
   alias YtSearch.Thumbnail
 
   defmodule ThumbnailMetadata do
@@ -8,7 +9,7 @@ defmodule YtSearch.Youtube.Thumbnail do
     defstruct [:aspect_ratio]
   end
 
-  def fetch_piped_in_background(youtube_id, data) do
+  def fetch_piped_in_background(youtube_id, data, opts) do
     if data["thumbnail"] != nil do
       # TODO wrap up in a supervisor?
       # reasons for that: handle network failures
@@ -16,7 +17,8 @@ defmodule YtSearch.Youtube.Thumbnail do
       Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
         maybe_download_thumbnail(
           youtube_id,
-          data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url()
+          data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
+          opts
         )
       end)
 
@@ -33,23 +35,24 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   # same idea as Mp4Link.maybe_fetch_upstream
 
-  @spec maybe_download_thumbnail(String.t(), String.t()) :: Thumbnail.t()
-  def maybe_download_thumbnail(id, url) do
+  @spec maybe_download_thumbnail(String.t(), String.t(), Keyword.t()) :: Thumbnail.t()
+  def maybe_download_thumbnail(id, url, opts) do
     case Thumbnail.fetch(id) do
       nil ->
-        mutexed_download_thumbnail(id, url)
+        mutexed_download_thumbnail(id, url, opts)
 
       thumb ->
         thumb
+        |> SlotUtilities.refresh_expiration(opts)
     end
   end
 
-  def mutexed_download_thumbnail(id, url) do
+  def mutexed_download_thumbnail(id, url, opts) do
     Mutex.under(ThumbnailMutex, id, fn ->
       # refetch to prevent double fetch
       case Thumbnail.fetch(id) do
         nil ->
-          do_download_thumbnail(id, url)
+          do_download_thumbnail(id, url, opts)
 
         thumb ->
           thumb
@@ -57,7 +60,7 @@ defmodule YtSearch.Youtube.Thumbnail do
     end)
   end
 
-  defp do_download_thumbnail(youtube_id, url) do
+  defp do_download_thumbnail(youtube_id, url, opts) do
     Logger.debug("thumbnail requesting #{url}")
 
     # youtube channels give urls without scheme for some reason
@@ -91,7 +94,7 @@ defmodule YtSearch.Youtube.Thumbnail do
 
       final_body = File.read!(temporary_path)
       File.rm(temporary_path)
-      {:ok, Thumbnail.insert(youtube_id, content_type, final_body)}
+      {:ok, Thumbnail.insert(youtube_id, content_type, final_body, opts)}
     else
       Logger.error(
         "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"

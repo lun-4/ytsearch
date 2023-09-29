@@ -2,23 +2,29 @@ defmodule YtSearch.PlaylistSlot do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.SlotUtilities
+  import Ecto.Changeset
   require Logger
 
   @type t :: %__MODULE__{}
   @primary_key {:id, :integer, autogenerate: false}
 
-  # 1 times to retry
-  def max_id_retries, do: 1
-  # 12 hours
-  def ttl, do: 12 * 60 * 60
-  # this number must be synced with the world build
-  def urls, do: 20_000
-
-  schema "playlist_slots" do
+  schema "playlist_slots_v3" do
     field(:youtube_id, :string)
-    timestamps()
+    timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
+    field(:expires_at, :naive_datetime)
+    field(:used_at, :naive_datetime)
+    field(:keepalive, :boolean)
+  end
+
+  def slot_spec() do
+    %{
+      # this number must be synced with the world build
+      max_ids: 20_000,
+      # 12 hours
+      # TODO we can tweak this thanks to autorefresh
+      ttl: 12 * 60 * 60
+    }
   end
 
   @spec fetch(Integer.t()) :: Slot.t() | nil
@@ -26,57 +32,62 @@ defmodule YtSearch.PlaylistSlot do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
+    |> SlotUtilities.strict_ttl()
   end
 
   @spec fetch_by_youtube_id(String.t()) :: t() | nil
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.all(query)
-    |> Enum.filter(fn playlist_slot ->
-      TTL.maybe?(playlist_slot, __MODULE__) != nil
+    Repo.one(query)
+    |> SlotUtilities.strict_ttl()
+  end
+
+  def changeset(%__MODULE__{} = slot, params) do
+    slot
+    |> cast(params, [:id, :youtube_id, :expires_at, :used_at, :keepalive])
+    |> validate_required([:youtube_id, :expires_at, :used_at])
+  end
+
+  @spec create(String.t(), Keyword.t()) :: t()
+  def create(youtube_id, opts \\ []) do
+    keepalive = Keyword.get(opts, :keepalive, false)
+
+    Repo.transaction(fn ->
+      query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+      playlist_slot = Repo.one(query)
+
+      if playlist_slot == nil do
+        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+
+        params =
+          %{
+            id: new_id,
+            youtube_id: youtube_id,
+            keepalive: keepalive
+          }
+          |> SlotUtilities.put_simple_expiration(__MODULE__)
+          |> SlotUtilities.put_used()
+
+        %__MODULE__{}
+        |> changeset(params)
+        |> Repo.insert!(
+          on_conflict: [
+            set: [
+              youtube_id: youtube_id,
+              expires_at: params.expires_at,
+              used_at: params.used_at,
+              keepalive: keepalive
+            ]
+          ]
+        )
+      else
+        playlist_slot
+        |> SlotUtilities.refresh_expiration(opts)
+      end
     end)
-    |> Enum.at(0)
+    |> then(fn {:ok, slot} -> slot end)
   end
 
-  @spec from(String.t()) :: Slot.t()
-  def from(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-
-    case Repo.one(query) do
-      nil ->
-        {:ok, new_id} = find_available_id()
-
-        %__MODULE__{youtube_id: youtube_id, id: new_id}
-        |> Repo.insert!()
-
-      slot ->
-        slot
-    end
-  end
-
-  @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
-  defp find_available_id() do
-    SlotUtilities.find_available_slot_id(__MODULE__)
-  end
-
-  def as_youtube_url(slot) do
-    "https://www.youtube.com/playlist?list=#{slot.youtube_id}"
-  end
-
-  def refresh(playlist_slot_id) do
-    query = from s in __MODULE__, where: s.id == ^playlist_slot_id, select: s
-    playlist_slot = Repo.one(query)
-
-    unless playlist_slot == nil do
-      Logger.info("refreshing playlist id #{playlist_slot.id}")
-
-      playlist_slot
-      |> Ecto.Changeset.change(
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-      )
-      |> YtSearch.Repo.update!()
-    end
-  end
+  def urls, do: 0
 end

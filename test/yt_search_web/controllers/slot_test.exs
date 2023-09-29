@@ -25,6 +25,10 @@ defmodule YtSearchWeb.SlotTest do
     %{slot: slot}
   end
 
+  defp insert_slot() do
+    insert(:slot, [], on_conflict: :replace_all)
+  end
+
   @custom_expire (System.os_time(:second) + 3_600) |> to_string
 
   @run1 File.read!("test/support/piped_outputs/video_streams.json")
@@ -45,7 +49,7 @@ defmodule YtSearchWeb.SlotTest do
     conn: conn,
     ets_table: table
   } do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams/" <> wanted_youtube_id} = env ->
@@ -68,7 +72,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v3/s/#{slot.id}")
+      |> get(~p"/api/v4/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -101,7 +105,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v3/s/#{slot.id}")
+      |> get(~p"/api/v4/s/#{slot.id}")
 
     assert get_resp_header(conn, "location") == ["https://mp5.com"]
 
@@ -111,7 +115,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
@@ -123,7 +127,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/api/v3/sr/#{slot.id}")
+      |> get(~p"/api/v4/sr/#{slot.id}")
 
     assert conn.status == 302
 
@@ -137,7 +141,7 @@ defmodule YtSearchWeb.SlotTest do
   @expected_stream_url "https://manifest.googlevideo.com/api/manifest/hls_variant/expire/#{@custom_expire}/ei/IvrTZLKgGf_Y1sQPk4KOuAE/ip/2804%3A14d%3A5492%3A8fe8%3A%3A1001/id/jfKfPfyJRdk.2/source/yt_live_broadcast/requiressl/yes/hfr/1/playlist_duration/3600/manifest_duration/3600/demuxed/1/maudio/1/vprv/1/go/1/pacing/0/nvgoi/1/short_key/1/ncsapi/1/keepalive/yes/fexp/24007246%2C51000023/dover/13/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cdemuxed%2Cmaudio%2Cvprv%2Cgo%2Citag%2Cplaylist_type/sig/AOq0QJ8wRQIhANBnLbXAZIDegOLck5OxexbCOmLLVMKOtqukyUpwVnr1AiAHdQByc0Hm-MPN26SmyYflKk9LA905ahxukvjccfzR5w%3D%3D/file/index.m3u8?host=manifest.googlevideo.com"
 
   test "it gets m3u8 url on streams", %{conn: conn} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
@@ -150,7 +154,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v3/s/#{slot.id}")
+      |> get(~p"/api/v4/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -162,17 +166,17 @@ defmodule YtSearchWeb.SlotTest do
   test "it gives 404 on unknown slot ids", %{conn: conn} do
     # i really dont want this test to fail because the generated test
     # slot clashes with a hardcoded one here
-    {:ok, unknown_id} = YtSearch.SlotUtilities.find_available_slot_id(YtSearch.Slot)
+    {:ok, unknown_id} = YtSearch.SlotUtilities.generate_id_v3(YtSearch.Slot)
 
     conn =
       conn
-      |> get(~p"/a/3/sl/#{unknown_id}")
+      |> get(~p"/a/4/sl/#{unknown_id}")
 
     assert conn.status == 404
 
     conn =
       conn
-      |> get(~p"/a/3/sl/#{unknown_id}")
+      |> get(~p"/a/4/sl/#{unknown_id}")
 
     assert conn.status == 404
   end
@@ -222,7 +226,7 @@ defmodule YtSearchWeb.SlotTest do
   import Tesla.Mock
 
   test "metadata works and are only fetched once", %{ets_table: table} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     mock_global(fn
       %{method: :get, url: "sb.example.org/api/skipSegments?videoID=" <> rest} = env ->
@@ -327,7 +331,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v3/s/#{slot.id}")
+        |> get(~p"/api/v4/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -340,7 +344,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "metadata fails successfully on failure of external servers", %{ets_table: table} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     mock_global(fn
       %{method: :get, url: "sb.example.org/api/skipSegments?videoID=" <> rest} = env ->
@@ -398,7 +402,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v3/s/#{slot.id}")
+        |> get(~p"/api/v4/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -410,7 +414,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "links work under pressure and are only fetched once", %{ets_table: table} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     mock_global(fn
       %{method: :get, url: "example.org/streams/" <> youtube_id} = env ->
@@ -437,7 +441,7 @@ defmodule YtSearchWeb.SlotTest do
     |> Enum.map(fn _ ->
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
-        |> get(~p"/api/v3/sr/#{slot.id}")
+        |> get(~p"/api/v4/sr/#{slot.id}")
       end)
     end)
     |> Enum.map(fn task ->
@@ -446,23 +450,6 @@ defmodule YtSearchWeb.SlotTest do
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["awooga"]
     end)
-  end
-
-  @another_youtube_id "k2RuprlsXng"
-  @even_another_youtube_id "D6enSGlTJYA"
-
-  test "correctly rerolls ids" do
-    :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
-
-    slot = Slot.create(@another_youtube_id, 3600)
-    assert slot.id == 71186
-
-    # go with the same seed, causing it to go down the reroll route
-
-    :rand.seed({:exsss, [125_964_573_718_566_670 | 47_560_692_658_558_529]})
-
-    slot = Slot.create(@even_another_youtube_id, 3600)
-    assert slot.id == 47635
   end
 
   test "it removes links from db that are already expired" do
@@ -482,13 +469,15 @@ defmodule YtSearchWeb.SlotTest do
     assert Repo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) == nil
   end
 
-  test "it removes slots from db that are already expired" do
-    slot = insert(:slot)
+  test "it doesnt expose expired slots to main fetch function" do
+    slot = insert_slot()
 
     slot
     |> Ecto.Changeset.change(
-      inserted_at: slot.inserted_at |> NaiveDateTime.add(-Slot.max_ttl(), :second),
-      inserted_at_v2: slot.inserted_at_v2 - Slot.max_ttl()
+      expires_at:
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-10, :second)
+        |> NaiveDateTime.truncate(:second)
     )
     |> Repo.update!()
 
@@ -497,13 +486,10 @@ defmodule YtSearchWeb.SlotTest do
     # assert its still on db
     from_db = Repo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
     assert from_db.id == slot.id
-
-    YtSearch.Slot.Janitor.tick()
-    assert Repo.one(from s in Slot, where: s.id == ^slot.id, select: s) == nil
   end
 
   test "it gives 200 on invalid youtube ids", %{conn: conn} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
@@ -519,7 +505,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v3/s/#{slot.id}")
+      |> get(~p"/api/v4/s/#{slot.id}")
 
     assert conn.status == 200
     assert response_content_type(conn, :mp4)
@@ -527,7 +513,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "it refreshes the slot if its older than a minute", %{conn: conn} do
-    slot = insert(:slot)
+    slot = insert_slot()
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
@@ -563,7 +549,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v3/s/#{slot.id}")
+      |> get(~p"/api/v4/s/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
@@ -572,18 +558,20 @@ defmodule YtSearchWeb.SlotTest do
     slot =
       slot
       |> Ecto.Changeset.change(
-        inserted_at: slot.inserted_at |> NaiveDateTime.add(-60, :second),
-        inserted_at_v2: slot.inserted_at_v2 - 60
+        used_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-61, :second)
+          |> NaiveDateTime.truncate(:second)
       )
       |> YtSearch.Repo.update!()
 
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v3/s/#{slot.id}")
+      |> get(~p"/api/v4/s/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
-    assert fetched_slot.inserted_at > slot.inserted_at
+    assert fetched_slot.expires_at > slot.expires_at
   end
 end

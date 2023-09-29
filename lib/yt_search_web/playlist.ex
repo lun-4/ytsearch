@@ -2,7 +2,7 @@ defmodule YtSearchWeb.Playlist do
   alias YtSearch.Youtube
   require Logger
 
-  def from_piped_data(json) do
+  def from_piped_data(json, opts \\ []) do
     json
     |> Enum.map(fn entry ->
       entity_type =
@@ -35,12 +35,12 @@ defmodule YtSearchWeb.Playlist do
     end)
     |> Enum.map(fn {entity_type, data} ->
       youtube_id = data["url"] |> youtube_id_from_url
-      thumbnail_metadata = Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data)
+      thumbnail_metadata = Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data, opts)
 
       Logger.debug("processing for ytid #{youtube_id}")
 
       Mutex.under(PlaylistEntryCreatorMutex, "#{entity_type}:#{youtube_id}", fn ->
-        do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id)
+        do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id, opts)
       end)
     end)
   end
@@ -64,16 +64,16 @@ defmodule YtSearchWeb.Playlist do
     end
   end
 
-  defp do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id) do
+  defp do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id, opts) do
     case entity_type do
       t when t in [:video, :short, :livestream, :playlist] ->
         slot =
           case t do
             :playlist ->
-              YtSearch.PlaylistSlot.from(youtube_id)
+              YtSearch.PlaylistSlot.create(youtube_id, opts)
 
             _ ->
-              YtSearch.Slot.create(youtube_id, data["duration"])
+              YtSearch.Slot.create(youtube_id, data["duration"], opts)
           end
 
         channel_id =
@@ -87,14 +87,14 @@ defmodule YtSearchWeb.Playlist do
           case entity_type do
             t when t in [:video, :livestream] ->
               # full videos should provide channel metadata
-              YtSearch.ChannelSlot.from(channel_id)
+              YtSearch.ChannelSlot.create(channel_id, opts)
 
             t when t in [:short, :playlist] ->
               # shorts dont give proper metadata about themselves at all
               # fuck shorts
               # make it optional
               unless channel_id == nil do
-                YtSearch.ChannelSlot.from(channel_id)
+                YtSearch.ChannelSlot.create(channel_id, opts)
               else
                 nil
               end
@@ -127,7 +127,7 @@ defmodule YtSearchWeb.Playlist do
         }
 
       :channel ->
-        slot = YtSearch.ChannelSlot.from(youtube_id)
+        slot = YtSearch.ChannelSlot.create(youtube_id, opts)
 
         %{
           type: :channel,

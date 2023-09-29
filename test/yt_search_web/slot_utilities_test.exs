@@ -2,19 +2,10 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.Repo
+  import Ecto.Query
 
   defp random_yt_id do
     :rand.uniform(100_000_000_000_000) |> to_string |> Base.encode64()
-  end
-
-  defp printtime(func) do
-    prev = System.monotonic_time()
-    func.()
-    next = System.monotonic_time()
-    diff = next - prev
-    diff |> System.convert_time_unit(:native, :millisecond)
-
-    IO.puts("took #{diff} ms running function")
   end
 
   @slot_types [
@@ -37,47 +28,21 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
       # load a bunch of slots to test with
 
-      0..((unquote(slot_type).urls() * cutoff_point) |> trunc)
-      |> Enum.shuffle()
-      |> Enum.map(fn id ->
-        case unquote(slot_type) do
-          YtSearch.Slot ->
-            %{
-              id: id,
-              youtube_id: random_yt_id(),
-              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              inserted_at_v2: DateTime.to_unix(DateTime.utc_now())
-            }
+      slot_module = unquote(slot_type)
 
-          YtSearch.SearchSlot ->
-            %{
-              id: id,
-              slots_json: "[]",
-              query: "amongnus",
-              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-            }
-
-          s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
-            %{
-              id: id,
-              youtube_id: random_yt_id(),
-              inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
-              updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-            }
-        end
-      end)
-      |> Enum.chunk_every(5000)
-      |> Enum.each(fn batch ->
-        IO.puts("inserting #{length(batch)} slots (pre-test)")
-
-        printtime(fn ->
-          Repo.insert_all(unquote(slot_type), batch)
-        end)
-      end)
-
-      # then see how things go on the second half (one by one id gen)
+      from(s in slot_module, select: s)
+      |> Repo.update_all(
+        set: [
+          expires_at:
+            NaiveDateTime.utc_now()
+            |> NaiveDateTime.add(600, :second)
+            |> NaiveDateTime.truncate(:second),
+          used_at:
+            NaiveDateTime.utc_now()
+            |> NaiveDateTime.truncate(:second),
+          keepalive: false
+        ]
+      )
 
       harder_test(unquote(slot_type), cutoff_point)
 
@@ -98,11 +63,14 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
             YtSearch.Slot ->
               slot_type.create(random_yt_id(), 3600)
 
+            YtSearch.ChannelSlot ->
+              slot_type.create(random_yt_id())
+
             YtSearch.SearchSlot ->
               slot_type.from_playlist([], random_yt_id())
 
-            s when s in [YtSearch.ChannelSlot, YtSearch.PlaylistSlot] ->
-              s.from(random_yt_id())
+            YtSearch.PlaylistSlot ->
+              YtSearch.PlaylistSlot.create(random_yt_id())
           end
 
           next = System.monotonic_time()
@@ -134,19 +102,18 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     changed_slot =
       slot
       |> Ecto.Changeset.change(
-        inserted_at: slot.inserted_at |> NaiveDateTime.add(-(Slot.min_ttl() + 1), :second),
-        inserted_at_v2: slot.inserted_at_v2 - Slot.min_ttl() + 1
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-1, :second)
+          |> NaiveDateTime.truncate(:second)
       )
       |> YtSearch.Repo.update!()
-
-    assert YtSearch.TTL.expired?(changed_slot)
 
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil
 
     same_slot = YtSearch.Slot.create(youtube_id, 1)
     assert same_slot.id == slot.id
-    assert same_slot.inserted_at > changed_slot.inserted_at
-    assert same_slot.inserted_at_v2 > changed_slot.inserted_at_v2
+    assert same_slot.expires_at > changed_slot.expires_at
   end
 end

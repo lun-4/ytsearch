@@ -2,28 +2,31 @@ defmodule YtSearch.SearchSlot do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Repo
-  alias YtSearch.TTL
   alias YtSearch.Slot
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
   alias YtSearch.SlotUtilities
+  import Ecto.Changeset
   require Logger
 
   @type t :: %__MODULE__{}
 
   @primary_key {:id, :integer, autogenerate: false}
 
-  # 20 times to retry
-  def max_id_retries, do: 2
-  # 20 minutes
-  def ttl, do: 20 * 60
-  # this number must be synced with the world build
-  def urls, do: 10_000
-
-  schema "search_slots" do
+  schema "search_slots_v3" do
     field(:slots_json, :string)
     field(:query, :string)
-    timestamps()
+    timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
+    field(:expires_at, :naive_datetime)
+    field(:used_at, :naive_datetime)
+    field(:keepalive, :boolean)
+  end
+
+  def slot_spec() do
+    %{
+      max_ids: 10_000,
+      ttl: 20 * 60
+    }
   end
 
   @spec fetch_by_id(Integer.t()) :: SearchSlot.t() | nil
@@ -31,22 +34,7 @@ defmodule YtSearch.SearchSlot do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     Repo.one(query)
-    |> TTL.maybe?(__MODULE__)
-  end
-
-  def refresh(search_slot_id) do
-    query = from s in __MODULE__, where: s.id == ^search_slot_id, select: s
-    search_slot = Repo.one(query)
-
-    unless search_slot == nil do
-      Logger.info("refreshed search id #{search_slot.id}")
-
-      search_slot
-      |> Ecto.Changeset.change(
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-      )
-      |> Repo.update!()
-    end
+    |> SlotUtilities.strict_ttl()
   end
 
   defp internal_id_for(%ChannelSlot{youtube_id: channel_id}) do
@@ -64,11 +52,8 @@ defmodule YtSearch.SearchSlot do
   def fetch_by_query(query) do
     query = from s in __MODULE__, where: s.query == ^(query |> internal_id_for), select: s
 
-    Repo.all(query)
-    |> Enum.filter(fn search_slot ->
-      TTL.maybe?(search_slot, __MODULE__) != nil
-    end)
-    |> Enum.at(0)
+    Repo.one(query)
+    |> SlotUtilities.strict_ttl()
   end
 
   def get_slots(search_slot) do
@@ -79,17 +64,7 @@ defmodule YtSearch.SearchSlot do
   def fetched_slots_from_search(search_slot) do
     search_slot
     |> get_slots
-    |> Enum.map(fn maybe_slot ->
-      {slot_type, youtube_id} =
-        case maybe_slot do
-          # old version of the field
-          data when is_list(data) ->
-            {nil, nil}
-
-          slot when is_map(slot) ->
-            {slot["type"], slot["youtube_id"]}
-        end
-
+    |> Enum.map(fn %{"type" => slot_type, "youtube_id" => youtube_id} = maybe_slot ->
       # assumes all slot types are "strict ttl" as in,
       # fetches won't give nil values if the respective slots
       # are going to be obliterated any time now
@@ -104,31 +79,77 @@ defmodule YtSearch.SearchSlot do
           ChannelSlot.fetch_by_youtube_id(youtube_id)
 
         nil ->
+          Logger.warning("invalid type from #{inspect(maybe_slot)}")
           nil
 
         _ ->
           raise "invalid type for search slot entry: #{inspect(slot_type)}"
       end
     end)
-    |> Enum.filter(fn result -> result != nil end)
   end
 
-  def from_playlist(playlist, search_query) do
+  def changeset(%__MODULE__{} = slot, params) do
+    slot
+    |> cast(params, [:id, :query, :slots_json, :expires_at, :used_at, :keepalive])
+    |> validate_required([:query, :slots_json, :expires_at, :used_at])
+  end
+
+  def from_playlist(playlist, search_query, opts \\ []) do
     playlist
     |> Jason.encode!()
-    |> from_slots_json(search_query |> internal_id_for)
+    |> from_slots_json(search_query |> internal_id_for, opts)
   end
 
-  @spec from_slots_json(String.t(), String.t()) :: SearchSlot.t()
-  defp from_slots_json(slots_json, search_query) do
-    {:ok, new_id} = find_available_id()
+  @spec from_slots_json(String.t(), String.t(), Keyword.t()) :: SearchSlot.t()
+  defp from_slots_json(slots_json, search_query, opts) do
+    keepalive = Keyword.get(opts, :keepalive, false)
 
-    %__MODULE__{slots_json: slots_json, id: new_id, query: search_query}
-    |> Repo.insert!()
+    Repo.transaction(fn ->
+      query = from s in __MODULE__, where: s.query == ^search_query, select: s
+      search_slot = Repo.one(query)
+
+      if search_slot == nil do
+        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+
+        params =
+          %{
+            id: new_id,
+            query: search_query,
+            slots_json: slots_json,
+            keepalive: keepalive
+          }
+          |> SlotUtilities.put_simple_expiration(__MODULE__)
+          |> SlotUtilities.put_used()
+
+        %__MODULE__{}
+        |> changeset(params)
+        |> Repo.insert!(
+          on_conflict: [
+            set: [
+              query: params.query,
+              slots_json: params.slots_json,
+              expires_at: params.expires_at,
+              used_at: params.used_at,
+              keepalive: params.keepalive
+            ]
+          ]
+        )
+      else
+        search_slot
+        |> changeset(
+          %{
+            slots_json: slots_json,
+            keepalive: keepalive
+          }
+          |> SlotUtilities.put_simple_expiration(__MODULE__)
+          |> SlotUtilities.put_opts(opts)
+          |> SlotUtilities.put_used()
+        )
+        |> Repo.update!()
+      end
+    end)
+    |> then(fn {:ok, slot} -> slot end)
   end
 
-  @spec find_available_id() :: {:ok, Integer.t()} | {:error, :no_available_id}
-  defp find_available_id() do
-    SlotUtilities.find_available_slot_id(__MODULE__)
-  end
+  def urls, do: 0
 end
