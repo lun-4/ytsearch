@@ -72,7 +72,7 @@ defmodule YtSearch.Thumbnail do
           limit: 200
         )
         |> Repo.all()
-        |> Enum.chunk_every(200)
+        |> Enum.chunk_every(10)
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn thumb ->
