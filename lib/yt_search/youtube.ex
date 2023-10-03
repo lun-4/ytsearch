@@ -293,6 +293,15 @@ defmodule YtSearch.Youtube do
             Logger.warning("this video is DMCA'd! #{message}")
             {:error, :video_unavailable}
 
+          String.contains?(message, "Could not get any stream.") ->
+            {:error, :video_unavailable}
+
+          String.contains?(
+            message,
+            "This video has been removed for violating YouTube's policy on nudity or sexual content"
+          ) ->
+            {:error, :video_unavailable}
+
           String.contains?(message, "This channel is not available") ->
             Logger.warning("this is an unavailable channel")
             {:error, :channel_unavailable}
