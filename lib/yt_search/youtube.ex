@@ -100,6 +100,8 @@ defmodule YtSearch.Youtube do
       with {:ok, youtube_id} <- youtube_id_from_uri(host, url_path),
            {:ok, piped_response} <-
              piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
+        raw_upload_date = piped_response["uploadDate"]
+
         video_result =
           @keys_to_copy
           |> Enum.reduce(%{}, fn key, result ->
@@ -116,13 +118,22 @@ defmodule YtSearch.Youtube do
           # NOTE duration is 0, not -1, for live streams
           |> Map.put("type", "stream")
           |> Map.put("url", "/watch?v=#{youtube_id}")
-          # we don't get the real uploaded timestamp, so fill it with date at midnight
           |> Map.put(
             "uploaded",
-            piped_response["uploadDate"]
-            |> Date.from_iso8601!()
-            |> DateTime.new!(~T[00:00:00])
-            |> DateTime.to_unix(:millisecond)
+            if String.contains?(raw_upload_date, "T") do
+              raw_upload_date
+              |> DateTime.from_iso8601()
+              |> then(fn {:ok, dt, _tz} ->
+                dt
+                |> DateTime.to_unix(:millisecond)
+              end)
+            else
+              # we usually don't get the real uploaded timestamp, so fill it with date at midnight
+              raw_upload_date
+              |> Date.from_iso8601!()
+              |> DateTime.new!(~T[00:00:00])
+              |> DateTime.to_unix(:millisecond)
+            end
           )
 
         {:ok, [video_result]}
