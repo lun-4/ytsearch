@@ -170,7 +170,8 @@ defmodule YtSearch.Youtube do
           {:input_error, :invalid_format}
         end
 
-      String.starts_with?(uri.path, "live") ->
+      String.starts_with?(uri.path, "live") or
+          String.starts_with?(uri.path, "shorts") ->
         uri.path
         |> String.split("/")
         |> Enum.at(1)

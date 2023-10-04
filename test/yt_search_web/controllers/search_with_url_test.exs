@@ -30,7 +30,8 @@ defmodule YtSearchWeb.SearchWithURLTest do
     "http://youtube.com/live/#{@test_youtube_id}",
     "youtube.com/live/#{@test_youtube_id}",
     "www.youtube.com/live/#{@test_youtube_id}",
-    "https://youtube.com/live/#{@test_youtube_id}"
+    "https://youtube.com/live/#{@test_youtube_id}",
+    "https://youtube.com/shorts/#{@test_youtube_id}"
   ]
 
   @invalid_test_cases [
