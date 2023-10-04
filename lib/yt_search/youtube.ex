@@ -297,6 +297,9 @@ defmodule YtSearch.Youtube do
           String.contains?(message, "Could not get any stream.") ->
             {:error, :video_unavailable}
 
+          String.contains?(message, "This video is private.") ->
+            {:error, :video_unavailable}
+
           String.contains?(
             message,
             "This video has been removed for violating YouTube's policy on nudity or sexual content"
