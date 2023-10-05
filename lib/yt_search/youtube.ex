@@ -192,6 +192,18 @@ defmodule YtSearch.Youtube do
         Logger.error("invalid uri: #{host} #{url_path}")
         {:input_error, :invalid_format}
     end
+    |> then(fn
+      {:ok, id} ->
+        if String.length(id) == 11 do
+          {:ok, id}
+        else
+          Logger.error("extracted id is not 11 characters. #{id}")
+          {:input_error, :invalid_format}
+        end
+
+      v ->
+        v
+    end)
   end
 
   defp piped_search_call(func, id, list_field) do
