@@ -62,6 +62,19 @@ defmodule YtSearch.Subtitle do
         )
         |> Repo.all()
         |> Enum.map(fn subtitle ->
+          # TODO: fix subtitle table
+          # this hack is done because somehow id is nil,
+          # likely due to bad table schema.
+          subtitle
+          |> Map.put(
+            :id,
+            case Map.get(subtitle, :id) do
+              nil -> 0
+              v -> v
+            end
+          )
+        end)
+        |> Enum.map(fn subtitle ->
           Repo.delete(subtitle)
           1
         end)
