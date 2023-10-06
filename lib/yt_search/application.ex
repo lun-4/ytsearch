@@ -49,7 +49,10 @@ defmodule YtSearch.Application do
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
-        {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
+        %{
+          id: SimpleRegistry.Extractors,
+          start: {YtSearch.SimpleRegistry, :start_link, [[name: YtSearch.MetadataExtractors]]}
+        }
       ] ++ maybe_janitors()
 
     start_telemetry()

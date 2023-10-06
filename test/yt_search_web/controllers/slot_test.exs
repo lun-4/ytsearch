@@ -94,13 +94,13 @@ defmodule YtSearchWeb.SlotTest do
     :ok = GenServer.call(worker, :unregister)
     [] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
 
-    [{extractor, :self}] =
-      Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
+    extractor =
+      YtSearch.SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
 
     :ok = GenServer.call(extractor, :unregister)
 
-    [] =
-      Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
+    nil =
+      YtSearch.SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
 
     conn =
       build_conn()
@@ -112,6 +112,11 @@ defmodule YtSearchWeb.SlotTest do
     # as i still hold a pid of the link, i can fetch it again and it should give the old url
     {:ok, link} = YtSearch.MetadataExtractor.Worker.mp4_link(extractor)
     assert link.mp4_link == @expected_run1_url
+
+    other_extractor_pid =
+      YtSearch.SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
+
+    assert other_extractor_pid != extractor
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn} do

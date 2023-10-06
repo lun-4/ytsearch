@@ -5,6 +5,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
   alias YtSearch.Mp4Link
   alias YtSearch.Test.Data
   alias YtSearch.Repo
+  alias YtSearch.SimpleRegistry
   import Ecto.Query
   import Tesla.Mock
   require Logger
@@ -53,31 +54,31 @@ defmodule YtSearchWeb.SlotConsistencyTest do
       end
     end
 
-    with [{extractor, :self}] <-
-           Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
+    with extractor when not is_nil(extractor) <-
+           SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
       Logger.debug("unregistering #{inspect(extractor)}")
       :ok = GenServer.call(extractor, :unregister)
 
-      case Registry.lookup(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
-        [{other, :self}] ->
-          assert other != extractor
-
-        [] ->
+      case SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, youtube_id}) do
+        nil ->
           :ok
+
+        other ->
+          assert other != extractor
       end
     end
 
-    with [{extractor, :self}] <-
-           Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
+    with extractor when not is_nil(extractor) <-
+           SimpleRegistry.get(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
       Logger.debug("unregistering #{inspect(extractor)}")
       :ok = GenServer.call(extractor, :unregister)
 
-      case Registry.lookup(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
-        [{other, :self}] ->
-          assert other != extractor
-
-        [] ->
+      case SimpleRegistry.get(YtSearch.MetadataExtractors, {:subtitles, youtube_id}) do
+        nil ->
           :ok
+
+        other ->
+          assert other != extractor
       end
     end
   end

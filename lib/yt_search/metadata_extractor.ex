@@ -4,6 +4,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   alias YtSearch.Youtube
   alias YtSearch.Chapters
+  alias YtSearch.SimpleRegistry
 
   @valid_types [:subtitles, :mp4_link, :sponsorblock_segments, :chapters]
 
@@ -67,7 +68,8 @@ defmodule YtSearch.MetadataExtractor.Worker do
                     youtube_id,
                     [
                       name:
-                        {:via, Registry, {YtSearch.MetadataExtractors, {type, youtube_id}, :self}}
+                        {:via, YtSearch.SimpleRegistry,
+                         {YtSearch.MetadataExtractors, {type, youtube_id}}}
                     ]
                   ]}
              }
@@ -107,7 +109,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
   @doc "this should only be called in tests"
   def handle_call(:unregister, _from, %{type: type, youtube_id: youtube_id} = state) do
     if Mix.env() == :test do
-      Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
+      SimpleRegistry.remove(YtSearch.MetadataExtractors, {type, youtube_id}, self())
     else
       raise "unregister is an invalid call on non-test environments"
     end
@@ -132,7 +134,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
     new_state =
       if time_since_last_reply > 60 do
-        Registry.unregister(YtSearch.MetadataExtractors, {type, youtube_id})
+        SimpleRegistry.remove(YtSearch.MetadataExtractors, {type, youtube_id}, self())
 
         Process.send_after(self(), {:suicide, last_reply}, 30000 + Enum.random(2000..20000))
         state |> Map.put(:will_die?, true)
