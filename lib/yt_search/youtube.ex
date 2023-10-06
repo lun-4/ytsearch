@@ -312,6 +312,9 @@ defmodule YtSearch.Youtube do
           String.contains?(message, "This video is private.") ->
             {:error, :video_unavailable}
 
+          String.contains?(message, "geo restriction checker") ->
+            {:error, :video_unavailable}
+
           String.contains?(message, "We're processing this video. Check back later.") ->
             {:error, :video_unavailable}
 
