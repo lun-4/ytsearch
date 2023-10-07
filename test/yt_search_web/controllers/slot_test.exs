@@ -6,6 +6,7 @@ defmodule YtSearchWeb.SlotTest do
   alias YtSearch.Mp4Link
   alias YtSearch.Repo
   import Ecto.Query
+  alias YtSearch.SimpleRegistry
   alias YtSearch.Test.Data
 
   @youtube_id "Jouh2mdt1fI"
@@ -90,17 +91,13 @@ defmodule YtSearchWeb.SlotTest do
     |> YtSearch.Repo.update!()
 
     # instead of stopping, just unregister them both
-    [{worker, :self}] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
+    worker = SimpleRegistry.get(YtSearch.MetadataWorkers, slot.youtube_id)
     :ok = GenServer.call(worker, :unregister)
-    [] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
+    nil = SimpleRegistry.get(YtSearch.MetadataWorkers, slot.youtube_id)
 
-    extractor =
-      YtSearch.SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
-
+    extractor = SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
     :ok = GenServer.call(extractor, :unregister)
-
-    nil =
-      YtSearch.SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
+    nil = SimpleRegistry.get(YtSearch.MetadataExtractors, {:mp4_link, slot.youtube_id})
 
     conn =
       build_conn()

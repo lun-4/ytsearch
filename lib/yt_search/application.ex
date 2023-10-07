@@ -48,7 +48,10 @@ defmodule YtSearch.Application do
         {Cachex, name: :tabs},
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
-        {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
+        %{
+          id: SimpleRegistry.Workers,
+          start: {YtSearch.SimpleRegistry, :start_link, [[name: YtSearch.MetadataWorkers]]}
+        },
         %{
           id: SimpleRegistry.Extractors,
           start: {YtSearch.SimpleRegistry, :start_link, [[name: YtSearch.MetadataExtractors]]}

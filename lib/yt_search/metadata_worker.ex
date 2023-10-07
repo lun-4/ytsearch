@@ -3,6 +3,7 @@ defmodule YtSearch.Metadata.Worker do
 
   require Logger
   alias YtSearch.Youtube
+  alias YtSearch.SimpleRegistry
 
   def start_link(youtube_id, opts \\ []) do
     GenServer.start_link(__MODULE__, youtube_id, opts)
@@ -20,7 +21,9 @@ defmodule YtSearch.Metadata.Worker do
                  {__MODULE__, :start_link,
                   [
                     youtube_id,
-                    [name: {:via, Registry, {YtSearch.MetadataWorkers, youtube_id, :self}}]
+                    [
+                      name: {:via, SimpleRegistry, {YtSearch.MetadataWorkers, youtube_id}}
+                    ]
                   ]}
              }
            ) do
@@ -62,7 +65,7 @@ defmodule YtSearch.Metadata.Worker do
     time_since_last_reply = now - last_reply
 
     if time_since_last_reply > 60 do
-      Registry.unregister(YtSearch.MetadataWorkers, youtube_id)
+      SimpleRegistry.remove(YtSearch.MetadataWorkers, youtube_id, self())
       Process.send_after(self(), {:suicide, last_reply}, 30000 + Enum.random(2000..20000))
     else
       # schedule next exit if we arent supposed to die yet
@@ -95,7 +98,7 @@ defmodule YtSearch.Metadata.Worker do
   @doc "this should only be called in tests"
   def handle_call(:unregister, _from, %{youtube_id: youtube_id} = state) do
     if Mix.env() == :test do
-      Registry.unregister(YtSearch.MetadataWorkers, youtube_id)
+      SimpleRegistry.remove(YtSearch.MetadataWorkers, youtube_id, self())
     else
       raise "unregister is an invalid call on non-test environments"
     end
