@@ -30,7 +30,8 @@ defmodule YtSearch.Mp4Link do
 
       link ->
         if TTL.expired?(link, ttl_seconds()) do
-          Repo.delete!(link)
+          # do not expire in this case to prevent race conditions
+          # the one that should remove it is the link janitor
           {:ok, nil}
         else
           {:ok, link}
