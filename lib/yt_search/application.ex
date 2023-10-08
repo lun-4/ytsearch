@@ -94,6 +94,7 @@ defmodule YtSearch.Application do
     YtSearch.Youtube.Latency.setup()
     YtSearch.SlotUtilities.UsageMeter.Gauge.setup()
     YtSearchWeb.HelloController.BuildReporter.setup()
+    YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
 
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()

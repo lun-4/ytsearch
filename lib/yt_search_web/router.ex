@@ -18,6 +18,7 @@ defmodule YtSearchWeb.Router do
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
     get("/hello/:build_number", HelloController, :hello)
+    get("/aod/:error_id", AngelOfDeathController, :report_error)
   end
 
   # smaller url version of the api, this is a bodge for
@@ -32,6 +33,7 @@ defmodule YtSearchWeb.Router do
     get("/sl/:slot_id", SlotController, :fetch_video)
     get("/sr/:slot_id", SlotController, :fetch_redirect)
     get("/sl/:slot_id/index.m3u8", SlotController, :fetch_stream_redirect)
+    get("/aod/:error_id", AngelOfDeathController, :report_error)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
