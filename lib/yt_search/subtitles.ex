@@ -58,7 +58,7 @@ defmodule YtSearch.Subtitle do
           where:
             fragment("unixepoch(?)", s.inserted_at) <
               ^expiry_time,
-          limit: 5000
+          limit: 1000
         )
         |> Repo.all()
         |> Enum.map(fn subtitle ->
@@ -74,9 +74,18 @@ defmodule YtSearch.Subtitle do
             end
           )
         end)
-        |> Enum.map(fn subtitle ->
-          Repo.delete(subtitle)
-          1
+        |> Enum.chunk_every(10)
+        |> Enum.map(fn chunk ->
+          chunk
+          |> Enum.map(fn subtitle ->
+            Repo.delete(subtitle)
+            1
+          end)
+          |> then(fn count ->
+            :timer.sleep(1500)
+            count
+          end)
+          |> Enum.sum()
         end)
         |> Enum.sum()
 
