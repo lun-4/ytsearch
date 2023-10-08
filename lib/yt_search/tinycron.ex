@@ -22,7 +22,7 @@ defmodule YtSearch.Tinycron do
 
   @impl true
   def handle_info(:work, %{module: module} = state) do
-    Logger.debug("running #{inspect(state.module)}")
+    Logger.info("tinycron: running #{inspect(state.module)}")
     module.tick()
     schedule_work(state)
     {:noreply, state}
