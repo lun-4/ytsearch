@@ -51,8 +51,15 @@ defmodule YtSearch.Mp4Link do
         # if youtube gives expiry timestamp, use it so that
         # (inserted_at + @ttl) = expiry
         # guaranteeding we expire it at the same time youtube expires it
+        # if inserted_at + ttl should equal expiry
+        # then inserted_at = expiry - ttl
         value
-        |> Map.put(:inserted_at, DateTime.from_unix!(expires_at) |> DateTime.to_naive())
+        |> Map.put(
+          :inserted_at,
+          DateTime.from_unix!(expires_at)
+          |> DateTime.to_naive()
+          |> NaiveDateTime.add(-ttl_seconds(), :second)
+        )
       else
         value
       end
