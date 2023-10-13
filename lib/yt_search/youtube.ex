@@ -298,6 +298,9 @@ defmodule YtSearch.Youtube do
             Logger.warning("it's a premiere livestream! #{message}")
             {:error, :video_unavailable}
 
+          String.contains?(message, "This live stream recording is not available") ->
+            {:error, :video_unavailable}
+
           String.contains?(message, "This age-restricted video cannot be watched") ->
             Logger.warning("this video is age restricted!")
             {:error, :video_unavailable}
