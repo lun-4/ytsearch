@@ -573,5 +573,23 @@ defmodule YtSearchWeb.SlotTest do
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
     assert fetched_slot.expires_at > slot.expires_at
+
+    slot =
+      slot
+      |> Ecto.Changeset.change(
+        used_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-61, :second)
+          |> NaiveDateTime.truncate(:second)
+      )
+      |> YtSearch.Repo.update!()
+
+    conn =
+      build_conn()
+      |> get(~p"/a/4/qr/#{slot.id}")
+
+    assert conn.status == 200
+    fetched_slot = Slot.fetch_by_id(slot.id)
+    assert fetched_slot.expires_at > slot.expires_at
   end
 end

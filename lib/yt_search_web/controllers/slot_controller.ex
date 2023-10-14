@@ -33,6 +33,30 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
+  def refresh(conn, %{"slot_id" => slot_id_query}) do
+    {slot_id, _} = slot_id_query |> Integer.parse()
+
+    case Slot.fetch_by_id(slot_id) do
+      nil ->
+        Logger.warning("unavailable to refresh (slot not found)")
+
+        conn
+        |> put_status(404)
+        |> assign(:slot, nil)
+        |> render("slot.json")
+
+      slot ->
+        if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <= -60 do
+          slot
+          |> Slot.refresh()
+        end
+
+        conn
+        |> put_status(200)
+        |> json(%{})
+    end
+  end
+
   @error_video_directory Path.join(:code.priv_dir(:yt_search), "static/redirect_errors")
 
   defp show_error_video(conn, error_code) do
