@@ -5,6 +5,15 @@ defmodule YtSearch.Repo do
     pool_size: 20,
     loggers: [YtSearch.Repo.Instrumenter, Ecto.LogEntry]
 
+  def janitor_repo_id do
+    if Mix.env() == :test do
+      # required due to SQL sandbox
+      __MODULE__
+    else
+      :janitor_repo
+    end
+  end
+
   defmodule Instrumenter do
     use Prometheus.EctoInstrumenter
 

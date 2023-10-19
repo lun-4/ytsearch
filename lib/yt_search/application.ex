@@ -15,6 +15,11 @@ defmodule YtSearch.Application do
         YtSearchWeb.Telemetry,
         # Start the Ecto repository
         YtSearch.Repo,
+        Supervisor.child_spec(
+          {YtSearch.Repo, name: :janitor_repo},
+          id: YtSearch.JanitorRepo
+        ),
+
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
         # Start Finch

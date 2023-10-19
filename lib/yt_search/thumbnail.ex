@@ -66,13 +66,15 @@ defmodule YtSearch.Thumbnail do
 
       now = SlotUtilities.generate_unix_timestamp_integer()
 
+      Repo.put_dynamic_repo(Repo.janitor_repo_id())
+
       deleted_count =
         from(s in Thumbnail,
           where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
-          limit: 200
+          limit: 5000
         )
         |> Repo.all()
-        |> Enum.chunk_every(10)
+        |> Enum.chunk_every(30)
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn thumb ->
@@ -81,7 +83,7 @@ defmodule YtSearch.Thumbnail do
           end)
           |> then(fn results ->
             # let other ops run for a while
-            :timer.sleep(2000)
+            :timer.sleep(1000)
             results
           end)
           |> Enum.sum()
@@ -89,6 +91,7 @@ defmodule YtSearch.Thumbnail do
         |> Enum.sum()
 
       Logger.info("deleted #{deleted_count} thumbnails")
+      deleted_count
     end
   end
 

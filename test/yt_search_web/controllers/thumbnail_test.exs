@@ -39,7 +39,7 @@ defmodule YtSearchWeb.ThumbnailTest do
 
     fetched = Thumbnail.fetch(@youtube_id)
     assert fetched.data == thumb.data
-    Thumbnail.Janitor.tick()
+    assert Thumbnail.Janitor.tick() > 0
     nil = Thumbnail.fetch(@youtube_id)
   end
 
