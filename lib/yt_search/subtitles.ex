@@ -47,6 +47,8 @@ defmodule YtSearch.Subtitle do
     def tick() do
       Logger.info("cleaning subtitles...")
 
+      Repo.put_dynamic_repo(Repo.janitor_repo_id())
+
       expiry_time =
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-Subtitle.ttl_seconds())
