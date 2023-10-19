@@ -39,7 +39,7 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
             where: fragment("unixepoch(?)", s.expires_at) > ^now,
             select: count("*")
           )
-          |> Repo.one()
+          |> Repo.replica().one()
 
         {slot_type, count}
       end)

@@ -22,7 +22,7 @@ defmodule YtSearch.Thumbnail do
   @spec fetch(String.t()) :: Thumbnail.t()
   def fetch(id) do
     query = from s in __MODULE__, where: s.id == ^id, select: s
-    Repo.one(query)
+    Repo.replica().one(query)
   end
 
   def changeset(%__MODULE__{} = slot, params) do
@@ -71,7 +71,7 @@ defmodule YtSearch.Thumbnail do
           where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
           limit: 5000
         )
-        |> Repo.all()
+        |> Repo.replica().all()
         |> Enum.chunk_every(100)
         |> Enum.map(fn chunk ->
           chunk
@@ -95,7 +95,7 @@ defmodule YtSearch.Thumbnail do
 
   def refresh(id) do
     query = from s in __MODULE__, where: s.id == ^id, select: s
-    slot = Repo.one(query)
+    slot = Repo.replica().one(query)
 
     unless slot == nil do
       Logger.info("refreshed thumbnail id #{id}")

@@ -33,7 +33,7 @@ defmodule YtSearch.SearchSlot do
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.one(query)
+    Repo.replica().one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -52,7 +52,7 @@ defmodule YtSearch.SearchSlot do
   def fetch_by_query(query) do
     query = from s in __MODULE__, where: s.query == ^(query |> internal_id_for), select: s
 
-    Repo.one(query)
+    Repo.replica().one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -106,7 +106,7 @@ defmodule YtSearch.SearchSlot do
 
     Repo.transaction(fn ->
       query = from s in __MODULE__, where: s.query == ^search_query, select: s
-      search_slot = Repo.one(query)
+      search_slot = Repo.replica().one(query)
 
       if search_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)

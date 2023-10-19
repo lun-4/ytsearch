@@ -24,7 +24,7 @@ defmodule YtSearch.Mp4Link do
   def fetch_by_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    case Repo.one(query) do
+    case Repo.replica().one(query) do
       nil ->
         {:ok, nil}
 

@@ -21,7 +21,7 @@ defmodule YtSearch.ChannelSlot do
   def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.one(query)
+    Repo.replica().one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -29,7 +29,7 @@ defmodule YtSearch.ChannelSlot do
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.one(query)
+    Repo.replica().one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -49,7 +49,7 @@ defmodule YtSearch.ChannelSlot do
 
     Repo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-      channel_slot = Repo.one(query)
+      channel_slot = Repo.replica().one(query)
 
       if channel_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)

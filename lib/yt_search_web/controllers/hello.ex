@@ -41,7 +41,7 @@ defmodule YtSearchWeb.HelloController do
     [YtSearch.Slot, YtSearch.ChannelSlot]
     |> Enum.map(fn module ->
       from(s in module, select: s, where: s.keepalive)
-      |> Repo.all()
+      |> Repo.replica().all()
     end)
     |> List.flatten()
   end
