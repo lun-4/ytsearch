@@ -22,13 +22,21 @@ defmodule YtSearch.Repo do
   end
 
   for repo <- @replicas do
+    default_dynamic_repo =
+      if Mix.env() == :test do
+        YtSearch.Repo
+      else
+        repo
+      end
+
     defmodule repo do
       use Ecto.Repo,
         otp_app: :yt_search,
         adapter: Ecto.Adapters.SQLite3,
         pool_size: 1,
         loggers: [YtSearch.Repo.Instrumenter, Ecto.LogEntry],
-        read_only: true
+        read_only: true,
+        default_dynamic_repo: default_dynamic_repo
     end
   end
 

@@ -20,8 +20,7 @@ for repo <- repos do
     pool_size: 1,
     queue_target: 10000,
     queue_timeout: 10000,
-    pool: Ecto.Adapters.SQL.Sandbox,
-    default_dynamic_repo: YtSearch.Repo
+    pool: Ecto.Adapters.SQL.Sandbox
 end
 
 # We don't run a server during test. If one is required,
