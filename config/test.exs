@@ -5,12 +5,24 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :yt_search, YtSearch.Repo,
-  database: Path.expand("../yt_search_test.db", Path.dirname(__ENV__.file)),
-  pool_size: 1,
-  queue_target: 10000,
-  queue_timeout: 10000,
-  pool: Ecto.Adapters.SQL.Sandbox
+
+repos = [
+  YtSearch.Repo,
+  YtSearch.Repo.Replica1,
+  YtSearch.Repo.Replica2,
+  YtSearch.Repo.Replica3,
+  YtSearch.Repo.Replica4
+]
+
+for repo <- repos do
+  config :yt_search, repo,
+    database: Path.expand("../yt_search_test.db", Path.dirname(__ENV__.file)),
+    pool_size: 1,
+    queue_target: 10000,
+    queue_timeout: 10000,
+    pool: Ecto.Adapters.SQL.Sandbox,
+    default_dynamic_repo: YtSearch.Repo
+end
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

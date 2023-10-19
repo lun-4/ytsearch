@@ -49,9 +49,19 @@ if config_env() == :prod do
       For example: /etc/yt_search/yt_search.db
       """
 
-  config :yt_search, YtSearch.Repo,
-    database: database_path,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "1")
+  repos = [
+    YtSearch.Repo,
+    YtSearch.Repo.Replica1,
+    YtSearch.Repo.Replica2,
+    YtSearch.Repo.Replica3,
+    YtSearch.Repo.Replica4
+  ]
+
+  for repo <- repos do
+    config :yt_search, repo,
+      database: database_path,
+      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "1")
+  end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
