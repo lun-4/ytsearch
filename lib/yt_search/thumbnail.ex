@@ -66,8 +66,6 @@ defmodule YtSearch.Thumbnail do
 
       now = SlotUtilities.generate_unix_timestamp_integer()
 
-      Repo.put_dynamic_repo(Repo.janitor_repo_id())
-
       deleted_count =
         from(s in Thumbnail,
           where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
