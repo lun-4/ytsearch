@@ -47,7 +47,7 @@ config :hammer,
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 
 repos = [
-YtSearch.Repo,
+  YtSearch.Repo,
   YtSearch.Repo.Replica1,
   YtSearch.Repo.Replica2,
   YtSearch.Repo.Replica3,
@@ -56,7 +56,7 @@ YtSearch.Repo,
 
 for repo <- repos do
   config :yt_search, repo,
-    cache_size: -128_000,
+    cache_size: -32_000,
     auto_vacuum: :incremental,
     telemetry_event: [YtSearch.Repo.Instrumenter]
 end
