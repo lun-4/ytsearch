@@ -15,6 +15,11 @@ defmodule YtSearch.Application do
         YtSearchWeb.Telemetry,
         # Start the Ecto repository
         YtSearch.Repo,
+        YtSearch.Repo.Replica1,
+        YtSearch.Repo.Replica2,
+        YtSearch.Repo.Replica3,
+        YtSearch.Repo.Replica4,
+
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
         # Start Finch

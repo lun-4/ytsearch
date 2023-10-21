@@ -41,7 +41,7 @@ defmodule YtSearchWeb.HelloController do
     [YtSearch.Slot, YtSearch.ChannelSlot]
     |> Enum.map(fn module ->
       from(s in module, select: s, where: s.keepalive)
-      |> Repo.all()
+      |> Repo.replica().all()
     end)
     |> List.flatten()
   end
@@ -61,6 +61,20 @@ defmodule YtSearchWeb.HelloController do
     {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
   end
 
+  defp unkeepalive_thumbnails(old_keepalived_slots) do
+    # thumbnails follow different logic from slots, unkeepalive them prematurely
+    # (slots are more important to keep alive mid-trending-tab-refresh than thumbs)
+
+    old_keepalived_slots
+    |> Enum.each(fn slot ->
+      from(s in YtSearch.Thumbnail,
+        update: [set: [keepalive: false]],
+        where: s.id == ^slot.youtube_id
+      )
+      |> Repo.update_all([])
+    end)
+  end
+
   defp do_fetch_trending_tab() do
     url = "https://www.youtube.com/feed/trending"
 
@@ -68,6 +82,7 @@ defmodule YtSearchWeb.HelloController do
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
           old_keepalived_slots = keepalived_slots()
+          unkeepalive_thumbnails(old_keepalived_slots)
           {:ok, data} = upstream_trending_tab()
 
           Cachex.put(

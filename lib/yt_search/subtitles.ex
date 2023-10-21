@@ -21,7 +21,7 @@ defmodule YtSearch.Subtitle do
   @spec fetch(String.t()) :: [Subtitle.t()]
   def fetch(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-    Repo.all(query)
+    Repo.replica().all(query)
   end
 
   @spec insert(String.t(), String.t(), String.t() | nil) :: Subtitle.t()
@@ -60,7 +60,7 @@ defmodule YtSearch.Subtitle do
               ^expiry_time,
           limit: 1000
         )
-        |> Repo.all()
+        |> Repo.replica().all()
         |> Enum.map(fn subtitle ->
           # TODO: fix subtitle table
           # this hack is done because somehow id is nil,

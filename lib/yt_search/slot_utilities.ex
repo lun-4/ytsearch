@@ -77,7 +77,7 @@ defmodule YtSearch.SlotUtilities do
     random_id = :rand.uniform(module.urls())
     query = from s in module, where: s.id == ^random_id, select: s
 
-    case Repo.one(query) do
+    case Repo.replica().one(query) do
       nil ->
         {:ok, random_id}
 
@@ -126,7 +126,7 @@ defmodule YtSearch.SlotUtilities do
         ],
         limit: 50
 
-    Repo.all(query)
+    Repo.replica().all(query)
     |> then(fn
       [] ->
         raise "we should have already generated an entity id here"
@@ -150,7 +150,7 @@ defmodule YtSearch.SlotUtilities do
         ],
         limit: 50
 
-    Repo.all(query)
+    Repo.replica().all(query)
     |> then(fn
       [] ->
         raise "we should have already generated an entity id here"
@@ -195,7 +195,7 @@ defmodule YtSearch.SlotUtilities do
       select: s,
       limit: 1
     )
-    |> Repo.all()
+    |> Repo.replica().all()
     |> then(fn
       [] ->
         from(s in module,
@@ -206,7 +206,7 @@ defmodule YtSearch.SlotUtilities do
           ],
           limit: 5
         )
-        |> Repo.all()
+        |> Repo.replica().all()
         |> Enum.map(fn slot ->
           slot
           |> module.changeset(%{

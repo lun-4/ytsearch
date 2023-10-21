@@ -1,11 +1,22 @@
 import Config
 
 # Configure your database
-config :yt_search, YtSearch.Repo,
-  database: Path.expand("../yt_search_dev.db", Path.dirname(__ENV__.file)),
-  pool_size: 1,
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true
+
+repos = [
+  YtSearch.Repo,
+  YtSearch.Repo.Replica1,
+  YtSearch.Repo.Replica2,
+  YtSearch.Repo.Replica3,
+  YtSearch.Repo.Replica4
+]
+
+for repo <- repos do
+  config :yt_search, repo,
+    database: Path.expand("../yt_search_dev.db", Path.dirname(__ENV__.file)),
+    pool_size: 1,
+    stacktrace: true,
+    show_sensitive_data_on_connection_error: true
+end
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
