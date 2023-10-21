@@ -3,6 +3,9 @@ defmodule YtSearch.MetadataExtractor.Worker do
   require Logger
 
   alias YtSearch.Youtube
+  alias YtSearch.Chapters
+
+  @valid_types [:subtitles, :mp4_link, :sponsorblock_segments, :chapters]
 
   def start_link(type, youtube_id, opts \\ []) do
     if String.starts_with?(youtube_id, "https://") do
@@ -32,6 +35,15 @@ defmodule YtSearch.MetadataExtractor.Worker do
     GenServer.call(worker, :sponsorblock_segments, @default_timeout)
   end
 
+  def chapters(youtube_id) when is_binary(youtube_id) do
+    worker = worker_for(:chapters, youtube_id)
+    chapters(worker)
+  end
+
+  def chapters(worker) when is_pid(worker) do
+    GenServer.call(worker, :chapters, @default_timeout)
+  end
+
   def mp4_link(youtube_id) when is_binary(youtube_id) do
     worker = worker_for(:mp4_link, youtube_id)
     mp4_link(worker)
@@ -41,7 +53,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
     GenServer.call(worker, :mp4_link, @default_timeout)
   end
 
-  def worker_for(type, youtube_id) when type in [:subtitles, :mp4_link, :sponsorblock_segments] do
+  def worker_for(type, youtube_id) when type in @valid_types do
     worker =
       case DynamicSupervisor.start_child(
              YtSearch.MetadataSupervisor,
@@ -80,13 +92,14 @@ defmodule YtSearch.MetadataExtractor.Worker do
        youtube_id: youtube_id,
        mp4_link: nil,
        subtitle: nil,
+       chapters: nil,
        last_reply: System.monotonic_time(:second),
        will_die?: false
      }}
   end
 
   @impl true
-  def handle_call(t, from, state) when t in [:mp4_link, :subtitles, :sponsorblock_segments] do
+  def handle_call(t, from, state) when t in @valid_types do
     handle_request(t, from, state)
   end
 
@@ -201,6 +214,12 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
+  defp process_metadata(meta, %{youtube_id: youtube_id, type: :chapters} = _state) do
+    with {:ok, chapters} <- Youtube.extract_chapters(meta) do
+      {:ok, Chapters.insert(youtube_id, chapters)}
+    end
+  end
+
   alias YtSearch.Sponsorblock.Segments
 
   defp process_metadata(
@@ -224,6 +243,11 @@ defmodule YtSearch.MetadataExtractor.Worker do
   defp process_error(error, %{youtube_id: youtube_id, type: :sponsorblock_segments} = _state) do
     Logger.error("failed to fetch sponsorblock_segments: #{inspect(error)}. setting it as nil")
     {:ok, Segments.insert(youtube_id, nil)}
+  end
+
+  defp process_error(error, %{youtube_id: youtube_id, type: :chapters} = _state) do
+    Logger.error("failed to fetch chapters: #{inspect(error)}. setting it as nil")
+    {:ok, Chapters.insert(youtube_id, nil)}
   end
 
   defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = _state) do

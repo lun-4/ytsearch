@@ -534,6 +534,10 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def extract_chapters(meta) do
+    {:ok, meta["chapters"]}
+  end
+
   def video_metadata(youtube_id) do
     piped_call(:streams, &Piped.streams/2, youtube_id, nil)
   end

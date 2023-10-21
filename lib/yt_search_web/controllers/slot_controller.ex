@@ -4,6 +4,7 @@ defmodule YtSearchWeb.SlotController do
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
   alias YtSearch.Subtitle
+  alias YtSearch.Chapters
   alias YtSearchWeb.UserAgent
 
   def fetch_video(conn, %{"slot_id" => slot_id_query}) do
@@ -174,14 +175,21 @@ defmodule YtSearchWeb.SlotController do
         do_sponsorblock(slot) |> Jason.decode!()
       end)
 
+    chapters_task =
+      Task.async(fn ->
+        do_chapters(slot) |> Jason.decode!()
+      end)
+
     subtitle_data = Task.await(subtitle_task)
     sponsorblock_data = Task.await(sponsorblock_task)
+    chapters_data = Task.await(chapters_task)
 
     conn
     |> json(%{
       duration: slot.video_duration,
       subtitle_data: subtitle_data,
-      sponsorblock_segments: sponsorblock_data
+      sponsorblock_segments: sponsorblock_data,
+      chapters: chapters_data
     })
   end
 
@@ -270,6 +278,19 @@ defmodule YtSearchWeb.SlotController do
 
       %Segments{} = segments ->
         segments.segments_json
+    end
+  end
+
+  defp do_chapters(slot) do
+    case Chapters.fetch(slot.youtube_id) do
+      nil ->
+        with {:ok, chapters} <-
+               YtSearch.MetadataExtractor.Worker.chapters(slot.youtube_id) do
+          chapters.chapter_data
+        end
+
+      %Chapters{} = chapters ->
+        chapters.chapter_data
     end
   end
 end
