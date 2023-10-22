@@ -112,7 +112,15 @@ defmodule YtSearch.Mp4Link do
       mp4_link: nil,
       error_reason: reason_string
     }
-    |> Repo.insert!()
+    |> Repo.insert!(
+      on_conflict: [
+        set: [
+          youtube_metadata: nil,
+          mp4_link: nil,
+          error_reason: reason_string
+        ]
+      ]
+    )
   end
 
   @spec maybe_fetch_upstream(Slot.t()) :: {:ok, __MODULE__.t()}
