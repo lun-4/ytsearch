@@ -7,23 +7,19 @@ defmodule YtSearch.SimpleRegistry do
   end
 
   def get(registry, key) do
-    IO.puts("get #{inspect(key)}")
     GenServer.call(registry, {:get, key})
   end
 
   def remove(registry, key) do
-    IO.puts("remove #{inspect(key)}")
     GenServer.call(registry, {:remove, key})
   end
 
   @doc "only remove if pids match"
   def remove(registry, key, pid) do
-    IO.puts("remove #{inspect(key)} #{inspect(pid)}")
     GenServer.call(registry, {:remove, key, pid})
   end
 
   def put(registry, key, pid) do
-    IO.puts("put #{inspect(key)} #{inspect(pid)}")
     GenServer.call(registry, {:put, key, pid})
   end
 
@@ -110,8 +106,8 @@ defmodule YtSearch.SimpleRegistry do
     {key, new_refs} = Map.pop(state.refs, ref)
     {pid, new_data} = Map.pop(state.data, key)
 
-    Logger.debug(
-      "simple registry #{inspect(key)}, #{inspect(pid)} is down, reason #{inspect(reason)}"
+    Logger.info(
+      "simple registry: #{inspect(key)}, #{inspect(pid)} is down, reason #{inspect(reason)}"
     )
 
     {:noreply, %{state | refs: new_refs, data: new_data}}
@@ -119,7 +115,7 @@ defmodule YtSearch.SimpleRegistry do
 
   @impl true
   def handle_info(msg, state) do
-    Logger.debug("Unexpected message; #{inspect(msg)}")
+    Logger.warning("Unexpected message; #{inspect(msg)}")
     {:noreply, state}
   end
 end
