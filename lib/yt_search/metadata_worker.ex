@@ -17,6 +17,7 @@ defmodule YtSearch.Metadata.Worker do
              YtSearch.MetadataSupervisor,
              %{
                id: __MODULE__,
+               restart: :transient,
                start:
                  {__MODULE__, :start_link,
                   [
