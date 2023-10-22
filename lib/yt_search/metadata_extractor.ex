@@ -164,13 +164,6 @@ defmodule YtSearch.MetadataExtractor.Worker do
     {:stop, {:shutdown, :intended_suicide}, state}
   end
 
-  @impl true
-  def terminate(reason, state) do
-    Logger.warning(
-      "PROBE: Extractor Terminate. self=#{inspect(self())}, reason=#{inspect(reason)} state=#{inspect(state)}"
-    )
-  end
-
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
     wanted_video_result = Youtube.extract_valid_streams(meta["videoStreams"])
 

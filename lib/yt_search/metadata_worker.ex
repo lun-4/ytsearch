@@ -75,12 +75,6 @@ defmodule YtSearch.Metadata.Worker do
 
   @impl true
   def handle_info({:suicide, old_last_reply}, %{last_reply: new_last_reply} = state) do
-    if old_last_reply != new_last_reply do
-      Logger.error(
-        "PROBE #{inspect(self())}: intended_suicide but last_reply got updated. was #{old_last_reply}, now is #{new_last_reply}"
-      )
-    end
-
     {:stop, {:shutdown, :intended_suicide}, state}
   end
 
