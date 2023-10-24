@@ -3,6 +3,7 @@ defmodule YtSearchWeb.ThumbnailTest do
 
   alias YtSearch.Youtube
   alias YtSearch.Thumbnail
+  alias YtSearch.Slot
   alias YtSearch.Repo
   alias YtSearch.SlotUtilities
 
@@ -67,5 +68,20 @@ defmodule YtSearchWeb.ThumbnailTest do
 
     Thumbnail.Janitor.tick()
     assert Thumbnail.fetch(@youtube_id) != nil
+  end
+
+  test "fetches thumbnails for a single slot id", %{conn: conn} do
+    slot = Slot.create(@youtube_id, 3600)
+
+    {:ok, thumb} =
+      Youtube.Thumbnail.maybe_download_thumbnail(@youtube_id, "https://i.ytimg.com", [])
+
+    assert thumb.id == @youtube_id
+
+    conn =
+      conn
+      |> get(~p"/api/v4/tn/#{slot.id}")
+
+    assert conn.status == 200
   end
 end

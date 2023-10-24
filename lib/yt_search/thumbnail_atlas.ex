@@ -21,10 +21,20 @@ defmodule YtSearch.Thumbnail.Atlas do
   defp montage,
     do: Application.fetch_env!(:yt_search, YtSearch.ThumbnailAtlas)[:montage_command]
 
+  def assemble_one(slot) do
+    [slot]
+    |> internal_assemble
+  end
+
   def do_assemble(search_slot) do
+    search_slot
+    |> SearchSlot.fetched_slots_from_search()
+    |> internal_assemble()
+  end
+
+  defp internal_assemble(slots) do
     thumbnail_paths =
-      search_slot
-      |> SearchSlot.fetched_slots_from_search()
+      slots
       |> Enum.map(fn slot ->
         # for each slot, attach to its thumbnail mutex, so if
         # theres thumbnails still being downloaded, we wait for
