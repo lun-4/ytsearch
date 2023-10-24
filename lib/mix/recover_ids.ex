@@ -1,6 +1,5 @@
 defmodule Mix.Tasks.YtSearch.RecoverIds do
   use Mix.Task
-  import Ecto.Query
 
   @requirements ["app.start"]
 

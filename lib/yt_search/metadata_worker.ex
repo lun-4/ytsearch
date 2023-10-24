@@ -74,7 +74,7 @@ defmodule YtSearch.Metadata.Worker do
   end
 
   @impl true
-  def handle_info({:suicide, old_last_reply}, %{last_reply: new_last_reply} = state) do
+  def handle_info({:suicide, _old_reply}, state) do
     {:stop, {:shutdown, :intended_suicide}, state}
   end
 
