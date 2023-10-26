@@ -21,8 +21,6 @@ defmodule YtSearch.Repo.Migrations.CreateSlotsV3 do
 
     create index(:slots_v3, ["unixepoch(expires_at)"])
     create index(:slots_v3, ["unixepoch(used_at)"])
-    # TODO do i need index on keepalive?
-    # create index(:slots_v3, ["keepalive"])
 
     create table(:channel_slots_v3) do
       add(:youtube_id, :string)

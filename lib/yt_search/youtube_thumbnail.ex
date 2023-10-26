@@ -11,9 +11,6 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   def fetch_piped_in_background(youtube_id, data, opts) do
     if data["thumbnail"] != nil do
-      # TODO wrap up in a supervisor?
-      # reasons for that: handle network failures
-      # reasons against: moar codes, also need to fast fail after some amnt of retries
       Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
         maybe_download_thumbnail(
           youtube_id,

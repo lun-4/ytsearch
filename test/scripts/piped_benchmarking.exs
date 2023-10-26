@@ -86,7 +86,7 @@ defmodule YtSearch.PipedBenchmarking do
         piped_call(&Piped.streams/2, host, youtube_id)
       end)
 
-    IO.puts("streams w/ subtitles (TODO fetch underlying sub)")
+    IO.puts("full streams")
     IO.inspect(latencies)
   end
 end
