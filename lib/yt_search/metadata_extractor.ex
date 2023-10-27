@@ -282,24 +282,20 @@ defmodule YtSearch.MetadataExtractor.Worker do
       if result != nil do
         {:reply, result, new_state}
       else
-        with {:ok, meta} <- YtSearch.Metadata.Worker.fetch_for(state.youtube_id),
-             {:ok, result} <- process_metadata(meta, state) do
-          # TODO remove copypaste
-          new_state =
-            new_state
-            |> Map.put(state.type, {:ok, result})
+        reply =
+          with {:ok, meta} <- YtSearch.Metadata.Worker.fetch_for(state.youtube_id),
+               {:ok, result} <- process_metadata(meta, state) do
+            {:ok, result}
+          else
+            value ->
+              process_error(value, state)
+          end
 
-          {:reply, {:ok, result}, new_state}
-        else
-          value ->
-            reply = process_error(value, state)
+        new_state =
+          new_state
+          |> Map.put(state.type, reply)
 
-            new_state =
-              new_state
-              |> Map.put(state.type, reply)
-
-            {:reply, reply, new_state}
-        end
+        {:reply, reply, new_state}
       end
     else
       {:reply, {:error, :wrong_worker_type}, state}
