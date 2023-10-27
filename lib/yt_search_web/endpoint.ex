@@ -67,40 +67,21 @@ defmodule YtSearchWeb.Endpoint do
     end
 
     defp do_call(conn) do
-      values = get_resp_header(conn, "content-type")
+      content_types = get_resp_header(conn, "content-type")
       [x_request_id] = get_resp_header(conn, "x-request-id")
 
-      # TODO convert this to with
-      case values do
-        [type] ->
-          case type do
-            "application/json" <> _whatever ->
-              new_body =
-                case conn.resp_body
-                     |> Jason.decode() do
-                  {:ok, body} ->
-                    cond do
-                      is_map(body) ->
-                        body
-                        |> Map.put("__x_request_id", x_request_id)
-
-                      true ->
-                        body
-                    end
-                    |> Jason.encode!()
-
-                  _ ->
-                    conn.resp_body
-                end
-
-              conn
-              |> resp(conn.status, new_body)
-
-            _ ->
-              conn
-          end
-
-        _ ->
+      with [type] <- content_types,
+           "application/json" <> _whatever <- type,
+           {:ok, body} <- conn.resp_body |> Jason.decode(),
+           true <- is_map(body),
+           {:ok, new_body} <-
+             body
+             |> Map.put("__x_request_id", x_request_id)
+             |> Jason.encode() do
+        conn
+        |> resp(conn.status, new_body)
+      else
+        _value ->
           conn
       end
     end
