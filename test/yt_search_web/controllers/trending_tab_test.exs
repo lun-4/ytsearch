@@ -59,10 +59,15 @@ defmodule YtSearchWeb.TrendingTabTest do
       search_slot_id = resp_json["trending_tab"]["slot_id"]
 
       _ = SearchSlot.fetch_by_id(search_slot_id)
-      # TODO set expires_at on search slot |> Ecto.Changeset.change(
-      #  inserted_at: slot.inserted_at |> NaiveDateTime.add(-(SearchSlot.ttl() + 1), :second)
-      # )
-      # |> YtSearch.Repo.update!()
+
+      slot
+      |> Ecto.Changeset.change(
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-10, :second)
+          |> NaiveDateTime.truncate(:second)
+      )
+      |> YtSearch.Repo.update!()
 
       search_slot_after = SearchSlot.fetch_by_id(search_slot_id)
       assert search_slot_after != nil
