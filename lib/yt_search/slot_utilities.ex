@@ -2,7 +2,6 @@ defmodule YtSearch.SlotUtilities do
   import Ecto.Query
   require Logger
   alias YtSearch.Repo
-  alias YtSearch.TTL
 
   defp expiration_for(%{} = spec) do
     NaiveDateTime.utc_now()
