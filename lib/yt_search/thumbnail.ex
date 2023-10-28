@@ -69,10 +69,10 @@ defmodule YtSearch.Thumbnail do
       deleted_count =
         from(s in Thumbnail,
           where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
-          limit: 2000
+          limit: 3000
         )
         |> Repo.replica().all()
-        |> Enum.chunk_every(30)
+        |> Enum.chunk_every(25)
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn thumb ->
