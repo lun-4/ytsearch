@@ -96,9 +96,21 @@ defmodule YtSearch.Youtube.Thumbnail do
         File.rm(temporary_path)
         {:ok, Thumbnail.insert(youtube_id, content_type, final_body, opts)}
       else
+        input_image = Image.from_binary!(body)
+
         thumb =
-          Image.from_binary!(body)
-          |> Image.add_alpha!(:transparent)
+          input_image
+          |> Image.add_alpha(:transparent)
+          |> then(fn
+            {:ok, image} ->
+              image
+
+            {:error, "Image already has an alpha band"} ->
+              input_image
+
+            {:error, err} ->
+              raise err
+          end)
           |> Image.thumbnail!(256, height: 144)
           |> Image.embed!(256, 144, background_transparency: 0, x: :center, y: :center)
           |> Image.write!(:memory, suffix: ".png")
