@@ -113,7 +113,7 @@ defmodule YtSearch.Youtube.Thumbnail do
           end)
           |> Image.thumbnail!(256, height: 144)
           |> Image.embed!(256, 144, background_transparency: 0, x: :center, y: :center)
-          |> Image.write!(:memory, suffix: ".png")
+          |> Image.write!(:memory, suffix: ".webp")
 
         {:ok, Thumbnail.insert(youtube_id, content_type, thumb, opts)}
       end
