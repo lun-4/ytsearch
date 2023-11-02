@@ -71,7 +71,7 @@ defmodule YtSearch.Thumbnail do
           where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
           limit: 14000
         )
-        |> Repo.replica().all()
+        |> Repo.ThumbnailReplica.all()
         |> Enum.chunk_every(25)
         |> Enum.map(fn chunk ->
           ids = chunk |> Enum.map(fn t -> t.id end)
