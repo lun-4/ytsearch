@@ -5,7 +5,7 @@ defmodule YtSearch.Repo.Janitor do
   require Logger
   alias YtSearch.Repo
 
-  @page_count 500
+  @page_count 800
 
   def tick() do
     Logger.info("running vacuum at #{@page_count} pages")
