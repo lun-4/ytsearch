@@ -10,18 +10,22 @@ defmodule YtSearch.Repo do
     pool_size: 1,
     loggers: [YtSearch.Repo.Instrumenter, Ecto.LogEntry]
 
-  @replicas [
+  @read_replicas [
     YtSearch.Repo.Replica1,
     YtSearch.Repo.Replica2,
     YtSearch.Repo.Replica3,
-    YtSearch.Repo.Replica4
+    YtSearch.Repo.Replica4,
+    YtSearch.Repo.Replica5,
+    YtSearch.Repo.Replica6,
+    YtSearch.Repo.Replica7,
+    YtSearch.Repo.Replica8
   ]
 
   def replica do
-    Enum.random(@replicas)
+    Enum.random(@read_replicas)
   end
 
-  for repo <- @replicas do
+  for repo <- @read_replicas do
     default_dynamic_repo =
       if Mix.env() == :test do
         YtSearch.Repo

@@ -19,6 +19,10 @@ defmodule YtSearch.Application do
         YtSearch.Repo.Replica2,
         YtSearch.Repo.Replica3,
         YtSearch.Repo.Replica4,
+        YtSearch.Repo.Replica5,
+        YtSearch.Repo.Replica6,
+        YtSearch.Repo.Replica7,
+        YtSearch.Repo.Replica8,
 
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
