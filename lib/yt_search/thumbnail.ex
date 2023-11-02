@@ -81,7 +81,7 @@ defmodule YtSearch.Thumbnail do
             |> Repo.delete_all()
 
           # let other ops run for a while
-          :timer.sleep(500)
+          :timer.sleep(1000)
           count
         end)
         |> Enum.sum()
