@@ -48,6 +48,7 @@ defmodule YtSearch.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:mutex, "~>1.3"},
       {:mogrify, "~> 0.9.3"},
+      {:image, "~> 0.37"},
       {:temp, "~> 0.4"},
       {:cachex, "~> 3.6"},
       {:prometheus, "~> 4.6"},

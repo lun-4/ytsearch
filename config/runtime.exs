@@ -58,7 +58,8 @@ if config_env() == :prod do
     YtSearch.Repo.Replica5,
     YtSearch.Repo.Replica6,
     YtSearch.Repo.Replica7,
-    YtSearch.Repo.Replica8
+    YtSearch.Repo.Replica8,
+    YtSearch.Repo.ThumbnailReplica
   ]
 
   for repo <- repos do

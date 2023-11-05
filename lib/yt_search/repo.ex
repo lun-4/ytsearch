@@ -21,11 +21,16 @@ defmodule YtSearch.Repo do
     YtSearch.Repo.Replica8
   ]
 
+  # single purpose
+  @dedicated_replicas [
+    YtSearch.Repo.ThumbnailReplica
+  ]
+
   def replica do
     Enum.random(@read_replicas)
   end
 
-  for repo <- @read_replicas do
+  for repo <- @read_replicas ++ @dedicated_replicas do
     default_dynamic_repo =
       if Mix.env() == :test do
         YtSearch.Repo

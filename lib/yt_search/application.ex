@@ -23,6 +23,7 @@ defmodule YtSearch.Application do
         YtSearch.Repo.Replica6,
         YtSearch.Repo.Replica7,
         YtSearch.Repo.Replica8,
+        YtSearch.Repo.ThumbnailReplica,
 
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
@@ -71,8 +72,10 @@ defmodule YtSearch.Application do
         # Tinycron.new(YtSearch.Slot.Janitor, every: 10 * 60, jitter: (-3 * 60)..(3 * 60)),
         Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
         Tinycron.new(YtSearch.Mp4Link.Janitor, every: 10 * 60, jitter: (-2 * 60)..(5 * 60)),
-        Tinycron.new(YtSearch.Thumbnail.Janitor, every: 10 * 60, jitter: (-2 * 60)..(4 * 60)),
+        Tinycron.new(YtSearch.Thumbnail.Janitor, every: 3 * 60, jitter: (-2 * 60)..(2 * 60)),
         Tinycron.new(YtSearch.Repo.Analyzer, every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60)),
+        Tinycron.new(YtSearch.Repo.Janitor, every: 60, jitter: -30..30),
+        Tinycron.new(YtSearch.Repo.FreelistMeter, every: 30, jitter: -10..30),
         Tinycron.new(YtSearch.Chapters.Cleaner, every: 1 * 60 * 60, jitter: (-20 * 60)..(20 * 60))
       ]
     else
@@ -105,6 +108,7 @@ defmodule YtSearch.Application do
     YtSearch.SlotUtilities.UsageMeter.Gauge.setup()
     YtSearchWeb.HelloController.BuildReporter.setup()
     YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
+    YtSearch.Repo.FreelistMeter.Gauge.setup()
 
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()

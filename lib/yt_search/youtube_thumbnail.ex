@@ -57,6 +57,8 @@ defmodule YtSearch.Youtube.Thumbnail do
     end)
   end
 
+  @mogrify false
+
   defp do_download_thumbnail(youtube_id, url, opts) do
     Logger.debug("thumbnail requesting #{url}")
 
@@ -73,25 +75,48 @@ defmodule YtSearch.Youtube.Thumbnail do
       content_type = Tesla.get_header(response, "content-type")
       body = response.body
 
-      temporary_path = Temp.path!()
-      File.write(temporary_path, body)
-
       # turn the thumbnail into a 16:9 aspect ratio image
       # while adding transparency around the borders for non-16:9 images
 
       # this lets the world use that transparency to show the correct
       # perceived ratio on the user's eyes
 
-      Mogrify.open(temporary_path)
-      |> Mogrify.resize("256x144")
-      |> Mogrify.gravity("center")
-      |> Mogrify.custom("background", "none")
-      |> Mogrify.extent("256x144")
-      |> Mogrify.save(in_place: true)
+      if @mogrify do
+        temporary_path = Temp.path!()
+        File.write(temporary_path, body)
 
-      final_body = File.read!(temporary_path)
-      File.rm(temporary_path)
-      {:ok, Thumbnail.insert(youtube_id, content_type, final_body, opts)}
+        Mogrify.open(temporary_path)
+        |> Mogrify.resize("256x144")
+        |> Mogrify.gravity("center")
+        |> Mogrify.custom("background", "none")
+        |> Mogrify.extent("256x144")
+        |> Mogrify.save(in_place: true)
+
+        final_body = File.read!(temporary_path)
+        File.rm(temporary_path)
+        {:ok, Thumbnail.insert(youtube_id, content_type, final_body, opts)}
+      else
+        input_image = Image.from_binary!(body)
+
+        thumb =
+          input_image
+          |> Image.add_alpha(:transparent)
+          |> then(fn
+            {:ok, image} ->
+              image
+
+            {:error, "Image already has an alpha band"} ->
+              input_image
+
+            {:error, err} ->
+              raise err
+          end)
+          |> Image.thumbnail!(256, height: 144)
+          |> Image.embed!(256, 144, background_transparency: 0, x: :center, y: :center)
+          |> Image.write!(:memory, suffix: ".webp")
+
+        {:ok, Thumbnail.insert(youtube_id, content_type, thumb, opts)}
+      end
     else
       Logger.error(
         "thumbnail request. expected 200, got #{inspect(response.status)} #{inspect(response.body)}"
