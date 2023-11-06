@@ -20,7 +20,7 @@ defmodule YtSearchWeb.ThumbnailTest do
     assert repo_thumb.id == thumb.id
 
     temporary_path = Temp.path!()
-    File.write!(temporary_path, repo_thumb.data)
+    File.write!(temporary_path, Thumbnail.blob(repo_thumb))
     YtSearch.AssertUtil.image(temporary_path)
   end
 
@@ -39,7 +39,7 @@ defmodule YtSearchWeb.ThumbnailTest do
     |> Repo.update!()
 
     fetched = Thumbnail.fetch(@youtube_id)
-    assert fetched.data == thumb.data
+    assert Thumbnail.blob(fetched) == Thumbnail.blob(thumb)
     assert Thumbnail.Janitor.tick() > 0
     nil = Thumbnail.fetch(@youtube_id)
   end
@@ -57,13 +57,13 @@ defmodule YtSearchWeb.ThumbnailTest do
     |> Repo.update!()
 
     fetched = Thumbnail.fetch(@youtube_id)
-    assert fetched.data == thumb.data
+    assert Thumbnail.blob(fetched) == Thumbnail.blob(thumb)
 
     fetched
     |> SlotUtilities.refresh_expiration()
 
     fetched2 = Thumbnail.fetch(@youtube_id)
-    assert fetched2.data == thumb.data
+    assert Thumbnail.blob(fetched2) == Thumbnail.blob(thumb)
     assert NaiveDateTime.compare(fetched2.expires_at, fetched.expires_at) == :gt
 
     Thumbnail.Janitor.tick()
