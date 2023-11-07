@@ -47,7 +47,7 @@ defmodule YtSearch.Youtube.Thumbnail do
   def mutexed_download_thumbnail(id, url, opts) do
     Mutex.under(ThumbnailMutex, id, fn ->
       # refetch to prevent double fetch
-      case Thumbnail.fetch(id) do
+      case Thumbnail.blob(id) do
         nil ->
           do_download_thumbnail(id, url, opts)
 
