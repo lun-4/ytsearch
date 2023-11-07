@@ -25,7 +25,11 @@ defmodule YtSearch.Thumbnail do
   end
 
   def blob(%__MODULE__{} = thumb) do
-    case File.read("thumbnails/#{thumb.id}") do
+    blob(thumb.id)
+  end
+
+  def blob(id) when is_bitstring(id) do
+    case File.read(path_for(id)) do
       {:ok, data} -> data
       {:error, :enoent} -> nil
     end
@@ -44,21 +48,27 @@ defmodule YtSearch.Thumbnail do
     }
   end
 
-  def insert(id, mimetype, blob, opts) do
-    thumb =
-      %__MODULE__{}
-      |> changeset(
-        %{
-          id: id,
-          mime_type: mimetype,
-          keepalive: Keyword.get(opts, :keepalive, false)
-        }
-        |> SlotUtilities.put_simple_expiration(__MODULE__)
-        |> SlotUtilities.put_used()
-      )
-      |> Repo.insert!()
+  def insert(id, mimetype, opts) do
+    %__MODULE__{}
+    |> changeset(
+      %{
+        id: id,
+        mime_type: mimetype,
+        keepalive: Keyword.get(opts, :keepalive, false)
+      }
+      |> SlotUtilities.put_simple_expiration(__MODULE__)
+      |> SlotUtilities.put_used()
+    )
+    |> Repo.insert!()
+  end
 
-    File.write!("thumbnails/#{id}", blob)
+  def path_for(id) do
+    "thumbnails/#{id}"
+  end
+
+  def insert(id, mimetype, blob, opts) do
+    thumb = insert(id, mimetype, opts)
+    File.write!(path_for(id), blob)
     thumb
   end
 
@@ -91,7 +101,7 @@ defmodule YtSearch.Thumbnail do
 
           ids
           |> Enum.each(fn id ->
-            File.rm("thumbnails/#{id}")
+            File.rm(Thumbnail.path_for(id))
           end)
 
           # let other ops run for a while
