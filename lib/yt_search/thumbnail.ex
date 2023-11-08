@@ -24,6 +24,8 @@ defmodule YtSearch.Thumbnail do
     Repo.replica().one(query)
   end
 
+  def blob(nil), do: nil
+
   def blob(%__MODULE__{} = thumb) do
     blob(thumb.id)
   end
