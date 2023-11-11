@@ -98,8 +98,23 @@ local function writeall(s)
   io.flush()
 end
 
+do
+  writeall('configuring database...')
+  local pfile = io.popen("sqlite3 "..OUTFILE, "w")
+  if pfile == nil then
+    print('failed to open sqlite3 for writing')
+    return
+  end
+  pfile:write("PRAGMA journal_mode=WAL;\n")
+  pfile:write("PRAGMA auto_vacuum=incremental;\n")
+  pfile:write("PRAGMA cache_size=-16000;\n")
+  pfile:write("VACUUM;\n")
+  pfile:write(".q\n")
+  pfile:close()
+end
+
 for _, dump_path in pairs(dump_paths) do
-  writeall('processing ' .. dump_path)
+  print('processing ' .. dump_path)
   local pfile = io.popen("sqlite3 "..OUTFILE, "w")
   if pfile == nil then
     print('failed to open sqlite3 for writing')
@@ -132,3 +147,4 @@ for _, dump_path in pairs(dump_paths) do
   writeall('\n')
 end
 
+print('done! written to '..OUTFILE)
