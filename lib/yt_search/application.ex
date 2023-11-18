@@ -9,6 +9,8 @@ defmodule YtSearch.Application do
 
   @impl true
   def start(_type, _args) do
+    File.mkdir_p!("thumbnails")
+
     children =
       [
         # Start the Telemetry supervisor

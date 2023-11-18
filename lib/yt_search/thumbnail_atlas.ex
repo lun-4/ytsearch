@@ -42,7 +42,9 @@ defmodule YtSearch.Thumbnail.Atlas do
 
         if slot != nil do
           Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
-            Thumbnail.fetch(slot.youtube_id)
+            slot.youtube_id
+            |> Thumbnail.fetch()
+            |> Thumbnail.blob()
           end)
         else
           nil
@@ -53,9 +55,9 @@ defmodule YtSearch.Thumbnail.Atlas do
           nil ->
             @invalid_thumbnail_path
 
-          thumbnail ->
+          data ->
             temporary_path = Temp.path!()
-            File.write!(temporary_path, thumbnail.data)
+            File.write!(temporary_path, data)
             temporary_path
         end
       end)

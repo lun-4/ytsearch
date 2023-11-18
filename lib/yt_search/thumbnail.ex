@@ -10,9 +10,8 @@ defmodule YtSearch.Thumbnail do
 
   @primary_key {:id, :string, autogenerate: false}
 
-  schema "thumbnails" do
+  schema "thumbnails_v2" do
     field(:mime_type, :string)
-    field(:data, :binary)
     timestamps()
     field(:expires_at, :naive_datetime)
     field(:used_at, :naive_datetime)
@@ -25,10 +24,23 @@ defmodule YtSearch.Thumbnail do
     Repo.replica().one(query)
   end
 
+  def blob(nil), do: nil
+
+  def blob(%__MODULE__{} = thumb) do
+    blob(thumb.id)
+  end
+
+  def blob(id) when is_bitstring(id) do
+    case File.read(path_for(id)) do
+      {:ok, data} -> data
+      {:error, :enoent} -> nil
+    end
+  end
+
   def changeset(%__MODULE__{} = slot, params) do
     slot
-    |> cast(params, [:id, :mime_type, :data, :expires_at, :used_at, :keepalive])
-    |> validate_required([:id, :mime_type, :data, :expires_at, :used_at])
+    |> cast(params, [:id, :mime_type, :expires_at, :used_at, :keepalive])
+    |> validate_required([:id, :mime_type, :expires_at, :used_at])
   end
 
   def slot_spec do
@@ -38,19 +50,28 @@ defmodule YtSearch.Thumbnail do
     }
   end
 
-  def insert(id, mimetype, blob, opts) do
+  def insert(id, mimetype, opts) do
     %__MODULE__{}
     |> changeset(
       %{
         id: id,
         mime_type: mimetype,
-        data: blob,
         keepalive: Keyword.get(opts, :keepalive, false)
       }
       |> SlotUtilities.put_simple_expiration(__MODULE__)
       |> SlotUtilities.put_used()
     )
     |> Repo.insert!()
+  end
+
+  def path_for(id) do
+    "thumbnails/#{id}"
+  end
+
+  def insert(id, mimetype, blob, opts) do
+    thumb = insert(id, mimetype, opts)
+    File.write!(path_for(id), blob)
+    thumb
   end
 
   defmodule Janitor do
@@ -80,6 +101,11 @@ defmodule YtSearch.Thumbnail do
             from(t in Thumbnail, where: t.id in ^ids)
             |> Repo.delete_all()
 
+          ids
+          |> Enum.each(fn id ->
+            File.rm(Thumbnail.path_for(id))
+          end)
+
           # let other ops run for a while
           :timer.sleep(1000)
           count
@@ -88,21 +114,6 @@ defmodule YtSearch.Thumbnail do
 
       Logger.info("deleted #{deleted_count} thumbnails")
       deleted_count
-    end
-  end
-
-  def refresh(id) do
-    query = from s in __MODULE__, where: s.id == ^id, select: s
-    slot = Repo.replica().one(query)
-
-    unless slot == nil do
-      Logger.info("refreshed thumbnail id #{id}")
-
-      slot
-      |> Ecto.Changeset.change(
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-      )
-      |> YtSearch.Repo.update!()
     end
   end
 end

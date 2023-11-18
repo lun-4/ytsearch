@@ -32,3 +32,5 @@ yt_search-*.tar
 release/
 
 .envrc
+
+thumbnails/
