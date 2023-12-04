@@ -23,7 +23,6 @@ defmodule YtSearchWeb.AtlasController do
     |> Slot.fetch_by_id()
     |> then(fn
       nil ->
-        # TODO empty thumb?
         conn
         |> put_status(404)
         |> text("search slot not found")
