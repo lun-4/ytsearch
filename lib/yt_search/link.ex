@@ -160,13 +160,28 @@ defmodule YtSearch.Mp4Link do
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-Mp4Link.ttl_seconds())
 
-      {deleted_count, _entities} =
+      deleted_count =
         from(s in Mp4Link,
           where:
-            s.inserted_at <
-              ^expiry_time
+            fragment("unixepoch(?)", s.inserted_at) <
+              ^expiry_time,
+          limit: 1000
         )
-        |> Repo.delete_all()
+        |> Repo.replica().all()
+        |> Enum.chunk_every(10)
+        |> Enum.map(fn chunk ->
+          chunk
+          |> Enum.map(fn link ->
+            Repo.delete(link)
+            1
+          end)
+          |> then(fn count ->
+            :timer.sleep(1500)
+            count
+          end)
+          |> Enum.sum()
+        end)
+        |> Enum.sum()
 
       Logger.info("deleted #{deleted_count} links")
     end
