@@ -602,5 +602,6 @@ defmodule YtSearchWeb.SlotTest do
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
     assert fetched_slot.expires_at > slot.expires_at
+    assert fetched_slot.used_at > slot.used_at
   end
 end

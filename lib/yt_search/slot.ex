@@ -140,7 +140,12 @@ defmodule YtSearch.Slot do
       |> Repo.replica().one()
 
     slot
-    |> changeset(%{} |> put_expiration(slot) |> SlotUtilities.put_opts(opts))
+    |> changeset(
+      %{}
+      |> put_expiration(slot)
+      |> SlotUtilities.put_used()
+      |> SlotUtilities.put_opts(opts)
+    )
     |> Repo.update!()
   end
 
@@ -148,7 +153,12 @@ defmodule YtSearch.Slot do
     Logger.info("refreshing video by slot #{slot.id}")
 
     slot
-    |> change(%{} |> put_expiration(slot) |> SlotUtilities.put_opts(opts))
+    |> change(
+      %{}
+      |> put_expiration(slot)
+      |> SlotUtilities.put_used()
+      |> SlotUtilities.put_opts(opts)
+    )
     |> Repo.update!()
   end
 
