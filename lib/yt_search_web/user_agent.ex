@@ -1,7 +1,7 @@
 defmodule YtSearchWeb.UserAgent do
   import Plug.Conn
 
-  @spec for(any()) :: :quest | :unity | :any
+  @spec for(any()) :: :quest_video | :unity | :any
   def for(conn) do
     agent =
       case get_req_header(conn, "user-agent") do
