@@ -59,6 +59,8 @@ defmodule YtSearch.SlotUtilities do
         |> put_used()
       )
       |> Repo.update!()
+    else
+      slot
     end
   end
 
