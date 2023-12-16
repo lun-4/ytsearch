@@ -165,10 +165,10 @@ defmodule YtSearch.Mp4Link do
           where:
             fragment("unixepoch(?)", s.inserted_at) <
               ^expiry_time,
-          limit: 1000
+          limit: 400
         )
         |> Repo.replica().all()
-        |> Enum.chunk_every(10)
+        |> Enum.chunk_every(4)
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn link ->
