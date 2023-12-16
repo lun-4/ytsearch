@@ -49,6 +49,10 @@ defmodule YtSearchWeb.ThumbnailTest do
 
     thumb
     |> Ecto.Changeset.change(
+      used_at:
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-180, :second)
+        |> NaiveDateTime.truncate(:second),
       expires_at:
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-10, :second)
