@@ -5,6 +5,7 @@ defmodule YtSearch.Slot do
   require Logger
   alias YtSearch.Repo
   alias YtSearch.SlotUtilities
+  alias YtSearch.SlotWriter
 
   @type t :: %__MODULE__{}
 
@@ -146,7 +147,7 @@ defmodule YtSearch.Slot do
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
-    |> Repo.update!()
+    |> SlotWriter.update()
   end
 
   def refresh(%__MODULE__{} = slot, opts) do
@@ -159,7 +160,7 @@ defmodule YtSearch.Slot do
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
-    |> Repo.update!()
+    |> SlotWriter.update()
   end
 
   def used(%__MODULE__{} = slot) do

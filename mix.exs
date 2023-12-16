@@ -68,6 +68,7 @@ defmodule YtSearch.MixProject do
       {:tesla, "~> 1.7"},
       {:hackney, "~> 1.18"},
       {:recon, "~> 2.5"},
+      {:ex_hash_ring, "~> 6.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_machina, "~> 2.4", only: :test}
     ]

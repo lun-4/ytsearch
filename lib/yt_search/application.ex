@@ -56,8 +56,10 @@ defmodule YtSearch.Application do
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
-        {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
-      ] ++ maybe_janitors()
+        {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
+        {Registry, keys: :unique, name: YtSearch.SlotWriters},
+        {ExHashRing.Ring, name: YtSearch.SlotWriterRing}
+      ] ++ maybe_janitors() ++ writer_pool()
 
     start_telemetry()
 
@@ -65,6 +67,18 @@ defmodule YtSearch.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: YtSearch.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp writer_pool do
+    1..10
+    |> Enum.map(fn id ->
+      %{
+        id: "slot_writer_#{id}",
+        start:
+          {YtSearch.SlotWriter, :start_link,
+           [id, [name: {:via, Registry, {YtSearch.SlotWriters, "writer_#{id}", :self}}]]}
+      }
+    end)
   end
 
   defp maybe_janitors do
