@@ -47,8 +47,13 @@ defmodule YtSearch.SlotUtilities do
     |> Repo.update!()
   end
 
+  def min_time_between_refreshes do
+    Application.get_env(:yt_search, YtSearch.Constants)[:minimum_time_between_refreshes] || 60
+  end
+
   def refresh_expiration(%module{} = slot, opts \\ []) do
-    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <= -60 do
+    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
+         -min_time_between_refreshes() do
       Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
 
       slot

@@ -206,8 +206,13 @@ defmodule YtSearch.Youtube do
     end)
   end
 
+  defp result_limit do
+    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_search] ||
+      raise "invalid configuration"
+  end
+
   defp piped_search_call(func, id, list_field) do
-    piped_call(:search, func, id, list_field, limit: 20)
+    piped_call(:search, func, id, list_field, limit: result_limit())
   end
 
   defp piped_call(call_type, func, id, list_field, opts \\ []) do
@@ -347,7 +352,7 @@ defmodule YtSearch.Youtube do
   end
 
   def trending(region \\ "US") do
-    piped_call(:search, &Piped.trending/2, region, nil, limit: 20)
+    piped_call(:search, &Piped.trending/2, region, nil, limit: result_limit())
   end
 
   def extract_valid_streams(incoming_video_streams) do

@@ -1,6 +1,7 @@
 defmodule YtSearchWeb.SlotController do
   use YtSearchWeb, :controller
   require Logger
+  alias YtSearch.SlotUtilities
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
   alias YtSearch.Subtitle
@@ -47,7 +48,8 @@ defmodule YtSearchWeb.SlotController do
         |> render("slot.json")
 
       slot ->
-        if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <= -60 do
+        if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
+             -SlotUtilities.min_time_between_refreshes() do
           slot
           |> Slot.refresh()
         end
@@ -160,7 +162,8 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp do_slot_metadata(conn, slot) do
-    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <= -60 do
+    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
+         -SlotUtilities.min_time_between_refreshes() do
       slot
       |> Slot.refresh()
     end

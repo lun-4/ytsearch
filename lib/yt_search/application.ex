@@ -68,21 +68,48 @@ defmodule YtSearch.Application do
   end
 
   defp maybe_janitors do
-    if Mix.env() != :test do
-      [
-        Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
-        # Tinycron.new(YtSearch.Slot.Janitor, every: 10 * 60, jitter: (-3 * 60)..(3 * 60)),
-        Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
-        Tinycron.new(YtSearch.Mp4Link.Janitor, every: 10 * 60, jitter: (-2 * 60)..(5 * 60)),
-        Tinycron.new(YtSearch.Thumbnail.Janitor, every: 3 * 60, jitter: (-2 * 60)..(2 * 60)),
-        Tinycron.new(YtSearch.Repo.Analyzer, every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60)),
-        Tinycron.new(YtSearch.Repo.Janitor, every: 60, jitter: -30..30),
-        Tinycron.new(YtSearch.Repo.FreelistMeter, every: 30, jitter: -10..30),
-        Tinycron.new(YtSearch.Chapters.Cleaner, every: 1 * 60 * 60, jitter: (-20 * 60)..(20 * 60))
-      ]
-    else
-      []
-    end
+    enable_periodic =
+      if Mix.env() == :test do
+        false
+      else
+        Application.get_env(:yt_search, YtSearch.Constants)[:enable_periodic_tasks]
+      end
+
+    enable_janitor =
+      if Mix.env() == :test do
+        false
+      else
+        Application.get_env(:yt_search, YtSearch.Constants)[:enable_janitor_tasks]
+      end
+
+    periodic_tasks =
+      if enable_periodic do
+        [
+          Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
+          Tinycron.new(YtSearch.Repo.FreelistMeter, every: 30, jitter: -10..30),
+          Tinycron.new(YtSearch.Repo.Analyzer, every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60))
+        ]
+      else
+        []
+      end
+
+    janitor_tasks =
+      if enable_janitor do
+        [
+          Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
+          Tinycron.new(YtSearch.Mp4Link.Janitor, every: 20 * 60, jitter: (-2 * 60)..(5 * 60)),
+          Tinycron.new(YtSearch.Thumbnail.Janitor, every: 3 * 60, jitter: (-2 * 60)..(2 * 60)),
+          Tinycron.new(YtSearch.Repo.Janitor, every: 60, jitter: -30..30),
+          Tinycron.new(YtSearch.Chapters.Cleaner,
+            every: 1 * 60 * 60,
+            jitter: (-20 * 60)..(20 * 60)
+          )
+        ]
+      else
+        []
+      end
+
+    periodic_tasks ++ janitor_tasks
   end
 
   defp start_telemetry do

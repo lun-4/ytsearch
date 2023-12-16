@@ -94,6 +94,12 @@ config :yt_search, YtSearch.ThumbnailAtlas, montage_command: "montage"
 config :phoenix_ecto,
   exclude_ecto_exceptions_from_plug: [Ecto.StaleEntryError]
 
+config :yt_search, YtSearch.Constants,
+  results_from_search: 20,
+  minimum_time_between_refreshes: 60,
+  enable_periodic_tasks: true,
+  enable_periodic_janitors: true
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
