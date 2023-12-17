@@ -582,6 +582,7 @@ defmodule YtSearchWeb.SlotTest do
       |> get(~p"/api/v4/s/#{slot.id}")
 
     assert conn.status == 200
+    YtSearch.SlotWriter.flush_for(slot.id)
     fetched_slot = Slot.fetch_by_id(slot.id)
     assert fetched_slot.expires_at > slot.expires_at
 
