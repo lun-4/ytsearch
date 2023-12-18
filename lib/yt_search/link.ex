@@ -167,7 +167,7 @@ defmodule YtSearch.Mp4Link do
               ^expiry_time,
           limit: 400
         )
-        |> Repo.replica().all()
+        |> Repo.LinkReplica.all()
         |> Enum.chunk_every(4)
         |> Enum.map(fn chunk ->
           chunk

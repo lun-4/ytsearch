@@ -56,7 +56,8 @@ repos = [
   YtSearch.Repo.Replica6,
   YtSearch.Repo.Replica7,
   YtSearch.Repo.Replica8,
-  YtSearch.Repo.ThumbnailReplica
+  YtSearch.Repo.ThumbnailReplica,
+  YtSearch.Repo.LinkReplica
 ]
 
 for repo <- repos do
