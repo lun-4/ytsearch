@@ -80,7 +80,7 @@ defmodule YtSearch.Application do
       if Mix.env() == :test do
         false
       else
-        Application.get_env(:yt_search, YtSearch.Constants)[:enable_janitor_tasks]
+        Application.get_env(:yt_search, YtSearch.Constants)[:enable_periodic_janitors]
       end
 
     periodic_tasks =
