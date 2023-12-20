@@ -26,6 +26,7 @@ defmodule YtSearch.Application do
         YtSearch.Repo.Replica7,
         YtSearch.Repo.Replica8,
         YtSearch.Repo.ThumbnailReplica,
+        YtSearch.Repo.LinkReplica,
 
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
