@@ -229,10 +229,23 @@ defmodule YtSearchWeb.SlotTest do
     slot = insert_slot()
 
     mock_global(fn
-      %{method: :get, url: "sb.example.org/api/skipSegments?videoID=" <> rest} = env ->
-        youtube_id = rest |> String.split("&") |> Enum.at(0)
+      %{method: :get, url: "sb.example.org/api/skipSegments?" <> query} = env ->
+        query_args = query |> URI.decode_query()
+        youtube_id = query_args |> Map.get("videoID")
+        categories = query_args |> Map.get("categories") |> Jason.decode!() |> MapSet.new()
 
-        if youtube_id == slot.youtube_id do
+        correct_categories? =
+          MapSet.difference(
+            categories,
+            YtSearch.Sponsorblock.categories() |> MapSet.new()
+          )
+          |> Enum.count()
+          |> then(fn
+            0 -> true
+            _ -> false
+          end)
+
+        if youtube_id == slot.youtube_id and correct_categories? do
           :timer.sleep(50)
           calls = :ets.update_counter(table, :segments_cmd, 1, {:segments_cmd, 0})
 
