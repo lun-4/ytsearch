@@ -31,6 +31,10 @@ defmodule YtSearch.Repo do
     Enum.random(@read_replicas)
   end
 
+  def replica(slot_id) when is_number(slot_id) or is_bitstring(slot_id) or is_atom(slot_id) do
+    @read_replicas |> Enum.at(rem(slot_id |> :erlang.phash2(), length(@read_replicas)))
+  end
+
   for repo <- @read_replicas ++ @dedicated_replicas do
     default_dynamic_repo =
       if Mix.env() == :test do
