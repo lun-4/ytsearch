@@ -17,7 +17,9 @@ defmodule YtSearch.Chapters do
 
   @spec fetch(String.t()) :: t()
   def fetch(youtube_id) do
-    Repo.replica().one(from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
+    Repo.replica(youtube_id).one(
+      from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    )
   end
 
   # TODO fix typing

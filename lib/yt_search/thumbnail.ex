@@ -21,7 +21,7 @@ defmodule YtSearch.Thumbnail do
   @spec fetch(String.t()) :: Thumbnail.t()
   def fetch(id) do
     query = from s in __MODULE__, where: s.id == ^id, select: s
-    Repo.replica().one(query)
+    Repo.replica(id).one(query)
   end
 
   def blob(nil), do: nil
