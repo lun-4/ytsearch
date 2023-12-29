@@ -60,7 +60,7 @@ defmodule YtSearch.Subtitle do
               ^expiry_time,
           limit: 1000
         )
-        |> Repo.replica().all()
+        |> Repo.SubtitleReplica.all()
         |> Enum.map(fn subtitle ->
           # TODO: fix subtitle table
           # this hack is done because somehow id is nil,

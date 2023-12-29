@@ -24,7 +24,9 @@ defmodule YtSearch.Repo do
   # single purpose
   @dedicated_replicas [
     YtSearch.Repo.ThumbnailReplica,
-    YtSearch.Repo.LinkReplica
+    YtSearch.Repo.LinkReplica,
+    YtSearch.Repo.SubtitleReplica,
+    YtSearch.Repo.ChapterReplica
   ]
 
   def replica do
