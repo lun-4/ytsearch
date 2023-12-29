@@ -111,14 +111,18 @@ defmodule YtSearch.SlotUtilities do
           limit: 5
         )
         |> Repo.replica().all()
-        |> Enum.map(fn slot ->
-          slot
-          |> module.changeset(%{
-            expires_at: ~N[2020-01-01 00:00:00]
-          })
-          |> Repo.update()
+        |> then(fn slots ->
+          slot_ids =
+            slots
+            |> Enum.map(fn slot -> slot.id end)
 
-          slot.id
+          from(s in module,
+            update: [set: [expires_at: ^~N[2020-01-01 00:00:00]]],
+            where: s.id in ^slot_ids
+          )
+          |> Repo.update_all([])
+
+          slot_ids
         end)
         |> Enum.shuffle()
         |> Enum.at(0)
