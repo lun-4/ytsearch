@@ -34,3 +34,4 @@ release/
 .envrc
 
 thumbnails/
+*__pycache__/
