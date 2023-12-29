@@ -29,19 +29,19 @@ end
 config :yt_search, YtSearch.ThumbnailAtlas,
   montage_command: System.get_env("MONTAGE_COMMAND") || "montage"
 
-if config_env() == :prod do
-  config :yt_search, YtSearch.Ratelimit,
-    ytdlp_search: {
-      (System.get_env("SEARCH_RATELIMIT_REQUESTS") || "2")
-      |> Integer.parse()
-      |> Tuple.to_list()
-      |> Enum.at(0),
-      (System.get_env("SEARCH_RATELIMIT_PER_MILLISECOND") || "4000")
-      |> Integer.parse()
-      |> Tuple.to_list()
-      |> Enum.at(0)
-    }
+config :yt_search, YtSearch.Ratelimit,
+  ytdlp_search: {
+    (System.get_env("SEARCH_RATELIMIT_REQUESTS") || "2")
+    |> Integer.parse()
+    |> Tuple.to_list()
+    |> Enum.at(0),
+    (System.get_env("SEARCH_RATELIMIT_PER_MILLISECOND") || "4000")
+    |> Integer.parse()
+    |> Tuple.to_list()
+    |> Enum.at(0)
+  }
 
+if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||
       raise """
