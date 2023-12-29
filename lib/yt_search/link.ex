@@ -20,21 +20,21 @@ defmodule YtSearch.Mp4Link do
     timestamps()
   end
 
-  @spec fetch_by_id(String.t()) :: Mp4Link.t()
+  @spec fetch_by_id(String.t()) :: Mp4Link.t() | nil
   def fetch_by_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
     case Repo.replica(youtube_id).one(query) do
       nil ->
-        {:ok, nil}
+        nil
 
       link ->
         if TTL.expired?(link, ttl_seconds()) do
           # do not expire in this case to prevent race conditions
           # the one that should remove it is the link janitor
-          {:ok, nil}
+          nil
         else
-          {:ok, link}
+          link
         end
     end
   end
@@ -123,14 +123,15 @@ defmodule YtSearch.Mp4Link do
     )
   end
 
-  @spec maybe_fetch_upstream(Slot.t()) :: {:ok, __MODULE__.t()}
+  @spec maybe_fetch_upstream(Slot.t()) ::
+          {:ok, __MODULE__.t()} | {:error, __MODULE__.t()} | {:error, term()}
   def maybe_fetch_upstream(slot) do
     case fetch_by_id(slot.youtube_id) do
-      {:ok, nil} ->
+      nil ->
         fetch_mp4_link(slot)
 
       value ->
-        value
+        {:ok, value}
     end
   end
 

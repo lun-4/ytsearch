@@ -80,7 +80,7 @@ defmodule YtSearchWeb.SlotTest do
              @expected_run1_url
            ]
 
-    {:ok, link} = YtSearch.Mp4Link.fetch_by_id(slot.youtube_id)
+    link = YtSearch.Mp4Link.fetch_by_id(slot.youtube_id)
     assert link != nil
 
     link

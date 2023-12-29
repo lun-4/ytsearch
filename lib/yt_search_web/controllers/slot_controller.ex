@@ -116,9 +116,6 @@ defmodule YtSearchWeb.SlotController do
 
   defp handle_quest_video(conn, slot) do
     case Mp4Link.maybe_fetch_upstream(slot) do
-      {:ok, nil} ->
-        raise "should not happen"
-
       {:ok, link} ->
         redirect_to(conn, link)
 
