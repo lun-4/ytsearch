@@ -51,14 +51,31 @@ defmodule YtSearch.Chapters do
       expiry_time =
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-Chapters.ttl_seconds())
+        |> DateTime.from_naive!("Etc/UTC")
+        |> DateTime.to_unix()
 
-      {deleted_count, _entities} =
+      deleted_count =
         from(s in Chapters,
           where:
-            s.inserted_at <
-              ^expiry_time
+            fragment("unixepoch(?)", s.inserted_at) <
+              ^expiry_time,
+          limit: 1000
         )
-        |> Repo.delete_all()
+        |> Repo.ChapterReplica.all()
+        |> Enum.chunk_every(10)
+        |> Enum.map(fn chunk ->
+          chunk
+          |> Enum.map(fn chapters ->
+            Repo.delete(chapters)
+            1
+          end)
+          |> then(fn count ->
+            :timer.sleep(1500)
+            count
+          end)
+          |> Enum.sum()
+        end)
+        |> Enum.sum()
 
       Logger.info("deleted #{deleted_count} chapters")
     end
