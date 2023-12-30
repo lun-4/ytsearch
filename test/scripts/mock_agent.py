@@ -182,8 +182,9 @@ async def main():
             len(instances),
             delta_instance_count,
         )
+        tasks = []
         if delta_instance_count >= 0:
-            await create_instance(ctx, instances, seed)
+            tasks.append(asyncio.create_task(create_instance(ctx, instances, seed)))
         else:
             ids_to_remove = []
             for instance in instances:
@@ -207,9 +208,11 @@ async def main():
                 target_agents_per_instance - len(instance.agents)
             ) + random.randint(-5, 5)
             if delta_agent_count >= 0:
-                await instance.add_agent()
+                tasks.append(asyncio.create_task(instance.add_agent()))
             else:
                 instance.maybe_remove_agent()
+
+        await asyncio.wait(tasks)
 
         # simulate the instances
         coros = []
