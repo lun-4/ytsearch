@@ -144,8 +144,13 @@ class Instance:
                 await agent.watch(video)
         else:
             if len(self.video_queue) < 30:  # max queue size
-                log.info("instance %d, add %r to queue", self.id, video["youtube_id"])
                 self.video_queue.append(video)
+                log.info(
+                    "instance %d, add %r to queue (len %d)",
+                    self.id,
+                    video["youtube_id"],
+                    len(self.video_queue),
+                )
 
 
 async def main():
@@ -154,7 +159,12 @@ async def main():
     seed = int(time.time())
     logging.basicConfig(level=logging.INFO)
     logging.getLogger("httpx").setLevel(logging.ERROR)
-    log.info("seed %d", seed)
+    log.info(
+        "seed %d, instance target %d, users per instance %d",
+        seed,
+        target_instance_count,
+        target_agents_per_instance,
+    )
     client = httpx.AsyncClient(headers={"Accept": "application/json"})
     ctx = Context(client=client)
 
@@ -164,7 +174,7 @@ async def main():
     current_tick = 0
     while True:
         delta_instance_count = (
-            len(instances) - target_agents_per_instance
+            target_instance_count - len(instances)
         ) + random.randint(-5, 5)
         log.info(
             "tick %d with %d instances, (applying delta %d)",
@@ -172,7 +182,7 @@ async def main():
             len(instances),
             delta_instance_count,
         )
-        if delta_instance_count < 0:
+        if delta_instance_count >= 0:
             await create_instance(ctx, instances, seed)
         else:
             ids_to_remove = []
@@ -194,9 +204,9 @@ async def main():
         # for each instance, maybe make players join or leave!
         for instance in instances:
             delta_agent_count = (
-                len(instance.agents) - target_agents_per_instance
+                target_agents_per_instance - len(instance.agents)
             ) + random.randint(-5, 5)
-            if delta_agent_count < 0:
+            if delta_agent_count >= 0:
                 await instance.add_agent()
             else:
                 instance.maybe_remove_agent()
