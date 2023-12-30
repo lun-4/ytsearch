@@ -1,9 +1,20 @@
 import string
 import time
+import io
 import random
-from flask import Flask, request
+from flask import Flask, request, send_file
+import numpy
+from PIL import Image
 
 app = Flask(__name__)
+
+
+def random_thumbnail():
+    a = numpy.random.rand(200, 300, 3) * 255
+    return Image.fromarray(a.astype("uint8")).convert("RGB")
+
+
+THUMBNAILS = [random_thumbnail() for _ in range(20)]
 
 
 def random_int(max=100000):
@@ -23,7 +34,7 @@ def random_yt_video():
 
 
 def thumbnail_for(id):
-    return f"http://example-proxey.com/vi/{id}/hq720.jpg?host=localhost:8080"
+    return f"http://example-proxey.com/_thumbs/{id}?host=ytsnuts.example.net"
 
 
 def channel_for(id):
@@ -38,7 +49,8 @@ def random_stream():
         "type": "stream",
         "title": random_string(),
         "uploaderUrl": channel_for(channel_id),
-        "thumbnailUrl": thumbnail_for(channel_id),
+        "thumbnail": thumbnail_for(youtube_id),
+        "thumbnailUrl": thumbnail_for(youtube_id),
         "uploaderName": random_string(),
         "uploaderAvatar": None,
         "uploadedDate": "1 day ago",
@@ -96,6 +108,15 @@ def playlist_route(playlist_id):
 @app.route("/_subtitles", methods=["GET"])
 def subtitles_route():
     return random_string()
+
+
+@app.route("/_thumbs/<whatever>", methods=["GET"])
+def thumbs_route(whatever):
+    image = random.choice(THUMBNAILS)
+    image_bytes = io.BytesIO()
+    image.save(image_bytes, format="WEBP")
+    image_bytes.seek(0)
+    return send_file(image_bytes, mimetype="image/webp", conditional=True)
 
 
 @app.route("/streams/<stream_id>", methods=["GET"])
