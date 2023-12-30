@@ -70,6 +70,24 @@ defmodule YtSearch.Application do
     Supervisor.start_link(children, opts)
   end
 
+  def janitor_specs do
+    [
+      [YtSearch.Subtitle.Cleaner, [every: 8 * 60, jitter: -60..60]],
+      [YtSearch.Mp4Link.Janitor, [every: 20 * 60, jitter: (-2 * 60)..(5 * 60)]],
+      [YtSearch.Thumbnail.Janitor, [every: 3 * 60, jitter: (-2 * 60)..(2 * 60)]],
+      [YtSearch.Repo.Janitor, [every: 60, jitter: -30..30]],
+      [YtSearch.Chapters.Cleaner, [every: 1 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]]
+    ]
+  end
+
+  def periodic_task_specs do
+    [
+      [YtSearch.SlotUtilities.UsageMeter, [every: 60, jitter: (-3 * 60)..(3 * 60)]],
+      [YtSearch.Repo.FreelistMeter, [every: 30, jitter: -10..30]],
+      [YtSearch.Repo.Analyzer, [every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]]
+    ]
+  end
+
   defp maybe_janitors do
     enable_periodic =
       if Mix.env() == :test do
@@ -87,27 +105,20 @@ defmodule YtSearch.Application do
 
     periodic_tasks =
       if enable_periodic do
-        [
-          Tinycron.new(YtSearch.SlotUtilities.UsageMeter, every: 60, jitter: (-3 * 60)..(3 * 60)),
-          Tinycron.new(YtSearch.Repo.FreelistMeter, every: 30, jitter: -10..30),
-          Tinycron.new(YtSearch.Repo.Analyzer, every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60))
-        ]
+        periodic_task_specs()
+        |> Enum.map(fn [module, opts] ->
+          Tinycron.new(module, opts)
+        end)
       else
         []
       end
 
     janitor_tasks =
       if enable_janitor do
-        [
-          Tinycron.new(YtSearch.Subtitle.Cleaner, every: 8 * 60, jitter: -60..60),
-          Tinycron.new(YtSearch.Mp4Link.Janitor, every: 20 * 60, jitter: (-2 * 60)..(5 * 60)),
-          Tinycron.new(YtSearch.Thumbnail.Janitor, every: 3 * 60, jitter: (-2 * 60)..(2 * 60)),
-          Tinycron.new(YtSearch.Repo.Janitor, every: 60, jitter: -30..30),
-          Tinycron.new(YtSearch.Chapters.Cleaner,
-            every: 1 * 60 * 60,
-            jitter: (-20 * 60)..(20 * 60)
-          )
-        ]
+        janitor_specs()
+        |> Enum.map(fn [module, opts] ->
+          Tinycron.new(module, opts)
+        end)
       else
         []
       end
