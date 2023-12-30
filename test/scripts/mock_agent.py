@@ -53,7 +53,12 @@ class Agent:
         )
         if resp.status_code != 200:
             raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
-        return resp.json()["search_results"]
+        rjson = resp.json()
+        atlas_id = rjson["slot_id"]
+        resp = await self.ctx.client.get(f"{yts_url}/a/4/at/{atlas_id}")
+        if resp.status_code != 200:
+            raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
+        return rjson["search_results"]
 
     async def watch(self, video):
         if self.is_quest:
@@ -233,7 +238,8 @@ async def main():
             else:
                 instance.maybe_remove_agent()
 
-        await asyncio.wait(tasks)
+        if tasks:
+            await asyncio.wait(tasks)
 
         # simulate the instances
         coros = []
