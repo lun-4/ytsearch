@@ -23,6 +23,21 @@ class Agent:
     name: str
     is_quest: bool
 
+    async def tick(self, ctx, current_tick):
+        choice = random.randint(1, 100)
+        if choice < 3:
+            search = await self.search(ctx)
+            return random.choice(search)
+
+    async def search(self, ctx):
+        resp = await ctx.client.get(
+            f"{yts_url}/api/v4/search?q={random_string()}",
+            headers={"user-agent": "UnityWebRequest"},
+        )
+        if resp.status_code != 200:
+            raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
+        return resp.json()["search_results"]
+
     async def watch(self, ctx, video):
         if self.is_quest:
             user_agent = "stagefright"
@@ -65,22 +80,23 @@ class Instance:
 
         results = []
         if not self.watching_video:
-            log.info("instance %d: searching and watching", self.id)
-            for agent in self.agents[:5]:
-                resp = await ctx.client.get(
-                    f"{yts_url}/api/v4/search?q={random_string()}",
-                    headers={"user-agent": "UnityWebRequest"},
-                )
-                if resp.status_code != 200:
-                    raise AssertionError(
-                        f"expected 200, got {resp.status_code}, {resp.text}"
-                    )
-                results.append(resp.json())
-
-            search = random.choice(results)
-
-            await self.watch(ctx, random.choice(search["search_results"]), current_tick)
+            if not self.video_queue:
+                log.info("instance %d: searching and watching", self.id)
+                results = await self.agents[0].search(ctx)
+                await self.watch(ctx, random.choice(results), current_tick)
+            else:
+                # we finished playing a video, and we have queue entry. play it
+                new_video_on_queue = self.video_queue.pop(0)
+                await self.watch(ctx, new_video_on_search, current_tick)
         else:
+            # if we're already watching, go through each agent, see if they want anything
+            for agent in self.agents:
+                maybe_video = await agent.tick(ctx, current_tick)
+                # if they do, submit to queue
+                if maybe_video:
+                    await self.watch(ctx, maybe_video, current_tick)
+
+            # tick the duration away
             end_timestamp = self.watching_at + self.watching_video["duration"]
             if current_tick > end_timestamp:
                 self.watching_video = None
@@ -94,10 +110,14 @@ class Instance:
                 )
 
     async def watch(self, ctx, video, current_tick):
-        self.watching_video = video
-        self.watching_at = current_tick
-        for agent in self.agents:
-            await agent.watch(ctx, video)
+        if self.watching_video is None:
+            self.watching_video = video
+            self.watching_at = current_tick
+            for agent in self.agents:
+                await agent.watch(ctx, video)
+        else:
+            if len(self.video_queue) < 30:  # max queue size
+                self.video_queue.append(video)
 
 
 async def main():
