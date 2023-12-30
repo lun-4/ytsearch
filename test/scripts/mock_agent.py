@@ -71,6 +71,7 @@ class Instance:
     seed: int
     agents: list
     video_queue: list
+    self_tick: int = 0
     watching_video: Optional[dict] = None
 
     async def add_agent(self):
@@ -101,9 +102,18 @@ class Instance:
         self.agents.pop(index_to_remove - 1)
 
     async def tick(self, current_tick):
-        results = []
-
         random.shuffle(self.agents)
+
+        # every 30 simulated ticks in the instance, one agent refreshes the queue
+        if self.self_tick % 30 == 0:
+            log.info(
+                "instance %d, refreshing queue with %d videos",
+                self.id,
+                len(self.video_queue),
+            )
+            for video in self.video_queue:
+                resp = await self.ctx.client.get(f"{yts_url}/a/4/qr/{video['slot_id']}")
+                assert resp.status_code == 200
 
         results = []
         if not self.watching_video:
@@ -134,6 +144,7 @@ class Instance:
                     self.watching_video["youtube_id"],
                     remaining_ticks,
                 )
+        self.self_tick += 1
 
     async def watch(self, video, current_tick):
         if self.watching_video is None:
