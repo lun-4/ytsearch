@@ -20,6 +20,7 @@ def random_string(length: int = 100, alphabet=string.ascii_letters):
 
 @dataclass
 class Agent:
+    instance_id: int
     name: str
     is_quest: bool
 
@@ -30,6 +31,7 @@ class Agent:
             return random.choice(search)
 
     async def search(self, ctx):
+        log.info("instance %d: searching...", self.instance_id)
         resp = await ctx.client.get(
             f"{yts_url}/api/v4/search?q={random_string()}",
             headers={"user-agent": "UnityWebRequest"},
@@ -69,7 +71,12 @@ class Instance:
 
     def add_agent(self):
         self.agents.append(
-            Agent(name=random_string(), is_quest=random.choice([False, True]))
+            Agent(
+                instance_id=self.id,
+                name=random_string(),
+                # 80 / 20 split between quest and non quest
+                is_quest=random.uniform(0, 1) < 0.8,
+            )
         )
         requests.get(f"{yts_url}/api/v4/hello/stress_test-{self.seed}")
 
@@ -81,13 +88,12 @@ class Instance:
         results = []
         if not self.watching_video:
             if not self.video_queue:
-                log.info("instance %d: searching and watching", self.id)
                 results = await self.agents[0].search(ctx)
                 await self.watch(ctx, random.choice(results), current_tick)
             else:
                 # we finished playing a video, and we have queue entry. play it
                 new_video_on_queue = self.video_queue.pop(0)
-                await self.watch(ctx, new_video_on_search, current_tick)
+                await self.watch(ctx, new_video_on_queue, current_tick)
         else:
             # if we're already watching, go through each agent, see if they want anything
             for agent in self.agents:
@@ -111,12 +117,14 @@ class Instance:
 
     async def watch(self, ctx, video, current_tick):
         if self.watching_video is None:
+            log.info("instance %d, watching %r", self.id, video["youtube_id"])
             self.watching_video = video
             self.watching_at = current_tick
             for agent in self.agents:
                 await agent.watch(ctx, video)
         else:
             if len(self.video_queue) < 30:  # max queue size
+                log.info("instance %d, add %r to queue", self.id, video["youtube_id"])
                 self.video_queue.append(video)
 
 
