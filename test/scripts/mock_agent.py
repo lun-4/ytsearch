@@ -28,13 +28,22 @@ class Agent:
     ctx: Context
     instance_id: int
     name: str
+    seed: int
     is_quest: bool
+    self_tick: int = 0
 
     async def tick(self, current_tick):
         choice = random.randint(1, 100)
         if choice < 3:
             search = await self.search()
             return random.choice(search)
+        if self.self_tick % 10 == 0:
+            # heartbeat with the server every 10 ticks
+            await self.heartbeat()
+        self.self_tick += 1
+
+    async def heartbeat(self):
+        await self.ctx.client.get(f"{yts_url}/api/v4/hello/stress_test-{self.seed}")
 
     async def search(self):
         log.info("instance %d: searching...", self.instance_id)
@@ -81,10 +90,11 @@ class Instance:
             name=random_string(),
             # 80 / 20 split between quest and non quest
             is_quest=random.uniform(0, 1) < 0.8,
+            seed=self.seed,
         )
         self.agents.append(agent)
         log.info("instance %d, add agent", self.id)
-        await self.ctx.client.get(f"{yts_url}/api/v4/hello/stress_test-{self.seed}")
+        await agent.heartbeat()
         if self.watching_video:
             await agent.watch(self.watching_video)
 
