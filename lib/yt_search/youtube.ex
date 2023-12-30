@@ -23,12 +23,34 @@ defmodule YtSearch.Youtube do
         help: "Total times we requested the ytdlp path for calling ytdlp",
         labels: [:type]
       )
+
+      Counter.declare(
+        name: :yts_ytdlp_response,
+        help: "responses from upstream youtube",
+        labels: [:type, :status_code]
+      )
     end
 
     def inc(type) do
       Counter.inc(
         name: :yts_ytdlp_call_count,
         labels: [to_string(type)]
+      )
+    end
+
+    def response(type, result) do
+      status_code =
+        case result do
+          {:ok, %Tesla.Env{} = response} ->
+            response.status
+
+          {:error, _} ->
+            0
+        end
+
+      Counter.inc(
+        name: :yts_ytdlp_response,
+        labels: [to_string(type), status_code]
       )
     end
   end
@@ -222,6 +244,7 @@ defmodule YtSearch.Youtube do
     result = func.(piped(), id)
     end_ts = System.monotonic_time(:millisecond)
     Latency.register(call_type, end_ts - start_ts)
+    CallCounter.response(call_type, result)
 
     case result do
       {:ok, %{status: 200} = response} ->
