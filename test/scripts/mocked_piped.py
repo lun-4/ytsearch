@@ -66,7 +66,7 @@ def random_stream():
 @app.route("/search", methods=["GET"])
 def search_route():
     return {
-        "items": [random_stream() for _ in range(10)],
+        "items": [random_stream() for _ in range(20)],
         "nextpage": "",
         "suggestion": None,
         "corrected": False,
