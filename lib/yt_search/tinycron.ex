@@ -13,6 +13,10 @@ defmodule YtSearch.Tinycron do
     GenServer.start_link(__MODULE__, [module, opts], opts)
   end
 
+  def noop(mod, value) do
+    GenServer.cast(mod, {:noop, value})
+  end
+
   @impl true
   def init([module, opts]) do
     state = %{module: module, opts: opts}
@@ -22,10 +26,18 @@ defmodule YtSearch.Tinycron do
 
   @impl true
   def handle_info(:work, %{module: module} = state) do
-    Logger.debug("running #{inspect(state.module)}")
-    module.tick()
+    unless state |> Map.get(:noop, false) do
+      Logger.debug("running #{inspect(state.module)}")
+      module.tick()
+    end
+
     schedule_work(state)
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:noop, value}, state) do
+    {:noreply, state |> Map.put(:noop, value)}
   end
 
   defp schedule_work(state) do
