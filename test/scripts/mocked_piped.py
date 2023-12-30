@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 
 def random_int(max=100000):
-    random.randint(1, max)
+    return random.randint(1, max)
 
 
 def random_string(length: int = 100, alphabet=string.ascii_letters):
