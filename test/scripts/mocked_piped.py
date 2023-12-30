@@ -70,7 +70,7 @@ def channel_route(channel_id):
         "bannerUrl": random_string(),
         "description": random_string(),
         "nextpage": None,
-        "subscriberCount": random_int,
+        "subscriberCount": random_int(),
         "tabs": [],
         "relatedStreams": [random_stream() for _ in range(10)],
     }
