@@ -38,13 +38,14 @@ defmodule YtSearch.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(YtSearch.Repo, shared: not tags[:async])
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-
-    slot_pid =
-      Ecto.Adapters.SQL.Sandbox.start_owner!(YtSearch.Data.SlotRepo, shared: not tags[:async])
-
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(slot_pid) end)
+    for repo <- [
+          YtSearch.Repo,
+          YtSearch.Data.SlotRepo,
+          YtSearch.Data.ChannelSlotRepo
+        ] do
+      pid = Ecto.Adapters.SQL.Sandbox.start_owner!(repo, shared: not tags[:async])
+      on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    end
   end
 
   @doc """

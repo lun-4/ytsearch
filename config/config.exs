@@ -8,7 +8,7 @@
 import Config
 
 config :yt_search,
-  ecto_repos: [YtSearch.Repo, YtSearch.Data.SlotRepo]
+  ecto_repos: [YtSearch.Repo, YtSearch.Data.SlotRepo, YtSearch.Data.ChannelSlotRepo]
 
 # Configures the endpoint
 config :yt_search, YtSearchWeb.Endpoint,
@@ -62,7 +62,10 @@ repos = [
   YtSearch.Repo.ChapterReplica,
   YtSearch.Data.SlotRepo,
   YtSearch.Data.SlotRepo.Replica1,
-  YtSearch.Data.SlotRepo.Replica2
+  YtSearch.Data.SlotRepo.Replica2,
+  YtSearch.Data.ChannelSlotRepo,
+  YtSearch.Data.ChannelSlotRepo.Replica1,
+  YtSearch.Data.ChannelSlotRepo.Replica2
 ]
 
 for repo <- repos do

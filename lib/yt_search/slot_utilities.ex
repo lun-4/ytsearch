@@ -91,6 +91,7 @@ defmodule YtSearch.SlotUtilities do
   end
 
   def repo(YtSearch.Slot), do: YtSearch.Data.SlotRepo
+  def repo(YtSearch.ChannelSlot), do: YtSearch.Data.ChannelSlotRepo
   def repo(_), do: YtSearch.Repo
 
   def generate_id_v3(module) do
