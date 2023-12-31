@@ -3,7 +3,7 @@ defmodule YtSearch.Slot do
   import Ecto.Query
   import Ecto.Changeset
   require Logger
-  alias YtSearch.Repo
+  alias YtSearch.Data.SlotRepo
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
@@ -23,7 +23,7 @@ defmodule YtSearch.Slot do
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.replica(slot_id).one(query)
+    SlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -31,7 +31,7 @@ defmodule YtSearch.Slot do
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.replica(youtube_id).one(query)
+    SlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -88,9 +88,9 @@ defmodule YtSearch.Slot do
   def create(youtube_id, video_duration, opts \\ []) do
     keepalive = opts |> Keyword.get(:keepalive, false)
 
-    Repo.transaction(fn ->
+    SlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-      maybe_slot = Repo.replica(youtube_id).one(query)
+      maybe_slot = SlotRepo.replica(youtube_id).one(query)
 
       if maybe_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -111,7 +111,7 @@ defmodule YtSearch.Slot do
 
         params
         |> changeset
-        |> Repo.insert!(
+        |> SlotRepo.insert!(
           on_conflict: [
             set: [
               youtube_id: youtube_id,
@@ -137,7 +137,7 @@ defmodule YtSearch.Slot do
 
     slot =
       from(s in __MODULE__, select: s, where: s.id == ^slot_id)
-      |> Repo.replica(slot_id).one()
+      |> SlotRepo.replica(slot_id).one()
 
     slot
     |> changeset(
@@ -146,7 +146,7 @@ defmodule YtSearch.Slot do
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
-    |> Repo.update!()
+    |> SlotRepo.update!()
   end
 
   def refresh(%__MODULE__{} = slot, opts) do
@@ -159,7 +159,7 @@ defmodule YtSearch.Slot do
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
-    |> Repo.update!()
+    |> SlotRepo.update!()
   end
 
   def used(%__MODULE__{} = slot) do
@@ -167,7 +167,7 @@ defmodule YtSearch.Slot do
 
     slot
     |> change(%{} |> SlotUtilities.put_used())
-    |> Repo.update!()
+    |> SlotRepo.update!()
   end
 
   def youtube_url(slot) do

@@ -8,7 +8,7 @@
 import Config
 
 config :yt_search,
-  ecto_repos: [YtSearch.Repo]
+  ecto_repos: [YtSearch.Repo, YtSearch.Data.SlotRepo]
 
 # Configures the endpoint
 config :yt_search, YtSearchWeb.Endpoint,
@@ -59,7 +59,10 @@ repos = [
   YtSearch.Repo.ThumbnailReplica,
   YtSearch.Repo.LinkReplica,
   YtSearch.Repo.SubtitleReplica,
-  YtSearch.Repo.ChapterReplica
+  YtSearch.Repo.ChapterReplica,
+  YtSearch.Data.SlotRepo,
+  YtSearch.Data.SlotRepo.Replica1,
+  YtSearch.Data.SlotRepo.Replica2
 ]
 
 for repo <- repos do
@@ -72,7 +75,7 @@ end
 config :prometheus, YtSearch.Repo.Instrumenter,
   stages: [:queue, :query, :decode],
   counter: true,
-  labels: [:result, :query],
+  labels: [:result, :query, :repo],
   query_duration_buckets: [
     10,
     100,

@@ -26,6 +26,18 @@ for repo <- repos do
     show_sensitive_data_on_connection_error: true
 end
 
+for repo <- [
+      YtSearch.Data.SlotRepo,
+      YtSearch.Data.SlotRepo.Replica1,
+      YtSearch.Data.SlotRepo.Replica2
+    ] do
+  config :yt_search, repo,
+    database: Path.expand("../db/yt_search_dev_slots.db", Path.dirname(__ENV__.file)),
+    pool_size: 1,
+    stacktrace: true,
+    show_sensitive_data_on_connection_error: true
+end
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

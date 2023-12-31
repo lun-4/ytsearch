@@ -29,17 +29,19 @@ end
 config :yt_search, YtSearch.ThumbnailAtlas,
   montage_command: System.get_env("MONTAGE_COMMAND") || "montage"
 
-config :yt_search, YtSearch.Ratelimit,
-  ytdlp_search: {
-    (System.get_env("SEARCH_RATELIMIT_REQUESTS") || "2")
-    |> Integer.parse()
-    |> Tuple.to_list()
-    |> Enum.at(0),
-    (System.get_env("SEARCH_RATELIMIT_PER_MILLISECOND") || "4000")
-    |> Integer.parse()
-    |> Tuple.to_list()
-    |> Enum.at(0)
-  }
+if config_env() in [:prod, :dev] do
+  config :yt_search, YtSearch.Ratelimit,
+    ytdlp_search: {
+      (System.get_env("SEARCH_RATELIMIT_REQUESTS") || "2")
+      |> Integer.parse()
+      |> Tuple.to_list()
+      |> Enum.at(0),
+      (System.get_env("SEARCH_RATELIMIT_PER_MILLISECOND") || "4000")
+      |> Integer.parse()
+      |> Tuple.to_list()
+      |> Enum.at(0)
+    }
+end
 
 if config_env() == :prod do
   database_path =
@@ -69,6 +71,21 @@ if config_env() == :prod do
     config :yt_search, repo,
       database: database_path,
       pool_size: String.to_integer(System.get_env("POOL_SIZE") || "1")
+  end
+
+  slots_database_path =
+    System.get_env("SLOTS_DATABASE_PATH") ||
+      raise """
+      environment variable SLOTS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_slots.db
+      """
+
+  for repo <- [
+        YtSearch.Data.SlotRepo,
+        YtSearch.Data.SlotRepo.Replica1,
+        YtSearch.Data.SlotRepo.Replica2
+      ] do
+    config :yt_search, repo, database: slots_database_path
   end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.

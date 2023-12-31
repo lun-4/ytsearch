@@ -1,0 +1,55 @@
+defmodule YtSearch.Data do
+  defmodule RepoBase do
+    defmacro __using__(opts) do
+      quote bind_quoted: [opts: opts] do
+        use Ecto.Repo,
+          otp_app: :yt_search,
+          adapter: Ecto.Adapters.SQLite3,
+
+          # sqlite does not do multi-writer. pool_size is effectively one,
+          # if it's larger than one, then Database Busy errors haunt you
+          # the trick to make concurrency happen is to create "read replicas"
+          # that are effectively a pool of readers. this works because we're in WAL mode
+          pool_size: 1,
+          loggers: [YtSearch.Repo.Instrumenter, Ecto.LogEntry]
+
+        @read_replicas opts[:read_replicas]
+        @dedicated_replicas opts[:dedicated_replicas]
+
+        def replica(identifier)
+            when is_number(identifier) or is_bitstring(identifier) or is_atom(identifier) do
+          @read_replicas |> Enum.at(rem(identifier |> :erlang.phash2(), length(@read_replicas)))
+        end
+
+        for repo <- @read_replicas ++ @dedicated_replicas do
+          default_dynamic_repo =
+            if Mix.env() == :test do
+              opts[:primary]
+            else
+              repo
+            end
+
+          defmodule repo do
+            use Ecto.Repo,
+              otp_app: :yt_search,
+              adapter: Ecto.Adapters.SQLite3,
+              pool_size: 1,
+              loggers: [YtSearch.Repo.Instrumenter, Ecto.LogEntry],
+              read_only: true,
+              default_dynamic_repo: default_dynamic_repo
+          end
+        end
+      end
+    end
+  end
+
+  defmodule SlotRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.SlotRepo,
+      read_replicas: [
+        YtSearch.Data.SlotRepo.Replica1,
+        YtSearch.Data.SlotRepo.Replica2
+      ],
+      dedicated_replicas: []
+  end
+end
