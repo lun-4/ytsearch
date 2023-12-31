@@ -5,7 +5,8 @@ ExUnit.start(exclude: [:slow, :slower])
 for repo <- [
       YtSearch.Repo,
       YtSearch.Data.SlotRepo,
-      YtSearch.Data.ChannelSlotRepo
+      YtSearch.Data.ChannelSlotRepo,
+      YtSearch.Data.PlaylistSlotRepo
     ] do
   Ecto.Adapters.SQL.Sandbox.mode(repo, :manual)
 end

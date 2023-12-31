@@ -66,4 +66,14 @@ defmodule YtSearch.Data do
       ],
       dedicated_replicas: []
   end
+
+  defmodule PlaylistSlotRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.PlaylistSlotRepo,
+      read_replicas: [
+        YtSearch.Data.PlaylistSlotRepo.Replica1,
+        YtSearch.Data.PlaylistSlotRepo.Replica2
+      ],
+      dedicated_replicas: []
+  end
 end

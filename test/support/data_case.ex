@@ -41,7 +41,8 @@ defmodule YtSearch.DataCase do
     for repo <- [
           YtSearch.Repo,
           YtSearch.Data.SlotRepo,
-          YtSearch.Data.ChannelSlotRepo
+          YtSearch.Data.ChannelSlotRepo,
+          YtSearch.Data.PlaylistSlotRepo
         ] do
       pid = Ecto.Adapters.SQL.Sandbox.start_owner!(repo, shared: not tags[:async])
       on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
