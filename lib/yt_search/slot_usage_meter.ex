@@ -1,7 +1,6 @@
 defmodule YtSearch.SlotUtilities.UsageMeter do
   require Logger
   alias YtSearch.SlotUtilities
-  alias YtSearch.Repo
   import Ecto.Query
 
   defmodule Gauge do
