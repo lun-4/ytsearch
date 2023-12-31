@@ -16,6 +16,10 @@ defmodule YtSearch.Data do
         @read_replicas opts[:read_replicas]
         @dedicated_replicas opts[:dedicated_replicas]
 
+        def replica() do
+          Enum.random(@read_replicas)
+        end
+
         def replica(identifier)
             when is_number(identifier) or is_bitstring(identifier) or is_atom(identifier) do
           @read_replicas |> Enum.at(rem(identifier |> :erlang.phash2(), length(@read_replicas)))
