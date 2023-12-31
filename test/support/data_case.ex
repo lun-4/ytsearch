@@ -25,6 +25,7 @@ defmodule YtSearch.DataCase do
       import Ecto.Query
       import YtSearch.DataCase
       import YtSearch.Factory
+      alias YtSearch.Factory
     end
   end
 

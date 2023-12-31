@@ -1,4 +1,5 @@
 defmodule YtSearchWeb.SlotTest do
+  alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
   require Logger
   alias YtSearch.Slot
@@ -26,7 +27,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   defp insert_slot() do
-    insert(:slot, [], on_conflict: :replace_all)
+    Factory.Slot.insert(:slot, [], on_conflict: :replace_all)
   end
 
   @custom_expire (System.os_time(:second) + 3_600) |> to_string
@@ -503,7 +504,7 @@ defmodule YtSearchWeb.SlotTest do
         |> NaiveDateTime.add(-10, :second)
         |> NaiveDateTime.truncate(:second)
     )
-    |> Repo.update!()
+    |> SlotRepo.update!()
 
     assert Slot.fetch_by_id(slot.id) == nil
 
@@ -587,7 +588,7 @@ defmodule YtSearchWeb.SlotTest do
           |> NaiveDateTime.add(-61, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
     conn =
       build_conn()
@@ -606,7 +607,7 @@ defmodule YtSearchWeb.SlotTest do
           |> NaiveDateTime.add(-61, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
     conn =
       build_conn()
