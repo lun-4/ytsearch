@@ -1,4 +1,5 @@
 defmodule YtSearch.Test.Data do
+  alias YtSearch.Factory
   import YtSearch.Factory
 
   def png do
@@ -10,7 +11,7 @@ defmodule YtSearch.Test.Data do
   end
 
   def insert_slot() do
-    insert(:slot, [], on_conflict: :replace_all)
+    Factory.Slot.insert(:slot, [], on_conflict: :replace_all)
   end
 
   def default_global_mock(extra_fn \\ nil) do

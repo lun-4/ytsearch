@@ -1,4 +1,5 @@
 defmodule YtSearchWeb.SlotUtilitiesTest do
+  alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.Repo
@@ -107,7 +108,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
           |> NaiveDateTime.add(-1, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil
