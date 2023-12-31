@@ -38,6 +38,9 @@ defmodule YtSearch.Application do
         YtSearch.Data.PlaylistSlotRepo,
         YtSearch.Data.PlaylistSlotRepo.Replica1,
         YtSearch.Data.PlaylistSlotRepo.Replica2,
+        YtSearch.Data.SearchSlotRepo,
+        YtSearch.Data.SearchSlotRepo.Replica1,
+        YtSearch.Data.SearchSlotRepo.Replica2,
 
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},

@@ -42,7 +42,8 @@ defmodule YtSearch.DataCase do
           YtSearch.Repo,
           YtSearch.Data.SlotRepo,
           YtSearch.Data.ChannelSlotRepo,
-          YtSearch.Data.PlaylistSlotRepo
+          YtSearch.Data.PlaylistSlotRepo,
+          YtSearch.Data.SearchSlotRepo
         ] do
       pid = Ecto.Adapters.SQL.Sandbox.start_owner!(repo, shared: not tags[:async])
       on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)

@@ -1,7 +1,7 @@
 defmodule YtSearch.SearchSlot do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.SearchSlotRepo
   alias YtSearch.Slot
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
@@ -33,7 +33,7 @@ defmodule YtSearch.SearchSlot do
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.replica(slot_id).one(query)
+    SearchSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -53,7 +53,7 @@ defmodule YtSearch.SearchSlot do
     internal_id = query |> internal_id_for
     query = from s in __MODULE__, where: s.query == ^internal_id, select: s
 
-    Repo.replica(internal_id).one(query)
+    SearchSlotRepo.replica(internal_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -105,9 +105,9 @@ defmodule YtSearch.SearchSlot do
   defp from_slots_json(slots_json, search_query, opts) do
     keepalive = Keyword.get(opts, :keepalive, false)
 
-    Repo.transaction(fn ->
+    SearchSlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.query == ^search_query, select: s
-      search_slot = Repo.replica(search_query).one(query)
+      search_slot = SearchSlotRepo.replica(search_query).one(query)
 
       if search_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -124,7 +124,7 @@ defmodule YtSearch.SearchSlot do
 
         %__MODULE__{}
         |> changeset(params)
-        |> Repo.insert!(
+        |> SearchSlotRepo.insert!(
           on_conflict: [
             set: [
               query: params.query,
@@ -146,7 +146,7 @@ defmodule YtSearch.SearchSlot do
           |> SlotUtilities.put_opts(opts)
           |> SlotUtilities.put_used()
         )
-        |> Repo.update!()
+        |> SearchSlotRepo.update!()
       end
     end)
     |> then(fn {:ok, slot} -> slot end)

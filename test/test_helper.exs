@@ -6,7 +6,8 @@ for repo <- [
       YtSearch.Repo,
       YtSearch.Data.SlotRepo,
       YtSearch.Data.ChannelSlotRepo,
-      YtSearch.Data.PlaylistSlotRepo
+      YtSearch.Data.PlaylistSlotRepo,
+      YtSearch.Data.SearchSlotRepo
     ] do
   Ecto.Adapters.SQL.Sandbox.mode(repo, :manual)
 end
