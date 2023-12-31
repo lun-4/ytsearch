@@ -40,6 +40,11 @@ defmodule YtSearch.DataCase do
   def setup_sandbox(tags) do
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(YtSearch.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+
+    slot_pid =
+      Ecto.Adapters.SQL.Sandbox.start_owner!(YtSearch.Data.SlotRepo, shared: not tags[:async])
+
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(slot_pid) end)
   end
 
   @doc """
