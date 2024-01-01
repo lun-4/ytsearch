@@ -1,7 +1,8 @@
 defmodule YtSearch.Chapters do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.ChapterRepo
+  alias YtSearch.Data.ChapterRepo.JanitorReplica
 
   @type t :: %__MODULE__{}
 
@@ -17,7 +18,7 @@ defmodule YtSearch.Chapters do
 
   @spec fetch(String.t()) :: t()
   def fetch(youtube_id) do
-    Repo.replica(youtube_id).one(
+    ChapterRepo.replica(youtube_id).one(
       from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
     )
   end
@@ -28,7 +29,7 @@ defmodule YtSearch.Chapters do
     chapter_data = chapter_data_nonstr |> Jason.encode!()
 
     %__MODULE__{youtube_id: youtube_id, chapter_data: chapter_data}
-    |> Repo.insert!(
+    |> ChapterRepo.insert!(
       on_conflict: [
         set: [
           chapter_data: chapter_data
@@ -61,12 +62,12 @@ defmodule YtSearch.Chapters do
               ^expiry_time,
           limit: 1000
         )
-        |> Repo.ChapterReplica.all()
+        |> JanitorReplica.all()
         |> Enum.chunk_every(10)
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn chapters ->
-            Repo.delete(chapters)
+            ChapterRepo.delete(chapters)
             1
           end)
           |> then(fn count ->

@@ -98,4 +98,16 @@ defmodule YtSearch.Data do
         YtSearch.Data.ThumbnailRepo.JanitorReplica
       ]
   end
+
+  defmodule ChapterRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.ChapterRepo,
+      read_replicas: [
+        YtSearch.Data.ChapterRepo.Replica1,
+        YtSearch.Data.ChapterRepo.Replica2
+      ],
+      dedicated_replicas: [
+        YtSearch.Data.ChapterRepo.JanitorReplica
+      ]
+  end
 end

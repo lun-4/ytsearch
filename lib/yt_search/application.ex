@@ -45,6 +45,10 @@ defmodule YtSearch.Application do
         YtSearch.Data.ThumbnailRepo.Replica1,
         YtSearch.Data.ThumbnailRepo.Replica2,
         YtSearch.Data.ThumbnailRepo.JanitorReplica,
+        YtSearch.Data.ChapterRepo,
+        YtSearch.Data.ChapterRepo.Replica1,
+        YtSearch.Data.ChapterRepo.Replica2,
+        YtSearch.Data.ChapterRepo.JanitorReplica,
 
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},

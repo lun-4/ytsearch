@@ -14,7 +14,8 @@ config :yt_search,
     YtSearch.Data.ChannelSlotRepo,
     YtSearch.Data.PlaylistSlotRepo,
     YtSearch.Data.SearchSlotRepo,
-    YtSearch.Data.ThumbnailRepo
+    YtSearch.Data.ThumbnailRepo,
+    YtSearch.Data.ChapterRepo
   ]
 
 # Configures the endpoint
@@ -82,7 +83,11 @@ repos = [
   YtSearch.Data.ThumbnailRepo,
   YtSearch.Data.ThumbnailRepo.Replica1,
   YtSearch.Data.ThumbnailRepo.Replica2,
-  YtSearch.Data.ThumbnailRepo.JanitorReplica
+  YtSearch.Data.ThumbnailRepo.JanitorReplica,
+  YtSearch.Data.ChapterRepo,
+  YtSearch.Data.ChapterRepo.Replica1,
+  YtSearch.Data.ChapterRepo.Replica2,
+  YtSearch.Data.ChapterRepo.JanitorReplica
 ]
 
 for repo <- repos do
