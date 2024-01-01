@@ -7,6 +7,10 @@ defmodule YtSearch.Application do
   require Logger
   alias YtSearch.Tinycron
 
+  def primaries() do
+    Application.fetch_env!(:yt_search, :ecto_repos)
+  end
+
   defp repos() do
     Application.fetch_env!(:yt_search, :ecto_repos)
     |> Enum.map(fn primary ->
@@ -31,21 +35,7 @@ defmodule YtSearch.Application do
     children_before_repos =
       [
         # Start the Telemetry supervisor
-        YtSearchWeb.Telemetry,
-        # Start the Ecto repository
-        YtSearch.Repo,
-        YtSearch.Repo.Replica1,
-        YtSearch.Repo.Replica2,
-        YtSearch.Repo.Replica3,
-        YtSearch.Repo.Replica4,
-        YtSearch.Repo.Replica5,
-        YtSearch.Repo.Replica6,
-        YtSearch.Repo.Replica7,
-        YtSearch.Repo.Replica8,
-        YtSearch.Repo.ThumbnailReplica,
-        YtSearch.Repo.LinkReplica,
-        YtSearch.Repo.SubtitleReplica,
-        YtSearch.Repo.ChapterReplica
+        YtSearchWeb.Telemetry
       ]
 
     children_after_repos =

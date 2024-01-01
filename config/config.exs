@@ -9,7 +9,6 @@ import Config
 
 config :yt_search,
   ecto_repos: [
-    YtSearch.Repo,
     YtSearch.Data.SlotRepo,
     YtSearch.Data.ChannelSlotRepo,
     YtSearch.Data.PlaylistSlotRepo,
@@ -58,19 +57,6 @@ config :hammer,
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 
 repos = [
-  YtSearch.Repo,
-  YtSearch.Repo.Replica1,
-  YtSearch.Repo.Replica2,
-  YtSearch.Repo.Replica3,
-  YtSearch.Repo.Replica4,
-  YtSearch.Repo.Replica5,
-  YtSearch.Repo.Replica6,
-  YtSearch.Repo.Replica7,
-  YtSearch.Repo.Replica8,
-  YtSearch.Repo.ThumbnailReplica,
-  YtSearch.Repo.LinkReplica,
-  YtSearch.Repo.SubtitleReplica,
-  YtSearch.Repo.ChapterReplica,
   YtSearch.Data.SlotRepo,
   YtSearch.Data.SlotRepo.Replica1,
   YtSearch.Data.SlotRepo.Replica2,

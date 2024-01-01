@@ -1,4 +1,6 @@
 defmodule YtSearchWeb.TrendingTabTest do
+  alias YtSearch.Data.ChannelSlotRepo
+  alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.SearchSlot
@@ -47,14 +49,14 @@ defmodule YtSearchWeb.TrendingTabTest do
         expires_at:
           NaiveDateTime.utc_now() |> NaiveDateTime.add(-30) |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
       ChannelSlot.fetch(channel_slot_id)
       |> Ecto.Changeset.change(
         expires_at:
           NaiveDateTime.utc_now() |> NaiveDateTime.add(-30) |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> ChannelSlotRepo.update!()
 
       search_slot_id = resp_json["trending_tab"]["slot_id"]
 
@@ -67,7 +69,7 @@ defmodule YtSearchWeb.TrendingTabTest do
           |> NaiveDateTime.add(-10, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
       search_slot_after = SearchSlot.fetch_by_id(search_slot_id)
       assert search_slot_after != nil

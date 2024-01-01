@@ -3,13 +3,15 @@ defmodule YtSearch.Repo.Analyzer do
   Run ANALYZE on the database
   """
   require Logger
-  alias YtSearch.Repo
 
   def tick() do
-    Logger.info("setting analysis_limit to 400")
-    Repo.query!("PRAGMA analysis_limit=400;")
-    Logger.info("running PRAGMA optimize on db")
-    Repo.query!("PRAGMA optimize;")
-    Logger.info("PRAGMA optimize: done!")
+    YtSearch.Application.primaries()
+    |> Enum.map(fn repo ->
+      Logger.info("#{inspect(repo)}: setting analysis_limit to 400")
+      repo.query!("PRAGMA analysis_limit=400;")
+      Logger.info("#{inspect(repo)}: running PRAGMA optimize on db")
+      repo.query!("PRAGMA optimize;")
+      Logger.info("#{inspect(repo)}: PRAGMA optimize: done!")
+    end)
   end
 end

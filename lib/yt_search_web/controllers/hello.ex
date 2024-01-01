@@ -1,9 +1,10 @@
 defmodule YtSearchWeb.HelloController do
   use YtSearchWeb, :controller
   require Logger
+  alias YtSearch.Data.ThumbnailRepo
+  alias YtSearch.SlotUtilities
   alias YtSearch.SearchSlot
   alias YtSearch.Youtube
-  alias YtSearch.Repo
   alias YtSearchWeb.Playlist
 
   def hello(conn, params) do
@@ -41,7 +42,7 @@ defmodule YtSearchWeb.HelloController do
     [YtSearch.Slot, YtSearch.ChannelSlot]
     |> Enum.map(fn module ->
       from(s in module, select: s, where: s.keepalive)
-      |> Repo.replica().all()
+      |> SlotUtilities.repo(module).replica().all()
     end)
     |> List.flatten()
   end
@@ -70,7 +71,7 @@ defmodule YtSearchWeb.HelloController do
         update: [set: [keepalive: false]],
         where: s.id == ^slot.youtube_id
       )
-      |> Repo.update_all([])
+      |> ThumbnailRepo.update_all([])
     end)
   end
 
@@ -125,7 +126,7 @@ defmodule YtSearchWeb.HelloController do
             if not any_match? do
               slot
               |> Ecto.Changeset.change(%{keepalive: false})
-              |> Repo.update()
+              |> SlotUtilities.repo(module).update()
             else
               {:ok, nil}
             end

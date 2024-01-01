@@ -1,10 +1,11 @@
 defmodule YtSearchWeb.SlotConsistencyTest do
+  alias YtSearch.Data.SubtitleRepo
+  alias YtSearch.Data.LinkRepo
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
   alias YtSearch.Test.Data
-  alias YtSearch.Repo
   import Ecto.Query
   import Tesla.Mock
   require Logger
@@ -116,7 +117,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
           from(s in Mp4Link,
             where: s.youtube_id == ^slot.youtube_id
           )
-          |> Repo.delete_all()
+          |> LinkRepo.delete_all()
 
           unregister_metadata_workers(slot.youtube_id)
         else
@@ -227,7 +228,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
           from(s in Subtitle,
             where: s.youtube_id == ^slot.youtube_id
           )
-          |> Repo.delete_all()
+          |> SubtitleRepo.delete_all()
 
           unregister_metadata_workers(slot.youtube_id)
         else

@@ -1,4 +1,5 @@
 defmodule YtSearchWeb.SlotTest do
+  alias YtSearch.Data.LinkRepo
   alias YtSearch.Data.SubtitleRepo
   alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
@@ -6,7 +7,6 @@ defmodule YtSearchWeb.SlotTest do
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
-  alias YtSearch.Repo
   import Ecto.Query
   alias YtSearch.Test.Data
 
@@ -89,7 +89,7 @@ defmodule YtSearchWeb.SlotTest do
     |> Ecto.Changeset.change(
       inserted_at: link.inserted_at |> NaiveDateTime.add(-100_000, :second)
     )
-    |> YtSearch.Repo.update!()
+    |> LinkRepo.update!()
 
     # instead of stopping, just unregister them both
     [{worker, :self}] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
@@ -488,11 +488,13 @@ defmodule YtSearchWeb.SlotTest do
       )
 
     # assert its still on db
-    from_db = Repo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    from_db = LinkRepo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
     assert from_db.youtube_id == link.youtube_id
 
     YtSearch.Mp4Link.Janitor.tick()
-    assert Repo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) == nil
+
+    assert LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) ==
+             nil
   end
 
   test "it doesnt expose expired slots to main fetch function" do
@@ -510,7 +512,7 @@ defmodule YtSearchWeb.SlotTest do
     assert Slot.fetch_by_id(slot.id) == nil
 
     # assert its still on db
-    from_db = Repo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
+    from_db = SlotRepo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
     assert from_db.id == slot.id
   end
 
