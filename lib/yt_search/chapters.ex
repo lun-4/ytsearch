@@ -41,7 +41,8 @@ defmodule YtSearch.Chapters do
   defmodule Cleaner do
     require Logger
 
-    alias YtSearch.Repo
+    alias YtSearch.Data.ChapterRepo
+    alias YtSearch.Data.ChapterRepo.JanitorReplica
     alias YtSearch.Chapters
 
     import Ecto.Query
