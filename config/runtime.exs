@@ -44,35 +44,6 @@ if config_env() in [:prod, :dev] do
 end
 
 if config_env() == :prod do
-  database_path =
-    System.get_env("DATABASE_PATH") ||
-      raise """
-      environment variable DATABASE_PATH is missing.
-      For example: /etc/yt_search/yt_search.db
-      """
-
-  repos = [
-    YtSearch.Repo,
-    YtSearch.Repo.Replica1,
-    YtSearch.Repo.Replica2,
-    YtSearch.Repo.Replica3,
-    YtSearch.Repo.Replica4,
-    YtSearch.Repo.Replica5,
-    YtSearch.Repo.Replica6,
-    YtSearch.Repo.Replica7,
-    YtSearch.Repo.Replica8,
-    YtSearch.Repo.ThumbnailReplica,
-    YtSearch.Repo.LinkReplica,
-    YtSearch.Repo.SubtitleReplica,
-    YtSearch.Repo.ChapterReplica
-  ]
-
-  for repo <- repos do
-    config :yt_search, repo,
-      database: database_path,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "1")
-  end
-
   slots_database_path =
     System.get_env("SLOTS_DATABASE_PATH") ||
       raise """
