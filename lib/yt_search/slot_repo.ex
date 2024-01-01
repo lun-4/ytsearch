@@ -16,6 +16,10 @@ defmodule YtSearch.Data do
         @read_replicas opts[:read_replicas]
         @dedicated_replicas opts[:dedicated_replicas]
 
+        def repo_spec do
+          %{read_replicas: @read_replicas, dedicated_replicas: @dedicated_replicas}
+        end
+
         def replica() do
           Enum.random(@read_replicas)
         end

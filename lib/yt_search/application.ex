@@ -7,11 +7,29 @@ defmodule YtSearch.Application do
   require Logger
   alias YtSearch.Tinycron
 
+  defp repos() do
+    Application.fetch_env!(:yt_search, :ecto_repos)
+    |> Enum.map(fn primary ->
+      primary
+      |> to_string
+      |> then(fn
+        "Elixir.YtSearch.Data" <> _ ->
+          spec = primary.repo_spec()
+          [primary] ++ spec.read_replicas ++ spec.dedicated_replicas
+
+        _ ->
+          []
+      end)
+      |> dbg
+    end)
+    |> Enum.reduce(fn x, acc -> x ++ acc end)
+  end
+
   @impl true
   def start(_type, _args) do
     File.mkdir_p!("thumbnails")
 
-    children =
+    children_before_repos =
       [
         # Start the Telemetry supervisor
         YtSearchWeb.Telemetry,
@@ -28,28 +46,11 @@ defmodule YtSearch.Application do
         YtSearch.Repo.ThumbnailReplica,
         YtSearch.Repo.LinkReplica,
         YtSearch.Repo.SubtitleReplica,
-        YtSearch.Repo.ChapterReplica,
-        YtSearch.Data.SlotRepo,
-        YtSearch.Data.SlotRepo.Replica1,
-        YtSearch.Data.SlotRepo.Replica2,
-        YtSearch.Data.ChannelSlotRepo,
-        YtSearch.Data.ChannelSlotRepo.Replica1,
-        YtSearch.Data.ChannelSlotRepo.Replica2,
-        YtSearch.Data.PlaylistSlotRepo,
-        YtSearch.Data.PlaylistSlotRepo.Replica1,
-        YtSearch.Data.PlaylistSlotRepo.Replica2,
-        YtSearch.Data.SearchSlotRepo,
-        YtSearch.Data.SearchSlotRepo.Replica1,
-        YtSearch.Data.SearchSlotRepo.Replica2,
-        YtSearch.Data.ThumbnailRepo,
-        YtSearch.Data.ThumbnailRepo.Replica1,
-        YtSearch.Data.ThumbnailRepo.Replica2,
-        YtSearch.Data.ThumbnailRepo.JanitorReplica,
-        YtSearch.Data.ChapterRepo,
-        YtSearch.Data.ChapterRepo.Replica1,
-        YtSearch.Data.ChapterRepo.Replica2,
-        YtSearch.Data.ChapterRepo.JanitorReplica,
+        YtSearch.Repo.ChapterReplica
+      ]
 
+    children_after_repos =
+      [
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
         # Start Finch
@@ -81,6 +82,8 @@ defmodule YtSearch.Application do
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
         {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
       ] ++ maybe_janitors()
+
+    children = children_before_repos ++ repos() ++ children_after_repos
 
     start_telemetry()
 
