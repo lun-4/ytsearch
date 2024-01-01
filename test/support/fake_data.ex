@@ -1,6 +1,5 @@
 defmodule YtSearch.Test.Data do
   alias YtSearch.Factory
-  import YtSearch.Factory
 
   def png do
     File.read!("test/support/hq720.webp")

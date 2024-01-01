@@ -17,7 +17,8 @@ config :yt_search,
     YtSearch.Data.ThumbnailRepo,
     YtSearch.Data.ChapterRepo,
     YtSearch.Data.SponsorblockRepo,
-    YtSearch.Data.SubtitleRepo
+    YtSearch.Data.SubtitleRepo,
+    YtSearch.Data.LinkRepo
   ]
 
 # Configures the endpoint
@@ -97,7 +98,11 @@ repos = [
   YtSearch.Data.SubtitleRepo,
   YtSearch.Data.SubtitleRepo.Replica1,
   YtSearch.Data.SubtitleRepo.Replica2,
-  YtSearch.Data.SubtitleRepo.JanitorReplica
+  YtSearch.Data.SubtitleRepo.JanitorReplica,
+  YtSearch.Data.LinkRepo,
+  YtSearch.Data.LinkRepo.Replica1,
+  YtSearch.Data.LinkRepo.Replica2,
+  YtSearch.Data.LinkRepo.JanitorReplica
 ]
 
 for repo <- repos do

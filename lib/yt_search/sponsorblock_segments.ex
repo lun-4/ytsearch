@@ -40,13 +40,13 @@ defmodule YtSearch.Sponsorblock.Segments do
     require Logger
 
     alias YtSearch.Data.SponsorblockRepo
-    alias YtSearch.Data.SponsorblockRepo.JanitorReplica
     alias YtSearch.Sponsorblock.Segments
 
     import Ecto.Query
 
     def tick() do
       Logger.debug("cleaning segments...")
+      # TODO use streaming delete
 
       expiry_time =
         NaiveDateTime.utc_now()

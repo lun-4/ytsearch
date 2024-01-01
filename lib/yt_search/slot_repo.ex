@@ -138,4 +138,16 @@ defmodule YtSearch.Data do
         YtSearch.Data.SubtitleRepo.JanitorReplica
       ]
   end
+
+  defmodule LinkRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.LinkRepo,
+      read_replicas: [
+        YtSearch.Data.LinkRepo.Replica1,
+        YtSearch.Data.LinkRepo.Replica2
+      ],
+      dedicated_replicas: [
+        YtSearch.Data.LinkRepo.JanitorReplica
+      ]
+  end
 end

@@ -197,6 +197,22 @@ if config_env() == :prod do
     config :yt_search, repo, database: subtitles_database_path
   end
 
+  links_database_path =
+    System.get_env("LINKS_DATABASE_PATH") ||
+      raise """
+      environment variable LINKS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_links.db
+      """
+
+  for repo <- [
+        YtSearch.Data.LinkRepo,
+        YtSearch.Data.LinkRepo.Replica1,
+        YtSearch.Data.LinkRepo.Replica2,
+        YtSearch.Data.LinkRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: links_database_path
+  end
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want
