@@ -133,6 +133,22 @@ if config_env() == :prod do
     config :yt_search, repo, database: search_slots_database_path
   end
 
+  thumbnails_database_path =
+    System.get_env("THUMBNAILS_DATABASE_PATH") ||
+      raise """
+      environment variable THUMBNAILS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_thumbnails.db
+      """
+
+  for repo <- [
+        YtSearch.Data.ThumbnailRepo,
+        YtSearch.Data.ThumbnailRepo.Replica1,
+        YtSearch.Data.ThumbnailRepo.Replica2,
+        YtSearch.Data.ThumbnailRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: thumbnails_database_path
+  end
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want

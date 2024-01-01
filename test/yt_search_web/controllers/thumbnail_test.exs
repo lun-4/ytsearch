@@ -4,8 +4,8 @@ defmodule YtSearchWeb.ThumbnailTest do
   alias YtSearch.Youtube
   alias YtSearch.Thumbnail
   alias YtSearch.Slot
-  alias YtSearch.Repo
   alias YtSearch.SlotUtilities
+  alias YtSearch.Data.ThumbnailRepo
 
   alias YtSearch.Test.Data
 
@@ -36,7 +36,7 @@ defmodule YtSearchWeb.ThumbnailTest do
         |> NaiveDateTime.add(-10, :second)
         |> NaiveDateTime.truncate(:second)
     )
-    |> Repo.update!()
+    |> ThumbnailRepo.update!()
 
     fetched = Thumbnail.fetch(@youtube_id)
     assert Thumbnail.blob(fetched) == Thumbnail.blob(thumb)
@@ -58,7 +58,7 @@ defmodule YtSearchWeb.ThumbnailTest do
         |> NaiveDateTime.add(-10, :second)
         |> NaiveDateTime.truncate(:second)
     )
-    |> Repo.update!()
+    |> ThumbnailRepo.update!()
 
     fetched = Thumbnail.fetch(@youtube_id)
     assert Thumbnail.blob(fetched) == Thumbnail.blob(thumb)

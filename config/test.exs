@@ -83,6 +83,20 @@ for repo <- [
     pool: Ecto.Adapters.SQL.Sandbox
 end
 
+for repo <- [
+      YtSearch.Data.ThumbnailRepo,
+      YtSearch.Data.ThumbnailRepo.Replica1,
+      YtSearch.Data.ThumbnailRepo.Replica2,
+      YtSearch.Data.ThumbnailRepo.JanitorReplica
+    ] do
+  config :yt_search, repo,
+    database: Path.expand("../db/yt_search_test_thumbnails.db", Path.dirname(__ENV__.file)),
+    pool_size: 1,
+    queue_target: 10000,
+    queue_timeout: 10000,
+    pool: Ecto.Adapters.SQL.Sandbox
+end
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :yt_search, YtSearchWeb.Endpoint,

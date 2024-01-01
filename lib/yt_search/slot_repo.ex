@@ -86,4 +86,16 @@ defmodule YtSearch.Data do
       ],
       dedicated_replicas: []
   end
+
+  defmodule ThumbnailRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.ThumbnailRepo,
+      read_replicas: [
+        YtSearch.Data.ThumbnailRepo.Replica1,
+        YtSearch.Data.ThumbnailRepo.Replica2
+      ],
+      dedicated_replicas: [
+        YtSearch.Data.ThumbnailRepo.JanitorReplica
+      ]
+  end
 end
