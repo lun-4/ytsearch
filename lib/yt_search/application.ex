@@ -20,7 +20,6 @@ defmodule YtSearch.Application do
         _ ->
           []
       end)
-      |> dbg
     end)
     |> Enum.reduce(fn x, acc -> x ++ acc end)
   end

@@ -210,7 +210,7 @@ defmodule YtSearchWeb.SlotTest do
     segments = Segments.insert(slot.youtube_id, [])
 
     from(s in Segments, where: s.youtube_id == ^segments.youtube_id, select: s)
-    |> Repo.update_all(
+    |> YtSearch.Data.SponsorblockRepo.update_all(
       set: [
         inserted_at:
           NaiveDateTime.utc_now()

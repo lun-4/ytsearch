@@ -114,4 +114,16 @@ defmodule YtSearch.Data do
         YtSearch.Data.ChapterRepo.JanitorReplica
       ]
   end
+
+  defmodule SponsorblockRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.SponsorblockRepo,
+      read_replicas: [
+        YtSearch.Data.SponsorblockRepo.Replica1,
+        YtSearch.Data.SponsorblockRepo.Replica2
+      ],
+      dedicated_replicas: [
+        YtSearch.Data.SponsorblockRepo.JanitorReplica
+      ]
+  end
 end
