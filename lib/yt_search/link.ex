@@ -1,7 +1,7 @@
 defmodule YtSearch.Mp4Link do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.LinkRepo
   alias YtSearch.TTL
   alias YtSearch.Slot
   require Logger
@@ -24,7 +24,7 @@ defmodule YtSearch.Mp4Link do
   def fetch_by_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    case Repo.replica(youtube_id).one(query) do
+    case LinkRepo.replica(youtube_id).one(query) do
       nil ->
         nil
 
@@ -65,7 +65,7 @@ defmodule YtSearch.Mp4Link do
       end
     end)
     |> then(fn link ->
-      Repo.insert!(
+      LinkRepo.insert!(
         link,
         on_conflict: [
           set:
@@ -112,7 +112,7 @@ defmodule YtSearch.Mp4Link do
       mp4_link: nil,
       error_reason: reason_string
     }
-    |> Repo.insert!(
+    |> LinkRepo.insert!(
       on_conflict: [
         set: [
           youtube_metadata: nil,
@@ -149,7 +149,7 @@ defmodule YtSearch.Mp4Link do
   defmodule Janitor do
     require Logger
 
-    alias YtSearch.Repo
+    alias YtSearch.Data.LinkRepo
     alias YtSearch.Mp4Link
 
     import Ecto.Query
@@ -168,12 +168,12 @@ defmodule YtSearch.Mp4Link do
               ^expiry_time,
           limit: 400
         )
-        |> Repo.LinkReplica.all()
+        |> LinkRepo.JanitorReplica.all()
         |> Enum.chunk_every(4)
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn link ->
-            Repo.delete(link)
+            LinkRepo.delete(link)
             1
           end)
           |> then(fn count ->
