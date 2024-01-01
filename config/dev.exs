@@ -113,6 +113,19 @@ for repo <- [
     show_sensitive_data_on_connection_error: true
 end
 
+for repo <- [
+      YtSearch.Data.SubtitleRepo,
+      YtSearch.Data.SubtitleRepo.Replica1,
+      YtSearch.Data.SubtitleRepo.Replica2,
+      YtSearch.Data.SubtitleRepo.JanitorReplica
+    ] do
+  config :yt_search, repo,
+    database: Path.expand("../db/yt_search_dev_subtitles.db", Path.dirname(__ENV__.file)),
+    pool_size: 1,
+    stacktrace: true,
+    show_sensitive_data_on_connection_error: true
+end
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

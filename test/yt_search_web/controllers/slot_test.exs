@@ -1,4 +1,5 @@
 defmodule YtSearchWeb.SlotTest do
+  alias YtSearch.Data.SubtitleRepo
   alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
   require Logger
@@ -189,7 +190,7 @@ defmodule YtSearchWeb.SlotTest do
     _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now")
 
     from(s in Subtitle, where: s.youtube_id == ^subtitle.youtube_id, select: s)
-    |> Repo.update_all(
+    |> SubtitleRepo.update_all(
       set: [
         inserted_at:
           NaiveDateTime.utc_now()

@@ -126,4 +126,16 @@ defmodule YtSearch.Data do
         YtSearch.Data.SponsorblockRepo.JanitorReplica
       ]
   end
+
+  defmodule SubtitleRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.SubtitleRepo,
+      read_replicas: [
+        YtSearch.Data.SubtitleRepo.Replica1,
+        YtSearch.Data.SubtitleRepo.Replica2
+      ],
+      dedicated_replicas: [
+        YtSearch.Data.SubtitleRepo.JanitorReplica
+      ]
+  end
 end
