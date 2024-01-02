@@ -95,7 +95,6 @@ defmodule YtSearch.SlotUtilities do
   def repo(YtSearch.PlaylistSlot), do: YtSearch.Data.PlaylistSlotRepo
   def repo(YtSearch.SearchSlot), do: YtSearch.Data.SearchSlotRepo
   def repo(YtSearch.Thumbnail), do: YtSearch.Data.ThumbnailRepo
-  def repo(_), do: YtSearch.Repo
 
   def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
