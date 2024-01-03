@@ -12,7 +12,10 @@ defmodule Mix.Tasks.YtSearch.RecoverIds do
     |> Enum.each(fn app -> Application.ensure_all_started(app) end)
 
     children = [
-      YtSearch.Repo
+      YtSearch.Data.SlotRepo,
+      YtSearch.Data.ChannelSlotRepo,
+      YtSearch.Data.PlaylistSlotRepo,
+      YtSearch.Data.SearchSlotRepo
     ]
 
     Supervisor.start_link(children,
