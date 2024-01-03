@@ -3,7 +3,7 @@ defmodule YtSearch.Repo do
     use Prometheus.EctoInstrumenter
 
     def label_value(:repo, log_entry) do
-      log_entry[:repo]
+      log_entry[:repo] |> to_string
     end
 
     def label_value(:query, log_entry) do
