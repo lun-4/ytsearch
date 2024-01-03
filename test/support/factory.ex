@@ -1,7 +1,4 @@
 defmodule YtSearch.Factory do
-  # with Ecto
-  use ExMachina.Ecto, repo: YtSearch.Repo
-
   defmodule Slot do
     use ExMachina.Ecto, repo: YtSearch.Data.SlotRepo
 
