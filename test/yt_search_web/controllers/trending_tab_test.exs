@@ -30,7 +30,7 @@ defmodule YtSearchWeb.TrendingTabTest do
 
       conn =
         conn
-        |> get(~p"/api/v4/hello")
+        |> get(~p"/api/v5/hello")
 
       resp_json = json_response(conn, 200)
       results = resp_json["trending_tab"]["search_results"]
@@ -83,7 +83,7 @@ defmodule YtSearchWeb.TrendingTabTest do
       # re-request it
       conn =
         conn
-        |> get(~p"/api/v4/hello")
+        |> get(~p"/api/v5/hello")
 
       resp_json = json_response(conn, 200)
       results2 = resp_json["trending_tab"]["search_results"]

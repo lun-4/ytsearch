@@ -74,7 +74,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -107,7 +107,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert get_resp_header(conn, "location") == ["https://mp5.com"]
 
@@ -129,7 +129,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/api/v4/sr/#{slot.id}")
+      |> get(~p"/api/v5/sr/#{slot.id}")
 
     assert conn.status == 302
 
@@ -156,7 +156,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -172,13 +172,13 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/a/4/sl/#{unknown_id}")
+      |> get(~p"/a/5/sl/#{unknown_id}")
 
     assert conn.status == 404
 
     conn =
       conn
-      |> get(~p"/a/4/sl/#{unknown_id}")
+      |> get(~p"/a/5/sl/#{unknown_id}")
 
     assert conn.status == 404
   end
@@ -356,7 +356,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v4/s/#{slot.id}")
+        |> get(~p"/api/v5/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -428,7 +428,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v4/s/#{slot.id}")
+        |> get(~p"/api/v5/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -467,7 +467,7 @@ defmodule YtSearchWeb.SlotTest do
     |> Enum.map(fn _ ->
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
-        |> get(~p"/api/v4/sr/#{slot.id}")
+        |> get(~p"/api/v5/sr/#{slot.id}")
       end)
     end)
     |> Enum.map(fn task ->
@@ -533,7 +533,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 200
     assert response_content_type(conn, :mp4)
@@ -577,7 +577,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
@@ -596,7 +596,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
@@ -614,7 +614,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       build_conn()
-      |> get(~p"/a/4/qr/#{slot.id}")
+      |> get(~p"/a/5/qr/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)

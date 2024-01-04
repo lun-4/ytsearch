@@ -43,19 +43,19 @@ class Agent:
         self.self_tick += 1
 
     async def heartbeat(self):
-        await self.ctx.client.get(f"{yts_url}/api/v4/hello/stress_test-{self.seed}")
+        await self.ctx.client.get(f"{yts_url}/api/v5/hello/stress_test-{self.seed}")
 
     async def search(self):
         log.info("instance %d: searching...", self.instance_id)
         resp = await self.ctx.client.get(
-            f"{yts_url}/api/v4/search?q={random_string()}",
+            f"{yts_url}/api/v5/search?q={random_string()}",
             headers={"user-agent": "UnityWebRequest"},
         )
         if resp.status_code != 200:
             raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
         rjson = resp.json()
         atlas_id = rjson["slot_id"]
-        resp = await self.ctx.client.get(f"{yts_url}/a/4/at/{atlas_id}")
+        resp = await self.ctx.client.get(f"{yts_url}/a/5/at/{atlas_id}")
         if resp.status_code != 200:
             raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
         return rjson["search_results"]
@@ -65,14 +65,14 @@ class Agent:
             user_agent = "stagefright"
         else:
             user_agent = "kldgjaslkj"
-        # each agent does /a/4/sl/id for metadata
+        # each agent does /a/5/sl/id for metadata
         resp = await self.ctx.client.get(
-            f'{yts_url}/a/4/sl/{video["slot_id"]}',
+            f'{yts_url}/a/5/sl/{video["slot_id"]}',
             headers={"user-agent": user_agent},
         )
         assert resp.status_code in (200, 302)
         resp = await self.ctx.client.get(
-            f'{yts_url}/a/4/sl/{video["slot_id"]}',
+            f'{yts_url}/a/5/sl/{video["slot_id"]}',
             headers={"user-agent": "UnityWebRequest"},
         )
         assert resp.status_code == 200
@@ -127,7 +127,7 @@ class Instance:
                 len(self.video_queue),
             )
             for video in self.video_queue:
-                resp = await self.ctx.client.get(f"{yts_url}/a/4/qr/{video['slot_id']}")
+                resp = await self.ctx.client.get(f"{yts_url}/a/5/qr/{video['slot_id']}")
                 assert resp.status_code == 200
 
         results = []
