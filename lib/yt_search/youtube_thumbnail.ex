@@ -30,21 +30,20 @@ defmodule YtSearch.Youtube.Thumbnail do
     end
   end
 
-  # same idea as Mp4Link.maybe_fetch_upstream
+  defp filesize_for(id) do
+    Thumbnail.path_for(id)
+    |> File.stat()
+    |> then(fn
+      {:ok, %{size: size}} -> size
+      {:error, :enoent} -> 0
+      {:error, :_} -> 0
+    end)
+  end
 
   @spec maybe_download_thumbnail(String.t(), String.t(), Keyword.t()) :: Thumbnail.t()
   def maybe_download_thumbnail(id, url, opts) do
     maybe_metadata = Thumbnail.fetch(id)
-
-    maybe_filesize =
-      Thumbnail.path_for(id)
-      |> File.stat()
-      |> then(fn
-        {:ok, %{size: size}} -> size
-        {:error, :enoent} -> 0
-        {:error, :_} -> 0
-      end)
-
+    maybe_filesize = filesize_for(id)
     should_download? = maybe_metadata == nil or maybe_filesize == 0
 
     if should_download? do
@@ -71,7 +70,7 @@ defmodule YtSearch.Youtube.Thumbnail do
   @mogrify false
 
   defp do_download_thumbnail(youtube_id, url, opts) do
-    if youtube_id |> Thumbnail.path_for() |> File.exists?() do
+    if filesize_for(youtube_id) > 0 do
       # if it already exists, insert the metadata entry (as to be in this function,
       # the db entry would be currently missing)
       {:ok, Thumbnail.insert(youtube_id, "image/webp", opts)}
