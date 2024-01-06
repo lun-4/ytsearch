@@ -60,6 +60,16 @@ defmodule YtSearch.Youtube.Thumbnail do
   @mogrify false
 
   defp do_download_thumbnail(youtube_id, url, opts) do
+    if youtube_id |> Thumbnail.path_for() |> File.exists?() do
+      # if it already exists, insert the metadata entry (as to be in this function,
+      # the db entry would be currently missing)
+      {:ok, Thumbnail.insert(youtube_id, "image/webp", opts)}
+    else
+      really_do_download_thumbnail(youtube_id, url, opts)
+    end
+  end
+
+  defp really_do_download_thumbnail(youtube_id, url, opts) do
     Logger.debug("thumbnail requesting #{url}")
 
     # youtube channels give urls without scheme for some reason
