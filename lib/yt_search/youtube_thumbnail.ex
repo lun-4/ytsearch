@@ -34,13 +34,24 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   @spec maybe_download_thumbnail(String.t(), String.t(), Keyword.t()) :: Thumbnail.t()
   def maybe_download_thumbnail(id, url, opts) do
-    case Thumbnail.fetch(id) do
-      nil ->
-        mutexed_download_thumbnail(id, url, opts)
+    maybe_metadata = Thumbnail.fetch(id)
 
-      thumb ->
-        thumb
-        |> SlotUtilities.refresh_expiration(opts)
+    maybe_filesize =
+      Thumbnail.path_for(id)
+      |> File.stat()
+      |> then(fn
+        {:ok, %{size: size}} -> size
+        {:error, :enoent} -> 0
+        {:error, :_} -> 0
+      end)
+
+    should_download? = maybe_metadata == nil or maybe_filesize == 0
+
+    if should_download? do
+      mutexed_download_thumbnail(id, url, opts)
+    else
+      maybe_metadata
+      |> SlotUtilities.refresh_expiration(opts)
     end
   end
 
