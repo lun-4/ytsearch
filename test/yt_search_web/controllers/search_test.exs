@@ -276,4 +276,55 @@ defmodule YtSearchWeb.SearchTest do
 
     json_response(conn, 200)
   end
+
+  @test_cases [
+    "lofi_search.json"
+  ]
+
+  @test_cases
+  |> Enum.map(fn path -> "test/support/piped_outputs/#{path}" end)
+  |> Enum.map(fn path -> {path, File.read!(path)} end)
+  |> Enum.each(fn {path, file_data} ->
+    test "it livestreams works on " <> path, %{conn: conn} do
+      mock(fn
+        %{method: :get, url: "example.org/search" <> _suffix} ->
+          json(Jason.decode!(unquote(file_data)))
+      end)
+
+      conn =
+        conn
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/api/v5/search?search=whatever")
+
+      rjson = json_response(conn, 200)
+      first_result = rjson["search_results"] |> Enum.at(0)
+      assert first_result["type"] == "livestream"
+      slot = YtSearch.Slot.fetch_by_id(first_result["slot_id"])
+      assert slot != nil
+      delta = NaiveDateTime.diff(slot.expires_at, NaiveDateTime.utc_now())
+      assert delta > 1 * 60 * 60
+
+      slot
+      |> Ecto.Changeset.change(
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-10, :second)
+          |> NaiveDateTime.truncate(:second)
+      )
+      |> YtSearch.Data.SlotRepo.update!()
+
+      conn =
+        build_conn()
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/api/v5/search?search=whatever")
+
+      rjson = json_response(conn, 200)
+      first_result = rjson["search_results"] |> Enum.at(0)
+      assert first_result["type"] == "livestream"
+      slot = YtSearch.Slot.fetch_by_id(first_result["slot_id"])
+      assert slot != nil
+      delta = NaiveDateTime.diff(slot.expires_at, NaiveDateTime.utc_now())
+      assert delta > 1 * 60 * 60
+    end
+  end)
 end
