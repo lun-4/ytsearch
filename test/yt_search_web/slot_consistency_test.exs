@@ -1,10 +1,11 @@
 defmodule YtSearchWeb.SlotConsistencyTest do
+  alias YtSearch.Data.SubtitleRepo
+  alias YtSearch.Data.LinkRepo
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
   alias YtSearch.Test.Data
-  alias YtSearch.Repo
   import Ecto.Query
   import Tesla.Mock
   require Logger
@@ -110,13 +111,13 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
         conn =
           Phoenix.ConnTest.build_conn()
-          |> get(~p"/a/4/sr/#{slot.id}")
+          |> get(~p"/a/5/sr/#{slot.id}")
 
         if :rand.uniform(100) < 30 do
           from(s in Mp4Link,
             where: s.youtube_id == ^slot.youtube_id
           )
-          |> Repo.delete_all()
+          |> LinkRepo.delete_all()
 
           unregister_metadata_workers(slot.youtube_id)
         else
@@ -221,13 +222,13 @@ defmodule YtSearchWeb.SlotConsistencyTest do
         conn =
           Phoenix.ConnTest.build_conn()
           |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/api/v4/s/#{slot.id}")
+          |> get(~p"/api/v5/s/#{slot.id}")
 
         if :rand.uniform(100) < 30 do
           from(s in Subtitle,
             where: s.youtube_id == ^slot.youtube_id
           )
-          |> Repo.delete_all()
+          |> SubtitleRepo.delete_all()
 
           unregister_metadata_workers(slot.youtube_id)
         else

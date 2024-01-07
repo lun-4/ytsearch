@@ -1,7 +1,6 @@
 defmodule YtSearch.SlotUtilities do
   import Ecto.Query
   require Logger
-  alias YtSearch.Repo
 
   defp expiration_for(%{} = spec) do
     NaiveDateTime.utc_now()
@@ -44,7 +43,7 @@ defmodule YtSearch.SlotUtilities do
 
     slot
     |> module.changeset(%{} |> put_used())
-    |> Repo.update!()
+    |> repo(module).update!()
   end
 
   def min_time_between_refreshes do
@@ -63,7 +62,7 @@ defmodule YtSearch.SlotUtilities do
         |> put_opts(opts)
         |> put_used()
       )
-      |> Repo.update!()
+      |> repo(module).update!()
     else
       slot
     end
@@ -91,6 +90,12 @@ defmodule YtSearch.SlotUtilities do
     end
   end
 
+  def repo(YtSearch.Slot), do: YtSearch.Data.SlotRepo
+  def repo(YtSearch.ChannelSlot), do: YtSearch.Data.ChannelSlotRepo
+  def repo(YtSearch.PlaylistSlot), do: YtSearch.Data.PlaylistSlotRepo
+  def repo(YtSearch.SearchSlot), do: YtSearch.Data.SearchSlotRepo
+  def repo(YtSearch.Thumbnail), do: YtSearch.Data.ThumbnailRepo
+
   def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
 
@@ -99,7 +104,7 @@ defmodule YtSearch.SlotUtilities do
       select: s,
       limit: 1
     )
-    |> Repo.replica().all()
+    |> repo(module).replica().all()
     |> then(fn
       [] ->
         from(s in module,
@@ -110,7 +115,7 @@ defmodule YtSearch.SlotUtilities do
           ],
           limit: 5
         )
-        |> Repo.replica().all()
+        |> repo(module).replica().all()
         |> then(fn slots ->
           slot_ids =
             slots
@@ -120,7 +125,7 @@ defmodule YtSearch.SlotUtilities do
             update: [set: [expires_at: ^~N[2020-01-01 00:00:00]]],
             where: s.id in ^slot_ids
           )
-          |> Repo.update_all([])
+          |> repo(module).update_all([])
 
           slot_ids
         end)

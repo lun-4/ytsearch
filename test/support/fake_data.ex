@@ -1,5 +1,5 @@
 defmodule YtSearch.Test.Data do
-  import YtSearch.Factory
+  alias YtSearch.Factory
 
   def png do
     File.read!("test/support/hq720.webp")
@@ -10,7 +10,7 @@ defmodule YtSearch.Test.Data do
   end
 
   def insert_slot() do
-    insert(:slot, [], on_conflict: :replace_all)
+    Factory.Slot.insert(:slot, [], on_conflict: :replace_all)
   end
 
   def default_global_mock(extra_fn \\ nil) do

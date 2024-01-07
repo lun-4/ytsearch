@@ -30,7 +30,7 @@ defmodule YtSearch.ThumbnailAtlasTest do
   test "creates an atlas from a single thumbnail", %{conn: conn, search_slot: search_slot} do
     resp =
       conn
-      |> get("/a/4/at/#{search_slot.id}")
+      |> get("/a/5/at/#{search_slot.id}")
 
     assert resp.status == 200
     assert Plug.Conn.get_resp_header(resp, "content-type") == ["image/png"]

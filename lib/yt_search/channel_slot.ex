@@ -1,7 +1,7 @@
 defmodule YtSearch.ChannelSlot do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.ChannelSlotRepo
   alias YtSearch.SlotUtilities
   import Ecto.Changeset
   require Logger
@@ -21,7 +21,7 @@ defmodule YtSearch.ChannelSlot do
   def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.replica(slot_id).one(query)
+    ChannelSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -29,7 +29,7 @@ defmodule YtSearch.ChannelSlot do
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.replica(youtube_id).one(query)
+    ChannelSlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -47,9 +47,9 @@ defmodule YtSearch.ChannelSlot do
       raise "invalid youtube id"
     end
 
-    Repo.transaction(fn ->
+    ChannelSlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-      channel_slot = Repo.replica(youtube_id).one(query)
+      channel_slot = ChannelSlotRepo.replica(youtube_id).one(query)
 
       if channel_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -65,7 +65,7 @@ defmodule YtSearch.ChannelSlot do
 
         %__MODULE__{}
         |> changeset(params)
-        |> Repo.insert!(
+        |> ChannelSlotRepo.insert!(
           on_conflict: [
             set: [
               youtube_id: youtube_id,

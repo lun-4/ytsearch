@@ -4,7 +4,7 @@ defmodule YtSearchWeb.AngelOfDeathTest do
   test "aod works", %{conn: conn} do
     conn =
       conn
-      |> get(~p"/a/4/aod/1")
+      |> get(~p"/a/5/aod/1")
 
     resp_json = json_response(conn, 200)
     assert resp_json == nil

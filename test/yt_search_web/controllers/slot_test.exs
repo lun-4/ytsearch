@@ -1,10 +1,12 @@
 defmodule YtSearchWeb.SlotTest do
+  alias YtSearch.Data.LinkRepo
+  alias YtSearch.Data.SubtitleRepo
+  alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
   require Logger
   alias YtSearch.Slot
   alias YtSearch.Subtitle
   alias YtSearch.Mp4Link
-  alias YtSearch.Repo
   import Ecto.Query
   alias YtSearch.Test.Data
 
@@ -26,7 +28,7 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   defp insert_slot() do
-    insert(:slot, [], on_conflict: :replace_all)
+    Factory.Slot.insert(:slot, [], on_conflict: :replace_all)
   end
 
   @custom_expire (System.os_time(:second) + 3_600) |> to_string
@@ -72,7 +74,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -87,7 +89,7 @@ defmodule YtSearchWeb.SlotTest do
     |> Ecto.Changeset.change(
       inserted_at: link.inserted_at |> NaiveDateTime.add(-100_000, :second)
     )
-    |> YtSearch.Repo.update!()
+    |> LinkRepo.update!()
 
     # instead of stopping, just unregister them both
     [{worker, :self}] = Registry.lookup(YtSearch.MetadataWorkers, slot.youtube_id)
@@ -105,7 +107,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert get_resp_header(conn, "location") == ["https://mp5.com"]
 
@@ -127,7 +129,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/api/v4/sr/#{slot.id}")
+      |> get(~p"/api/v5/sr/#{slot.id}")
 
     assert conn.status == 302
 
@@ -154,7 +156,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 302
 
@@ -170,13 +172,13 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/a/4/sl/#{unknown_id}")
+      |> get(~p"/a/5/sl/#{unknown_id}")
 
     assert conn.status == 404
 
     conn =
       conn
-      |> get(~p"/a/4/sl/#{unknown_id}")
+      |> get(~p"/a/5/sl/#{unknown_id}")
 
     assert conn.status == 404
   end
@@ -188,7 +190,7 @@ defmodule YtSearchWeb.SlotTest do
     _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now")
 
     from(s in Subtitle, where: s.youtube_id == ^subtitle.youtube_id, select: s)
-    |> Repo.update_all(
+    |> SubtitleRepo.update_all(
       set: [
         inserted_at:
           NaiveDateTime.utc_now()
@@ -209,7 +211,7 @@ defmodule YtSearchWeb.SlotTest do
     segments = Segments.insert(slot.youtube_id, [])
 
     from(s in Segments, where: s.youtube_id == ^segments.youtube_id, select: s)
-    |> Repo.update_all(
+    |> YtSearch.Data.SponsorblockRepo.update_all(
       set: [
         inserted_at:
           NaiveDateTime.utc_now()
@@ -354,7 +356,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v4/s/#{slot.id}")
+        |> get(~p"/api/v5/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -426,7 +428,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v4/s/#{slot.id}")
+        |> get(~p"/api/v5/s/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -465,7 +467,7 @@ defmodule YtSearchWeb.SlotTest do
     |> Enum.map(fn _ ->
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
-        |> get(~p"/api/v4/sr/#{slot.id}")
+        |> get(~p"/api/v5/sr/#{slot.id}")
       end)
     end)
     |> Enum.map(fn task ->
@@ -486,11 +488,13 @@ defmodule YtSearchWeb.SlotTest do
       )
 
     # assert its still on db
-    from_db = Repo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    from_db = LinkRepo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
     assert from_db.youtube_id == link.youtube_id
 
     YtSearch.Mp4Link.Janitor.tick()
-    assert Repo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) == nil
+
+    assert LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) ==
+             nil
   end
 
   test "it doesnt expose expired slots to main fetch function" do
@@ -503,12 +507,12 @@ defmodule YtSearchWeb.SlotTest do
         |> NaiveDateTime.add(-10, :second)
         |> NaiveDateTime.truncate(:second)
     )
-    |> Repo.update!()
+    |> SlotRepo.update!()
 
     assert Slot.fetch_by_id(slot.id) == nil
 
     # assert its still on db
-    from_db = Repo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
+    from_db = SlotRepo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
     assert from_db.id == slot.id
   end
 
@@ -529,7 +533,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 200
     assert response_content_type(conn, :mp4)
@@ -573,7 +577,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
@@ -587,12 +591,12 @@ defmodule YtSearchWeb.SlotTest do
           |> NaiveDateTime.add(-61, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v4/s/#{slot.id}")
+      |> get(~p"/api/v5/s/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
@@ -606,11 +610,11 @@ defmodule YtSearchWeb.SlotTest do
           |> NaiveDateTime.add(-61, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
     conn =
       build_conn()
-      |> get(~p"/a/4/qr/#{slot.id}")
+      |> get(~p"/a/5/qr/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)

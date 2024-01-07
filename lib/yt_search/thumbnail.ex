@@ -1,7 +1,8 @@
 defmodule YtSearch.Thumbnail do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.ThumbnailRepo
+  alias YtSearch.Data.ThumbnailRepo.JanitorReplica
   alias YtSearch.SlotUtilities
   import Ecto.Changeset
   require Logger
@@ -21,7 +22,7 @@ defmodule YtSearch.Thumbnail do
   @spec fetch(String.t()) :: Thumbnail.t()
   def fetch(id) do
     query = from s in __MODULE__, where: s.id == ^id, select: s
-    Repo.replica(id).one(query)
+    ThumbnailRepo.replica(id).one(query)
   end
 
   def blob(nil), do: nil
@@ -61,7 +62,7 @@ defmodule YtSearch.Thumbnail do
       |> SlotUtilities.put_simple_expiration(__MODULE__)
       |> SlotUtilities.put_used()
     )
-    |> Repo.insert!()
+    |> ThumbnailRepo.insert!()
   end
 
   def path_for(id) do
@@ -77,7 +78,7 @@ defmodule YtSearch.Thumbnail do
   defmodule Janitor do
     require Logger
 
-    alias YtSearch.Repo
+    alias YtSearch.Data.ThumbnailRepo
     alias YtSearch.Thumbnail
 
     import Ecto.Query
@@ -92,14 +93,14 @@ defmodule YtSearch.Thumbnail do
           where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
           limit: 14000
         )
-        |> Repo.ThumbnailReplica.all()
+        |> JanitorReplica.all()
         |> Enum.chunk_every(100)
         |> Enum.map(fn chunk ->
           ids = chunk |> Enum.map(fn t -> t.id end)
 
           {count, _} =
             from(t in Thumbnail, where: t.id in ^ids)
-            |> Repo.delete_all()
+            |> ThumbnailRepo.delete_all()
 
           ids
           |> Enum.each(fn id ->

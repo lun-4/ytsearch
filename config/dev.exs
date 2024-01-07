@@ -2,29 +2,76 @@ import Config
 
 # Configure your database
 
-repos = [
-  YtSearch.Repo,
-  YtSearch.Repo.Replica1,
-  YtSearch.Repo.Replica2,
-  YtSearch.Repo.Replica3,
-  YtSearch.Repo.Replica4,
-  YtSearch.Repo.Replica5,
-  YtSearch.Repo.Replica6,
-  YtSearch.Repo.Replica7,
-  YtSearch.Repo.Replica8,
-  YtSearch.Repo.ThumbnailReplica,
-  YtSearch.Repo.LinkReplica,
-  YtSearch.Repo.SubtitleReplica,
-  YtSearch.Repo.ChapterReplica
+[
+  {[
+     YtSearch.Data.SlotRepo,
+     YtSearch.Data.SlotRepo.Replica1,
+     YtSearch.Data.SlotRepo.Replica2
+   ], "slots"},
+  {[
+     YtSearch.Data.ChannelSlotRepo,
+     YtSearch.Data.ChannelSlotRepo.Replica1,
+     YtSearch.Data.ChannelSlotRepo.Replica2
+   ], "channel_slots"},
+  {[
+     YtSearch.Data.PlaylistSlotRepo,
+     YtSearch.Data.PlaylistSlotRepo.Replica1,
+     YtSearch.Data.PlaylistSlotRepo.Replica2
+   ], "playlist_slots"},
+  {[
+     YtSearch.Data.SearchSlotRepo,
+     YtSearch.Data.SearchSlotRepo.Replica1,
+     YtSearch.Data.SearchSlotRepo.Replica2
+   ], "search_slots"},
+  {[
+     YtSearch.Data.ThumbnailRepo,
+     YtSearch.Data.ThumbnailRepo.Replica1,
+     YtSearch.Data.ThumbnailRepo.Replica2,
+     YtSearch.Data.ThumbnailRepo.JanitorReplica
+   ], "thumbnails"},
+  {[
+     YtSearch.Data.ChapterRepo,
+     YtSearch.Data.ChapterRepo.Replica1,
+     YtSearch.Data.ChapterRepo.Replica2,
+     YtSearch.Data.ChapterRepo.JanitorReplica
+   ], "chapters"},
+  {
+    [
+      YtSearch.Data.SponsorblockRepo,
+      YtSearch.Data.SponsorblockRepo.Replica1,
+      YtSearch.Data.SponsorblockRepo.Replica2,
+      YtSearch.Data.SponsorblockRepo.JanitorReplica
+    ],
+    "sponsorblock"
+  },
+  {
+    [
+      YtSearch.Data.SubtitleRepo,
+      YtSearch.Data.SubtitleRepo.Replica1,
+      YtSearch.Data.SubtitleRepo.Replica2,
+      YtSearch.Data.SubtitleRepo.JanitorReplica
+    ],
+    "subtitles"
+  },
+  {
+    [
+      YtSearch.Data.LinkRepo,
+      YtSearch.Data.LinkRepo.Replica1,
+      YtSearch.Data.LinkRepo.Replica2,
+      YtSearch.Data.LinkRepo.JanitorReplica
+    ],
+    "links"
+  }
 ]
-
-for repo <- repos do
-  config :yt_search, repo,
-    database: Path.expand("../yt_search_dev.db", Path.dirname(__ENV__.file)),
-    pool_size: 1,
-    stacktrace: true,
-    show_sensitive_data_on_connection_error: true
-end
+|> Enum.each(fn {repos, name} ->
+  for repo <- repos do
+    config :yt_search, repo,
+      database: Path.expand("../db/yt_search_dev_#{name}.db", Path.dirname(__ENV__.file)),
+      pool_size: 1,
+      stacktrace: true,
+      show_sensitive_data_on_connection_error: true
+  end
+end)
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

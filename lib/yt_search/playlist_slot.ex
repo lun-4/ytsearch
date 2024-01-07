@@ -1,7 +1,7 @@
 defmodule YtSearch.PlaylistSlot do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.PlaylistSlotRepo
   alias YtSearch.SlotUtilities
   import Ecto.Changeset
   require Logger
@@ -31,7 +31,7 @@ defmodule YtSearch.PlaylistSlot do
   def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.replica(slot_id).one(query)
+    PlaylistSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -39,7 +39,7 @@ defmodule YtSearch.PlaylistSlot do
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.replica(youtube_id).one(query)
+    PlaylistSlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -53,9 +53,9 @@ defmodule YtSearch.PlaylistSlot do
   def create(youtube_id, opts \\ []) do
     keepalive = Keyword.get(opts, :keepalive, false)
 
-    Repo.transaction(fn ->
+    PlaylistSlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-      playlist_slot = Repo.replica(youtube_id).one(query)
+      playlist_slot = PlaylistSlotRepo.replica(youtube_id).one(query)
 
       if playlist_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -71,7 +71,7 @@ defmodule YtSearch.PlaylistSlot do
 
         %__MODULE__{}
         |> changeset(params)
-        |> Repo.insert!(
+        |> PlaylistSlotRepo.insert!(
           on_conflict: [
             set: [
               youtube_id: youtube_id,

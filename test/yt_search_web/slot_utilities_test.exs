@@ -1,7 +1,8 @@
 defmodule YtSearchWeb.SlotUtilitiesTest do
+  alias YtSearch.SlotUtilities
+  alias YtSearch.Data.SlotRepo
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Slot
-  alias YtSearch.Repo
   import Ecto.Query
 
   defp random_yt_id do
@@ -31,7 +32,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       slot_module = unquote(slot_type)
 
       from(s in slot_module, select: s)
-      |> Repo.update_all(
+      |> SlotUtilities.repo(slot_module).update_all(
         set: [
           expires_at:
             NaiveDateTime.utc_now()
@@ -107,7 +108,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
           |> NaiveDateTime.add(-1, :second)
           |> NaiveDateTime.truncate(:second)
       )
-      |> YtSearch.Repo.update!()
+      |> SlotRepo.update!()
 
     fetched_slot = YtSearch.Slot.fetch_by_id(slot.id)
     assert fetched_slot == nil

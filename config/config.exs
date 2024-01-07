@@ -8,7 +8,17 @@
 import Config
 
 config :yt_search,
-  ecto_repos: [YtSearch.Repo]
+  ecto_repos: [
+    YtSearch.Data.SlotRepo,
+    YtSearch.Data.ChannelSlotRepo,
+    YtSearch.Data.PlaylistSlotRepo,
+    YtSearch.Data.SearchSlotRepo,
+    YtSearch.Data.ThumbnailRepo,
+    YtSearch.Data.ChapterRepo,
+    YtSearch.Data.SponsorblockRepo,
+    YtSearch.Data.SubtitleRepo,
+    YtSearch.Data.LinkRepo
+  ]
 
 # Configures the endpoint
 config :yt_search, YtSearchWeb.Endpoint,
@@ -47,32 +57,52 @@ config :hammer,
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1, 1 * 1000}
 
 repos = [
-  YtSearch.Repo,
-  YtSearch.Repo.Replica1,
-  YtSearch.Repo.Replica2,
-  YtSearch.Repo.Replica3,
-  YtSearch.Repo.Replica4,
-  YtSearch.Repo.Replica5,
-  YtSearch.Repo.Replica6,
-  YtSearch.Repo.Replica7,
-  YtSearch.Repo.Replica8,
-  YtSearch.Repo.ThumbnailReplica,
-  YtSearch.Repo.LinkReplica,
-  YtSearch.Repo.SubtitleReplica,
-  YtSearch.Repo.ChapterReplica
+  YtSearch.Data.SlotRepo,
+  YtSearch.Data.SlotRepo.Replica1,
+  YtSearch.Data.SlotRepo.Replica2,
+  YtSearch.Data.ChannelSlotRepo,
+  YtSearch.Data.ChannelSlotRepo.Replica1,
+  YtSearch.Data.ChannelSlotRepo.Replica2,
+  YtSearch.Data.PlaylistSlotRepo,
+  YtSearch.Data.PlaylistSlotRepo.Replica1,
+  YtSearch.Data.PlaylistSlotRepo.Replica2,
+  YtSearch.Data.SearchSlotRepo,
+  YtSearch.Data.SearchSlotRepo.Replica1,
+  YtSearch.Data.SearchSlotRepo.Replica2,
+  YtSearch.Data.ThumbnailRepo,
+  YtSearch.Data.ThumbnailRepo.Replica1,
+  YtSearch.Data.ThumbnailRepo.Replica2,
+  YtSearch.Data.ThumbnailRepo.JanitorReplica,
+  YtSearch.Data.ChapterRepo,
+  YtSearch.Data.ChapterRepo.Replica1,
+  YtSearch.Data.ChapterRepo.Replica2,
+  YtSearch.Data.ChapterRepo.JanitorReplica,
+  YtSearch.Data.SponsorblockRepo,
+  YtSearch.Data.SponsorblockRepo.Replica1,
+  YtSearch.Data.SponsorblockRepo.Replica2,
+  YtSearch.Data.SponsorblockRepo.JanitorReplica,
+  YtSearch.Data.SubtitleRepo,
+  YtSearch.Data.SubtitleRepo.Replica1,
+  YtSearch.Data.SubtitleRepo.Replica2,
+  YtSearch.Data.SubtitleRepo.JanitorReplica,
+  YtSearch.Data.LinkRepo,
+  YtSearch.Data.LinkRepo.Replica1,
+  YtSearch.Data.LinkRepo.Replica2,
+  YtSearch.Data.LinkRepo.JanitorReplica
 ]
 
 for repo <- repos do
   config :yt_search, repo,
     cache_size: -16_000,
     auto_vacuum: :incremental,
+    telemetry_prefix: [:yt_search, :repo],
     telemetry_event: [YtSearch.Repo.Instrumenter]
 end
 
 config :prometheus, YtSearch.Repo.Instrumenter,
   stages: [:queue, :query, :decode],
   counter: true,
-  labels: [:result, :query],
+  labels: [:result, :query, :repo],
   query_duration_buckets: [
     10,
     100,

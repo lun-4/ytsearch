@@ -7,29 +7,39 @@ defmodule YtSearch.Application do
   require Logger
   alias YtSearch.Tinycron
 
+  def primaries() do
+    Application.fetch_env!(:yt_search, :ecto_repos)
+  end
+
+  defp repos() do
+    Application.fetch_env!(:yt_search, :ecto_repos)
+    |> Enum.map(fn primary ->
+      primary
+      |> to_string
+      |> then(fn
+        "Elixir.YtSearch.Data" <> _ ->
+          spec = primary.repo_spec()
+          [primary] ++ spec.read_replicas ++ spec.dedicated_replicas
+
+        _ ->
+          []
+      end)
+    end)
+    |> Enum.reduce(fn x, acc -> x ++ acc end)
+  end
+
   @impl true
   def start(_type, _args) do
     File.mkdir_p!("thumbnails")
 
-    children =
+    children_before_repos =
       [
         # Start the Telemetry supervisor
-        YtSearchWeb.Telemetry,
-        # Start the Ecto repository
-        YtSearch.Repo,
-        YtSearch.Repo.Replica1,
-        YtSearch.Repo.Replica2,
-        YtSearch.Repo.Replica3,
-        YtSearch.Repo.Replica4,
-        YtSearch.Repo.Replica5,
-        YtSearch.Repo.Replica6,
-        YtSearch.Repo.Replica7,
-        YtSearch.Repo.Replica8,
-        YtSearch.Repo.ThumbnailReplica,
-        YtSearch.Repo.LinkReplica,
-        YtSearch.Repo.SubtitleReplica,
-        YtSearch.Repo.ChapterReplica,
+        YtSearchWeb.Telemetry
+      ]
 
+    children_after_repos =
+      [
         # Start the PubSub system
         {Phoenix.PubSub, name: YtSearch.PubSub},
         # Start Finch
@@ -61,6 +71,8 @@ defmodule YtSearch.Application do
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
         {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
       ] ++ maybe_janitors()
+
+    children = children_before_repos ++ repos() ++ children_after_repos
 
     start_telemetry()
 

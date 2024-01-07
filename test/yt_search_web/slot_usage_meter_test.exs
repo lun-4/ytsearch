@@ -1,14 +1,14 @@
 defmodule YtSearchWeb.SlotUsageMeterTest do
   use YtSearchWeb.ConnCase, async: false
+  alias YtSearch.Data.SlotRepo
   alias YtSearch.Slot
-  alias YtSearch.Repo
   import Ecto.Query
 
   alias YtSearch.SlotUtilities.UsageMeter
 
   setup do
     from(s in YtSearch.Slot, select: s)
-    |> Repo.update_all(
+    |> SlotRepo.update_all(
       set: [
         expires_at:
           NaiveDateTime.utc_now()
@@ -31,7 +31,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
         end
 
       from(s in YtSearch.Slot, select: s, where: s.id >= ^previous_id and s.id < ^id_limit)
-      |> Repo.update_all(
+      |> SlotRepo.update_all(
         set: [
           video_duration: wanted_duration
         ]
@@ -52,7 +52,7 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
         where: s.video_duration == ^duration,
         select: s.id
       )
-      |> Repo.update_all(
+      |> SlotRepo.update_all(
         set: [
           expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(-2, :second)
         ]

@@ -3,7 +3,7 @@ defmodule YtSearch.Slot do
   import Ecto.Query
   import Ecto.Changeset
   require Logger
-  alias YtSearch.Repo
+  alias YtSearch.Data.SlotRepo
   alias YtSearch.SlotUtilities
 
   @type t :: %__MODULE__{}
@@ -23,7 +23,7 @@ defmodule YtSearch.Slot do
   def fetch_by_id(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
-    Repo.replica(slot_id).one(query)
+    SlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -31,7 +31,7 @@ defmodule YtSearch.Slot do
   def fetch_by_youtube_id(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
 
-    Repo.replica(youtube_id).one(query)
+    SlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
@@ -46,12 +46,16 @@ defmodule YtSearch.Slot do
   @default_ttl 30 * 60
   @max_ttl 12 * 60 * 60
 
-  defp expiration_for(duration) do
+  defp expiration_for(duration, opts \\ []) do
     ttl =
-      if duration != nil do
-        max(@min_ttl, min((4 * duration) |> trunc, @max_ttl))
+      if opts |> Keyword.get(:entity_type) == :livestream do
+        3 * 60 * 60
       else
-        @default_ttl
+        if duration != nil do
+          max(@min_ttl, min((4 * duration) |> trunc, @max_ttl))
+        else
+          @default_ttl
+        end
       end
 
     NaiveDateTime.utc_now()
@@ -64,9 +68,14 @@ defmodule YtSearch.Slot do
     |> Map.put(:expires_at, expiration_for(params.video_duration))
   end
 
-  def put_expiration(params, %__MODULE__{} = slot) do
+  def put_expiration(params, %__MODULE__{} = slot, opts) do
     params
-    |> Map.put(:expires_at, expiration_for(slot.video_duration))
+    |> Map.put(:expires_at, expiration_for(slot.video_duration, opts))
+  end
+
+  def put_expiration(params, opts) do
+    params
+    |> Map.put(:expires_at, expiration_for(params.video_duration, opts))
   end
 
   def is_expired?(%__MODULE__{} = slot) do
@@ -88,9 +97,9 @@ defmodule YtSearch.Slot do
   def create(youtube_id, video_duration, opts \\ []) do
     keepalive = opts |> Keyword.get(:keepalive, false)
 
-    Repo.transaction(fn ->
+    SlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-      maybe_slot = Repo.replica(youtube_id).one(query)
+      maybe_slot = SlotRepo.replica(youtube_id).one(query)
 
       if maybe_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -106,12 +115,12 @@ defmodule YtSearch.Slot do
               end,
             keepalive: keepalive
           }
-          |> put_expiration()
+          |> put_expiration(opts)
           |> SlotUtilities.put_used()
 
         params
         |> changeset
-        |> Repo.insert!(
+        |> SlotRepo.insert!(
           on_conflict: [
             set: [
               youtube_id: youtube_id,
@@ -137,16 +146,16 @@ defmodule YtSearch.Slot do
 
     slot =
       from(s in __MODULE__, select: s, where: s.id == ^slot_id)
-      |> Repo.replica(slot_id).one()
+      |> SlotRepo.replica(slot_id).one()
 
     slot
     |> changeset(
       %{}
-      |> put_expiration(slot)
+      |> put_expiration(slot, opts)
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
-    |> Repo.update!()
+    |> SlotRepo.update!()
   end
 
   def refresh(%__MODULE__{} = slot, opts) do
@@ -155,11 +164,11 @@ defmodule YtSearch.Slot do
     slot
     |> change(
       %{}
-      |> put_expiration(slot)
+      |> put_expiration(slot, opts)
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
-    |> Repo.update!()
+    |> SlotRepo.update!()
   end
 
   def used(%__MODULE__{} = slot) do
@@ -167,7 +176,7 @@ defmodule YtSearch.Slot do
 
     slot
     |> change(%{} |> SlotUtilities.put_used())
-    |> Repo.update!()
+    |> SlotRepo.update!()
   end
 
   def youtube_url(slot) do

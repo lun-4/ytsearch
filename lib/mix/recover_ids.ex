@@ -12,7 +12,10 @@ defmodule Mix.Tasks.YtSearch.RecoverIds do
     |> Enum.each(fn app -> Application.ensure_all_started(app) end)
 
     children = [
-      YtSearch.Repo
+      YtSearch.Data.SlotRepo,
+      YtSearch.Data.ChannelSlotRepo,
+      YtSearch.Data.PlaylistSlotRepo,
+      YtSearch.Data.SearchSlotRepo
     ]
 
     Supervisor.start_link(children,
@@ -74,7 +77,9 @@ defmodule Mix.Tasks.YtSearch.RecoverIds do
 
         IO.puts("insert chunk ids #{first.id}..#{last.id}")
 
-        {amount_inserted, nil} = YtSearch.Repo.insert_all(module, chunk, on_conflict: :nothing)
+        {amount_inserted, nil} =
+          YtSearch.SlotUtilities.repo(module).insert_all(module, chunk, on_conflict: :nothing)
+
         amount_inserted
       end)
       |> Enum.reduce(fn x, y -> x + y end)

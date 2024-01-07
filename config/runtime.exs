@@ -29,46 +29,159 @@ end
 config :yt_search, YtSearch.ThumbnailAtlas,
   montage_command: System.get_env("MONTAGE_COMMAND") || "montage"
 
-config :yt_search, YtSearch.Ratelimit,
-  ytdlp_search: {
-    (System.get_env("SEARCH_RATELIMIT_REQUESTS") || "2")
-    |> Integer.parse()
-    |> Tuple.to_list()
-    |> Enum.at(0),
-    (System.get_env("SEARCH_RATELIMIT_PER_MILLISECOND") || "4000")
-    |> Integer.parse()
-    |> Tuple.to_list()
-    |> Enum.at(0)
-  }
+if config_env() in [:prod, :dev] do
+  config :yt_search, YtSearch.Ratelimit,
+    ytdlp_search: {
+      (System.get_env("SEARCH_RATELIMIT_REQUESTS") || "2")
+      |> Integer.parse()
+      |> Tuple.to_list()
+      |> Enum.at(0),
+      (System.get_env("SEARCH_RATELIMIT_PER_MILLISECOND") || "4000")
+      |> Integer.parse()
+      |> Tuple.to_list()
+      |> Enum.at(0)
+    }
+end
 
 if config_env() == :prod do
-  database_path =
-    System.get_env("DATABASE_PATH") ||
+  slots_database_path =
+    System.get_env("SLOTS_DATABASE_PATH") ||
       raise """
-      environment variable DATABASE_PATH is missing.
-      For example: /etc/yt_search/yt_search.db
+      environment variable SLOTS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_slots.db
       """
 
-  repos = [
-    YtSearch.Repo,
-    YtSearch.Repo.Replica1,
-    YtSearch.Repo.Replica2,
-    YtSearch.Repo.Replica3,
-    YtSearch.Repo.Replica4,
-    YtSearch.Repo.Replica5,
-    YtSearch.Repo.Replica6,
-    YtSearch.Repo.Replica7,
-    YtSearch.Repo.Replica8,
-    YtSearch.Repo.ThumbnailReplica,
-    YtSearch.Repo.LinkReplica,
-    YtSearch.Repo.SubtitleReplica,
-    YtSearch.Repo.ChapterReplica
-  ]
+  for repo <- [
+        YtSearch.Data.SlotRepo,
+        YtSearch.Data.SlotRepo.Replica1,
+        YtSearch.Data.SlotRepo.Replica2
+      ] do
+    config :yt_search, repo, database: slots_database_path
+  end
 
-  for repo <- repos do
-    config :yt_search, repo,
-      database: database_path,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "1")
+  channel_slots_database_path =
+    System.get_env("CHANNEL_SLOTS_DATABASE_PATH") ||
+      raise """
+      environment variable CHANNEL_SLOTS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_channel_slots.db
+      """
+
+  for repo <- [
+        YtSearch.Data.ChannelSlotRepo,
+        YtSearch.Data.ChannelSlotRepo.Replica1,
+        YtSearch.Data.ChannelSlotRepo.Replica2
+      ] do
+    config :yt_search, repo, database: channel_slots_database_path
+  end
+
+  playlist_slots_database_path =
+    System.get_env("PLAYLIST_SLOTS_DATABASE_PATH") ||
+      raise """
+      environment variable PLAYLIST_SLOTS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_playlist_slots.db
+      """
+
+  for repo <- [
+        YtSearch.Data.PlaylistSlotRepo,
+        YtSearch.Data.PlaylistSlotRepo.Replica1,
+        YtSearch.Data.PlaylistSlotRepo.Replica2
+      ] do
+    config :yt_search, repo, database: playlist_slots_database_path
+  end
+
+  search_slots_database_path =
+    System.get_env("SEARCH_SLOTS_DATABASE_PATH") ||
+      raise """
+      environment variable SEARCH_SLOTS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_search_slots.db
+      """
+
+  for repo <- [
+        YtSearch.Data.SearchSlotRepo,
+        YtSearch.Data.SearchSlotRepo.Replica1,
+        YtSearch.Data.SearchSlotRepo.Replica2
+      ] do
+    config :yt_search, repo, database: search_slots_database_path
+  end
+
+  thumbnails_database_path =
+    System.get_env("THUMBNAILS_DATABASE_PATH") ||
+      raise """
+      environment variable THUMBNAILS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_thumbnails.db
+      """
+
+  for repo <- [
+        YtSearch.Data.ThumbnailRepo,
+        YtSearch.Data.ThumbnailRepo.Replica1,
+        YtSearch.Data.ThumbnailRepo.Replica2,
+        YtSearch.Data.ThumbnailRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: thumbnails_database_path
+  end
+
+  chapters_database_path =
+    System.get_env("CHAPTERS_DATABASE_PATH") ||
+      raise """
+      environment variable CHAPTERS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_chapters.db
+      """
+
+  for repo <- [
+        YtSearch.Data.ChapterRepo,
+        YtSearch.Data.ChapterRepo.Replica1,
+        YtSearch.Data.ChapterRepo.Replica2,
+        YtSearch.Data.ChapterRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: chapters_database_path
+  end
+
+  sponsorblock_database_path =
+    System.get_env("SPONSORBLOCK_DATABASE_PATH") ||
+      raise """
+      environment variable SPONSORBLOCK_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_sponsorblock.db
+      """
+
+  for repo <- [
+        YtSearch.Data.SponsorblockRepo,
+        YtSearch.Data.SponsorblockRepo.Replica1,
+        YtSearch.Data.SponsorblockRepo.Replica2,
+        YtSearch.Data.SponsorblockRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: sponsorblock_database_path
+  end
+
+  subtitles_database_path =
+    System.get_env("SUBTITLES_DATABASE_PATH") ||
+      raise """
+      environment variable SUBTITLES_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_subtitles.db
+      """
+
+  for repo <- [
+        YtSearch.Data.SubtitleRepo,
+        YtSearch.Data.SubtitleRepo.Replica1,
+        YtSearch.Data.SubtitleRepo.Replica2,
+        YtSearch.Data.SubtitleRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: subtitles_database_path
+  end
+
+  links_database_path =
+    System.get_env("LINKS_DATABASE_PATH") ||
+      raise """
+      environment variable LINKS_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_links.db
+      """
+
+  for repo <- [
+        YtSearch.Data.LinkRepo,
+        YtSearch.Data.LinkRepo.Replica1,
+        YtSearch.Data.LinkRepo.Replica2,
+        YtSearch.Data.LinkRepo.JanitorReplica
+      ] do
+    config :yt_search, repo, database: links_database_path
   end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.

@@ -1,7 +1,7 @@
 defmodule YtSearch.Subtitle do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.SubtitleRepo
 
   @type t :: %__MODULE__{}
 
@@ -11,7 +11,6 @@ defmodule YtSearch.Subtitle do
   @primary_key false
 
   schema "subtitles" do
-    field(:id, :integer, primary_key: true, autogenerate: false)
     field(:youtube_id, :string, primary_key: true, autogenerate: false)
     field(:language, :string, primary_key: true)
     field(:subtitle_data, :string)
@@ -21,13 +20,13 @@ defmodule YtSearch.Subtitle do
   @spec fetch(String.t()) :: [Subtitle.t()]
   def fetch(youtube_id) do
     query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-    Repo.replica().all(query)
+    SubtitleRepo.replica().all(query)
   end
 
   @spec insert(String.t(), String.t(), String.t() | nil) :: Subtitle.t()
   def insert(youtube_id, language, subtitle_data) do
-    %__MODULE__{id: 0, youtube_id: youtube_id, language: language, subtitle_data: subtitle_data}
-    |> Repo.insert!(
+    %__MODULE__{youtube_id: youtube_id, language: language, subtitle_data: subtitle_data}
+    |> SubtitleRepo.insert!(
       on_conflict: [
         set: [
           subtitle_data: subtitle_data
@@ -39,7 +38,8 @@ defmodule YtSearch.Subtitle do
   defmodule Cleaner do
     require Logger
 
-    alias YtSearch.Repo
+    alias YtSearch.Data.SubtitleRepo
+    alias YtSearch.Data.SubtitleRepo.JanitorReplica
     alias YtSearch.Subtitle
 
     import Ecto.Query
@@ -60,7 +60,7 @@ defmodule YtSearch.Subtitle do
               ^expiry_time,
           limit: 1000
         )
-        |> Repo.SubtitleReplica.all()
+        |> JanitorReplica.all()
         |> Enum.map(fn subtitle ->
           # TODO: fix subtitle table
           # this hack is done because somehow id is nil,
@@ -78,7 +78,7 @@ defmodule YtSearch.Subtitle do
         |> Enum.map(fn chunk ->
           chunk
           |> Enum.map(fn subtitle ->
-            Repo.delete(subtitle)
+            SubtitleRepo.delete(subtitle)
             1
           end)
           |> then(fn count ->

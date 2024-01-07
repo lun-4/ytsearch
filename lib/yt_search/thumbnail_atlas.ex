@@ -55,6 +55,9 @@ defmodule YtSearch.Thumbnail.Atlas do
           nil ->
             @invalid_thumbnail_path
 
+          "" ->
+            @invalid_thumbnail_path
+
           data ->
             temporary_path = Temp.path!()
             File.write!(temporary_path, data)

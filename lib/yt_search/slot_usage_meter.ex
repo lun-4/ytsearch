@@ -1,6 +1,6 @@
 defmodule YtSearch.SlotUtilities.UsageMeter do
   require Logger
-  alias YtSearch.Repo
+  alias YtSearch.SlotUtilities
   import Ecto.Query
 
   defmodule Gauge do
@@ -32,14 +32,14 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
     counts =
       @slot_types
       |> Enum.map(fn slot_type ->
-        now = YtSearch.SlotUtilities.generate_unix_timestamp_integer()
+        now = SlotUtilities.generate_unix_timestamp_integer()
 
         count =
           from(s in slot_type,
             where: fragment("unixepoch(?)", s.expires_at) > ^now,
             select: count("*")
           )
-          |> Repo.replica().one()
+          |> SlotUtilities.repo(slot_type).replica().one()
 
         {slot_type, count}
       end)

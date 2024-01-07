@@ -1,7 +1,7 @@
 defmodule YtSearch.Sponsorblock.Segments do
   use Ecto.Schema
   import Ecto.Query
-  alias YtSearch.Repo
+  alias YtSearch.Data.SponsorblockRepo
 
   @type t :: %__MODULE__{}
 
@@ -17,7 +17,7 @@ defmodule YtSearch.Sponsorblock.Segments do
 
   @spec fetch(String.t()) :: t()
   def fetch(youtube_id) do
-    Repo.replica(youtube_id).one(
+    SponsorblockRepo.replica(youtube_id).one(
       from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
     )
   end
@@ -27,7 +27,7 @@ defmodule YtSearch.Sponsorblock.Segments do
     segments_json = segments_json_str |> Jason.encode!()
 
     %__MODULE__{youtube_id: youtube_id, segments_json: segments_json}
-    |> Repo.insert!(
+    |> SponsorblockRepo.insert!(
       on_conflict: [
         set: [
           segments_json: segments_json
@@ -39,13 +39,14 @@ defmodule YtSearch.Sponsorblock.Segments do
   defmodule Cleaner do
     require Logger
 
-    alias YtSearch.Repo
+    alias YtSearch.Data.SponsorblockRepo
     alias YtSearch.Sponsorblock.Segments
 
     import Ecto.Query
 
     def tick() do
       Logger.debug("cleaning segments...")
+      # TODO use streaming delete
 
       expiry_time =
         NaiveDateTime.utc_now()
@@ -57,7 +58,7 @@ defmodule YtSearch.Sponsorblock.Segments do
             s.inserted_at <
               ^expiry_time
         )
-        |> Repo.delete_all()
+        |> SponsorblockRepo.delete_all()
 
       Logger.info("deleted #{deleted_count} segments")
     end

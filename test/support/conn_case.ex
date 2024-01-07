@@ -29,6 +29,7 @@ defmodule YtSearchWeb.ConnCase do
       import Phoenix.ConnTest
       import YtSearchWeb.ConnCase
       import YtSearch.Factory
+      alias YtSearch.Factory
     end
   end
 

@@ -3,13 +3,17 @@ defmodule YtSearch.Repo.Janitor do
   Run incremental vacuums on the database
   """
   require Logger
-  alias YtSearch.Repo
 
   @page_count 20
 
   def tick() do
-    Logger.info("running vacuum at #{@page_count} pages")
-    Repo.query!("PRAGMA incremental_vacuum(#{@page_count});")
-    Logger.info("vacuum done")
+    Logger.info("running vacuum at #{@page_count} pages for repos...")
+
+    YtSearch.Application.primaries()
+    |> Enum.map(fn repo ->
+      repo.query!("PRAGMA incremental_vacuum(#{@page_count});")
+    end)
+
+    Logger.info("done!")
   end
 end
