@@ -68,9 +68,9 @@ defmodule YtSearch.Slot do
     |> Map.put(:expires_at, expiration_for(params.video_duration))
   end
 
-  def put_expiration(params, %__MODULE__{} = slot) do
+  def put_expiration(params, %__MODULE__{} = slot, opts) do
     params
-    |> Map.put(:expires_at, expiration_for(slot.video_duration))
+    |> Map.put(:expires_at, expiration_for(slot.video_duration, opts))
   end
 
   def put_expiration(params, opts) do
@@ -151,7 +151,7 @@ defmodule YtSearch.Slot do
     slot
     |> changeset(
       %{}
-      |> put_expiration(slot)
+      |> put_expiration(slot, opts)
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
@@ -164,7 +164,7 @@ defmodule YtSearch.Slot do
     slot
     |> change(
       %{}
-      |> put_expiration(slot)
+      |> put_expiration(slot, opts)
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
