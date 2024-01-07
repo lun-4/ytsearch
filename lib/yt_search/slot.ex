@@ -46,12 +46,16 @@ defmodule YtSearch.Slot do
   @default_ttl 30 * 60
   @max_ttl 12 * 60 * 60
 
-  defp expiration_for(duration) do
+  defp expiration_for(duration, opts \\ []) do
     ttl =
-      if duration != nil do
-        max(@min_ttl, min((4 * duration) |> trunc, @max_ttl))
+      if opts |> Keyword.get(:entity_type) == :livestream do
+        3 * 60 * 60
       else
-        @default_ttl
+        if duration != nil do
+          max(@min_ttl, min((4 * duration) |> trunc, @max_ttl))
+        else
+          @default_ttl
+        end
       end
 
     NaiveDateTime.utc_now()
@@ -67,6 +71,11 @@ defmodule YtSearch.Slot do
   def put_expiration(params, %__MODULE__{} = slot) do
     params
     |> Map.put(:expires_at, expiration_for(slot.video_duration))
+  end
+
+  def put_expiration(params, opts) do
+    params
+    |> Map.put(:expires_at, expiration_for(params.video_duration, opts))
   end
 
   def is_expired?(%__MODULE__{} = slot) do
@@ -106,7 +115,7 @@ defmodule YtSearch.Slot do
               end,
             keepalive: keepalive
           }
-          |> put_expiration()
+          |> put_expiration(opts)
           |> SlotUtilities.put_used()
 
         params
