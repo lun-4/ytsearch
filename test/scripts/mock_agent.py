@@ -87,7 +87,7 @@ class Instance:
     ctx: Context
     id: int
     seed: int
-    agents: list
+    agents: list[Agent]
     video_queue: list
     self_tick: int = 0
     watching_video: Optional[dict] = None
@@ -252,7 +252,7 @@ async def main():
             if random.randint(0, 100) < 70:
                 coros.append(asyncio.create_task(instance.tick(current_tick)))
         if coros:
-            await asyncio.wait(coros)
+            await asyncio.gather(*coros)
             await asyncio.sleep(0.1)
         current_tick += 1
 
