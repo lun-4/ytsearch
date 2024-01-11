@@ -248,7 +248,7 @@ async def main():
                 instance.maybe_remove_agent()
 
         if tasks:
-            await asyncio.wait(tasks)
+            await asyncio.gather(*tasks)
 
         # simulate the instances
         coros = []
