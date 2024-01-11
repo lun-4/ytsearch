@@ -137,6 +137,7 @@ def stream_route(stream_id):
         "views": random_int(99999),
         "likes": random_int(99999),
         "dislikes": random_int(99999),
+        "uploadDate": "2024-10-10T12:00:00Z",
         "audioStreams": [],
         "videoStreams": [
             {
