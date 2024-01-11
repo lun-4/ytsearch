@@ -26,6 +26,8 @@ defmodule YtSearchWeb.Playlist do
     end)
     |> Enum.filter(fn {entity_type, data} ->
       cond do
+        # if the entry doesn't provide a name, it's likely not important. ignore it.
+        data["name"] == nil -> false
         # topic channels don't provide a videos tab, ignore them
         entity_type == :channel and String.ends_with?(data["name"], " - Topic") -> false
         # we don't support upcoming things that don't actually have any videos for
