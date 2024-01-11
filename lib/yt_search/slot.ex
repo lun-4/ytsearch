@@ -97,49 +97,52 @@ defmodule YtSearch.Slot do
   def create(youtube_id, video_duration, opts \\ []) do
     keepalive = opts |> Keyword.get(:keepalive, false)
 
-    SlotRepo.transaction(fn ->
-      query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-      maybe_slot = SlotRepo.replica(youtube_id).one(query)
+    SlotRepo.transaction(
+      fn ->
+        query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+        maybe_slot = SlotRepo.replica(youtube_id).one(query)
 
-      if maybe_slot == nil do
-        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+        if maybe_slot == nil do
+          {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
-        params =
-          %{
-            id: new_id,
-            youtube_id: youtube_id,
-            video_duration:
-              case video_duration do
-                nil -> 10 * 60
-                duration -> duration |> trunc
-              end,
-            keepalive: keepalive
-          }
-          |> put_expiration(opts)
-          |> SlotUtilities.put_used()
-
-        Logger.info(
-          "allocating slot #{new_id} to #{youtube_id} (duration #{params[:video_duration]})"
-        )
-
-        params
-        |> changeset
-        |> SlotRepo.insert!(
-          on_conflict: [
-            set: [
+          params =
+            %{
+              id: new_id,
               youtube_id: youtube_id,
-              video_duration: video_duration,
-              expires_at: params.expires_at,
-              used_at: params.used_at,
+              video_duration:
+                case video_duration do
+                  nil -> 10 * 60
+                  duration -> duration |> trunc
+                end,
               keepalive: keepalive
+            }
+            |> put_expiration(opts)
+            |> SlotUtilities.put_used()
+
+          Logger.info(
+            "allocating slot #{new_id} to #{youtube_id} (duration #{params[:video_duration]})"
+          )
+
+          params
+          |> changeset
+          |> SlotRepo.insert!(
+            on_conflict: [
+              set: [
+                youtube_id: youtube_id,
+                video_duration: video_duration,
+                expires_at: params.expires_at,
+                used_at: params.used_at,
+                keepalive: keepalive
+              ]
             ]
-          ]
-        )
-      else
-        maybe_slot
-        |> refresh(opts)
-      end
-    end)
+          )
+        else
+          maybe_slot
+          |> refresh(opts)
+        end
+      end,
+      mode: :immediate
+    )
     |> then(fn {:ok, slot} -> slot end)
   end
 
