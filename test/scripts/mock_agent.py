@@ -71,10 +71,9 @@ class Agent:
             headers={"user-agent": user_agent},
         )
         assert resp.status_code == 302
-        if not self.is_quest:
-            redirect_to = resp.headers["location"]
-            if not redirect_to.endswith(video["youtube_id"]):
-                raise AssertionError(f'wanted {video["youtube_id"]}, got {redirect_to}')
+        redirect_to = resp.headers["location"]
+        if not redirect_to.endswith(video["youtube_id"]):
+            raise AssertionError(f'wanted {video["youtube_id"]}, got {redirect_to}')
         resp = await self.ctx.client.get(
             f'{yts_url}/a/5/sl/{video["slot_id"]}',
             headers={"user-agent": "UnityWebRequest"},
