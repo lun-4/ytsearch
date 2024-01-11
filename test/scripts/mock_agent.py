@@ -47,8 +47,14 @@ class Agent:
 
     async def search(self):
         log.info("instance %d: searching...", self.instance_id)
+        if random.randint(0, 100) < 30:
+            # 10% of the time ,search for single url
+            log.info("instance %d searching for single url", self.instance_id)
+            search_term = f"https://youtube.com/watch?v={random_string(11)}"
+        else:
+            search_term = random_string()
         resp = await self.ctx.client.get(
-            f"{yts_url}/api/v5/search?q={random_string()}",
+            f"{yts_url}/api/v5/search?q={search_term}",
             headers={"user-agent": "UnityWebRequest"},
         )
         if resp.status_code != 200:
