@@ -118,6 +118,10 @@ defmodule YtSearch.Slot do
           |> put_expiration(opts)
           |> SlotUtilities.put_used()
 
+        Logger.info(
+          "allocating slot #{new_id} to #{youtube_id} (duration #{params[:video_duration]})"
+        )
+
         params
         |> changeset
         |> SlotRepo.insert!(
