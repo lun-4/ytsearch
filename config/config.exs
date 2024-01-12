@@ -94,6 +94,7 @@ repos = [
 for repo <- repos do
   config :yt_search, repo,
     cache_size: -8_000,
+    pool_size: 1,
     auto_vacuum: :incremental,
     telemetry_prefix: [:yt_search, :repo],
     telemetry_event: [YtSearch.Repo.Instrumenter]
