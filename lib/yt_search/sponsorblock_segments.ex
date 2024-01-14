@@ -10,7 +10,7 @@ defmodule YtSearch.Sponsorblock.Segments do
 
   @primary_key {:youtube_id, :string, autogenerate: false}
 
-  schema "sponsorblock_segments" do
+  schema "sponsorblock_segments_v2" do
     field(:segments_json, :string)
     timestamps()
   end

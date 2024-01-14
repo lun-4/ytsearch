@@ -11,7 +11,7 @@ defmodule YtSearch.Chapters do
 
   @primary_key {:youtube_id, :string, autogenerate: false}
 
-  schema "chapters" do
+  schema "chapters_v2" do
     field(:chapter_data, :string)
     timestamps()
   end
