@@ -198,6 +198,10 @@ defmodule YtSearchWeb.SlotController do
       {:ok, result} ->
         result
 
+      {:exit, reason} ->
+        Logger.warning("task #{inspect(task)} failed with error: #{inspect(reason)}")
+        nil
+
       nil ->
         Logger.warning("task #{inspect(task)} timeouted after #{timeout}ms")
         nil
