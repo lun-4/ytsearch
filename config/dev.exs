@@ -33,6 +33,8 @@ import Config
      YtSearch.Data.ChapterRepo,
      YtSearch.Data.ChapterRepo.Replica1,
      YtSearch.Data.ChapterRepo.Replica2,
+     YtSearch.Data.ChapterRepo.Replica3,
+     YtSearch.Data.ChapterRepo.Replica4,
      YtSearch.Data.ChapterRepo.JanitorReplica
    ], "chapters"},
   {
@@ -40,6 +42,8 @@ import Config
       YtSearch.Data.SponsorblockRepo,
       YtSearch.Data.SponsorblockRepo.Replica1,
       YtSearch.Data.SponsorblockRepo.Replica2,
+      YtSearch.Data.SponsorblockRepo.Replica3,
+      YtSearch.Data.SponsorblockRepo.Replica4,
       YtSearch.Data.SponsorblockRepo.JanitorReplica
     ],
     "sponsorblock"

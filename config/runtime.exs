@@ -131,6 +131,8 @@ if config_env() == :prod do
         YtSearch.Data.ChapterRepo,
         YtSearch.Data.ChapterRepo.Replica1,
         YtSearch.Data.ChapterRepo.Replica2,
+        YtSearch.Data.ChapterRepo.Replica3,
+        YtSearch.Data.ChapterRepo.Replica4,
         YtSearch.Data.ChapterRepo.JanitorReplica
       ] do
     config :yt_search, repo, database: chapters_database_path
@@ -147,6 +149,8 @@ if config_env() == :prod do
         YtSearch.Data.SponsorblockRepo,
         YtSearch.Data.SponsorblockRepo.Replica1,
         YtSearch.Data.SponsorblockRepo.Replica2,
+        YtSearch.Data.SponsorblockRepo.Replica3,
+        YtSearch.Data.SponsorblockRepo.Replica4,
         YtSearch.Data.SponsorblockRepo.JanitorReplica
       ] do
     config :yt_search, repo, database: sponsorblock_database_path

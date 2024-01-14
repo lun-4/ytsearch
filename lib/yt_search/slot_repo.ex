@@ -108,7 +108,9 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.ChapterRepo,
       read_replicas: [
         YtSearch.Data.ChapterRepo.Replica1,
-        YtSearch.Data.ChapterRepo.Replica2
+        YtSearch.Data.ChapterRepo.Replica2,
+        YtSearch.Data.ChapterRepo.Replica3,
+        YtSearch.Data.ChapterRepo.Replica4
       ],
       dedicated_replicas: [
         YtSearch.Data.ChapterRepo.JanitorReplica
@@ -120,7 +122,9 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.SponsorblockRepo,
       read_replicas: [
         YtSearch.Data.SponsorblockRepo.Replica1,
-        YtSearch.Data.SponsorblockRepo.Replica2
+        YtSearch.Data.SponsorblockRepo.Replica2,
+        YtSearch.Data.SponsorblockRepo.Replica3,
+        YtSearch.Data.SponsorblockRepo.Replica4
       ],
       dedicated_replicas: [
         YtSearch.Data.SponsorblockRepo.JanitorReplica
