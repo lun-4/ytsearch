@@ -166,23 +166,23 @@ defmodule YtSearchWeb.SlotController do
     end
 
     subtitle_task =
-      Task.async(fn ->
+      Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
         do_subtitles(slot)
       end)
 
     sponsorblock_task =
-      Task.async(fn ->
+      Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
         do_sponsorblock(slot) |> Jason.decode!()
       end)
 
     chapters_task =
-      Task.async(fn ->
+      Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
         do_chapters(slot) |> Jason.decode!()
       end)
 
-    subtitle_data = Task.await(subtitle_task)
-    sponsorblock_data = Task.await(sponsorblock_task)
-    chapters_data = Task.await(chapters_task)
+    subtitle_data = maybe_await(subtitle_task)
+    sponsorblock_data = maybe_await(sponsorblock_task)
+    chapters_data = maybe_await(chapters_task)
 
     conn
     |> json(%{
@@ -191,6 +191,17 @@ defmodule YtSearchWeb.SlotController do
       sponsorblock_segments: sponsorblock_data,
       chapters: chapters_data
     })
+  end
+
+  defp maybe_await(task, timeout \\ 5000) do
+    case Task.yield(task, timeout) || Task.shutdown(task) do
+      {:ok, result} ->
+        result
+
+      nil ->
+        Logger.warning("task #{inspect(task)} timeouted after #{timeout}ms")
+        nil
+    end
   end
 
   defp valid_subtitle_from_list(subtitles) do

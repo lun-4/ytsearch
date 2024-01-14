@@ -69,7 +69,8 @@ defmodule YtSearch.Application do
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
-        {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
+        {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
+        {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}
       ] ++ maybe_janitors()
 
     children = children_before_repos ++ repos() ++ children_after_repos
