@@ -96,6 +96,44 @@ defmodule YtSearch.SlotUtilities do
   def repo(YtSearch.SearchSlot), do: YtSearch.Data.SearchSlotRepo
   def repo(YtSearch.Thumbnail), do: YtSearch.Data.ThumbnailRepo
 
+  defmodule RecycledSlotAge do
+    use Prometheus.Metric
+
+    def setup() do
+      Histogram.declare(
+        name: :yts_recycle_slot_age,
+        help: "age of slots when they're forcefully recycled back for reallocation",
+        labels: [:type],
+        buckets: [
+          10,
+          20,
+          30,
+          40,
+          60,
+          2 * 60,
+          10 * 60,
+          20 * 60,
+          60 * 60,
+          2 * 60 * 60,
+          3 * 60 * 60,
+          6 * 60 * 60,
+          8 * 60 * 60,
+          12 * 60 * 60
+        ]
+      )
+    end
+
+    def register(type, age) do
+      Histogram.observe(
+        [
+          name: :yts_recycle_slot_age,
+          labels: [type]
+        ],
+        age
+      )
+    end
+  end
+
   def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
 
@@ -119,7 +157,11 @@ defmodule YtSearch.SlotUtilities do
         |> then(fn slots ->
           slot_ids =
             slots
-            |> Enum.map(fn slot -> slot.id end)
+            |> Enum.map(fn slot ->
+              age = NaiveDateTime.diff(slot.expires_at, generate_unix_timestamp(), :second)
+              RecycledSlotAge.register(module, age)
+              slot.id
+            end)
 
           from(s in module,
             update: [set: [expires_at: ^~N[2020-01-01 00:00:00]]],
