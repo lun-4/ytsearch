@@ -19,6 +19,7 @@ defmodule YtSearchWeb.Router do
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
     get("/hello/:build_number", HelloController, :hello)
+    get("/aod/retry", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)
   end
 
@@ -36,6 +37,7 @@ defmodule YtSearchWeb.Router do
     get("/qr/:slot_id", SlotController, :refresh)
     get("/sr/:slot_id", SlotController, :fetch_redirect)
     get("/sl/:slot_id/index.m3u8", SlotController, :fetch_stream_redirect)
+    get("/aod/retry", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)
   end
 

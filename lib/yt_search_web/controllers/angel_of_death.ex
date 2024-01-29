@@ -9,6 +9,15 @@ defmodule YtSearchWeb.AngelOfDeathController do
     |> json(nil)
   end
 
+  @retry_error_reply Path.join(:code.priv_dir(:yt_search), "static/retry.png")
+  def report_video_retry_error(conn, params) do
+    __MODULE__.ErrorCounter.increment("retry")
+
+    conn
+    |> put_resp_header("content-type", "image/png")
+    |> resp(200, File.read!(@retry_error_reply))
+  end
+
   defmodule ErrorCounter do
     use Prometheus.Metric
 
