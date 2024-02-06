@@ -3,6 +3,7 @@ defmodule Mix.Tasks.YtSearch.DoubleCheckThumbnails do
   alias YtSearch.Thumbnail
   require Logger
   use Mix.Task
+  @requirements ["app.config"]
 
   def start_repo do
     [:ecto, :ecto_sql, :exqlite, :db_connection, :logger]
@@ -20,6 +21,7 @@ defmodule Mix.Tasks.YtSearch.DoubleCheckThumbnails do
     )
   end
 
+  @impl Mix.Task
   def run([chunk_size]) do
     start_repo()
     {chunk_size, ""} = chunk_size |> Integer.parse()
