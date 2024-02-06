@@ -24,17 +24,11 @@ defmodule Mix.Tasks.YtSearch.DoubleCheckThumbnails do
     start_repo()
     {chunk_size, ""} = chunk_size |> Integer.parse()
 
-    Path.wildcard("thumbnails/*")
-    |> then(fn thumbs ->
-      Logger.info("there are #{length(thumbs)} thumbnails in the folder")
-      thumbs
-    end)
-    |> Enum.chunk_every(chunk_size)
-    |> Enum.each(fn chunk ->
-      Logger.info("processing #{length(chunk)} files")
-
-      chunk
-      |> Enum.each(fn thumbnail_path ->
+    :filelib.fold_files(
+      "thumbnails",
+      ".*",
+      false,
+      fn thumbnail_path, state ->
         [_, ytid] = thumbnail_path |> String.split("/")
 
         # Thumbnail.fetch does not need to do TTL checks (on purpose, as we can serve the same thumb
@@ -47,10 +41,18 @@ defmodule Mix.Tasks.YtSearch.DoubleCheckThumbnails do
           Logger.info("thumbnail #{ytid} does not exist in db, removing")
           File.rm(thumbnail_path)
         end
-      end)
 
-      Logger.info("waiting 20 seconds until next chunk...")
-      :timer.sleep(20000)
+        if rem(state.filecount, chunk_size) == 0 do
+          Logger.info("waiting 20 seconds before next chunk...")
+          :timer.sleep(20000)
+        end
+
+        %{filecount: state.filecount + 1}
+      end,
+      %{filecount: 0}
+    )
+    |> then(fn state ->
+      Logger.info("done processing #{state.filecount} files")
     end)
 
     Logger.info("done!")
