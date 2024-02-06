@@ -483,18 +483,33 @@ defmodule YtSearchWeb.SlotTest do
       Mp4Link.insert(
         "abcdef",
         "https://freeeee--mp5.net",
-        DateTime.to_unix(DateTime.utc_now()) - Mp4Link.ttl_seconds() - 1,
+        nil,
         %{}
       )
 
     # assert its still on db
     from_db = LinkRepo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
     assert from_db.youtube_id == link.youtube_id
+    assert NaiveDateTime.diff(from_db.inserted_at, NaiveDateTime.utc_now()) >= 0
 
     YtSearch.Mp4Link.Janitor.tick()
 
-    assert LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s) ==
-             nil
+    from_db = LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    assert from_db.youtube_id == link.youtube_id
+
+    # update then check
+    link
+    |> Ecto.Changeset.change(
+      inserted_at:
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-Mp4Link.ttl_seconds() - 1)
+        |> NaiveDateTime.truncate(:second)
+    )
+    |> LinkRepo.update!()
+
+    YtSearch.Mp4Link.Janitor.tick()
+    from_db = LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    assert from_db == nil
   end
 
   test "it doesnt expose expired slots to main fetch function" do

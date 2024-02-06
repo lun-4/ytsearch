@@ -149,6 +149,7 @@ defmodule YtSearch.Mp4Link do
   defmodule Janitor do
     require Logger
 
+    alias YtSearch.SlotUtilities
     alias YtSearch.Data.LinkRepo
     alias YtSearch.Mp4Link
 
@@ -158,8 +159,7 @@ defmodule YtSearch.Mp4Link do
       Logger.info("cleaning links...")
 
       expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-Mp4Link.ttl_seconds())
+        SlotUtilities.generate_unix_timestamp_integer() - Mp4Link.ttl_seconds()
 
       deleted_count =
         from(s in Mp4Link,
