@@ -39,19 +39,28 @@ defmodule Mix.Tasks.YtSearch.DoubleCheckThumbnails do
 
         metadata? = Thumbnail.fetch(ytid)
 
-        if metadata? == nil do
-          Logger.info("thumbnail #{ytid} does not exist in db, removing")
-          File.rm(thumbnail_path)
-        end
+        deleted_count =
+          if metadata? == nil do
+            Logger.info("thumbnail #{ytid} does not exist in db, removing")
+            File.rm(thumbnail_path)
+            1
+          else
+            0
+          end
+
+        new_state = %{
+          filecount: state.filecount + 1,
+          deleted_count: state.deleted_count + deleted_count
+        }
 
         if rem(state.filecount, chunk_size) == 0 do
-          Logger.info("waiting 20 seconds before next chunk...")
+          Logger.info("waiting 20 seconds before next chunk... (state=#{inspect(new_state)})")
           :timer.sleep(20000)
         end
 
-        %{filecount: state.filecount + 1}
+        new_state
       end,
-      %{filecount: 0}
+      %{filecount: 0, deleted_count: 0}
     )
     |> then(fn state ->
       Logger.info("done processing #{state.filecount} files")
