@@ -11,7 +11,16 @@ defmodule YtSearchWeb.AngelOfDeathController do
 
   @retry_error_reply Path.join(:code.priv_dir(:yt_search), "static/retry.png")
   def report_video_retry_error(conn, params) do
-    __MODULE__.ErrorCounter.increment("retry")
+    maybe_number = params["number"]
+
+    counter_scope =
+      if maybe_number != nil do
+        "retry#{maybe_number}"
+      else
+        "retry"
+      end
+
+    __MODULE__.ErrorCounter.increment(counter_scope)
 
     conn
     |> put_resp_header("content-type", "image/png")
