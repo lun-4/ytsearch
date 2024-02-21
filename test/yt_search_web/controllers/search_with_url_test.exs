@@ -20,6 +20,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
 
   @valid_test_cases [
     "youtu.be/#{@test_youtube_id}",
+    "youtu.be/watch?v=#{@test_youtube_id}",
     "https://youtu.be/#{@test_youtube_id}",
     "https://youtu.be/#{@test_youtube_id}?si=19385719832",
     "http://youtu.be/#{@test_youtube_id}",
