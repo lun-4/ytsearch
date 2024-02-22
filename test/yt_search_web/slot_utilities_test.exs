@@ -117,4 +117,50 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     assert same_slot.id == slot.id
     assert same_slot.expires_at > changed_slot.expires_at
   end
+
+  test "it correctly expires the oldest-used slot" do
+    # setup by writing all of em
+
+    0..(YtSearch.Slot.slot_spec().max_ids - 1)
+    |> Enum.map(fn id ->
+      future =
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(66_666_666_666_666, :second)
+
+      used_at =
+        if id == 666 do
+          future
+        else
+          ~N[2020-01-01 00:00:00]
+        end
+
+      %{
+        id: id,
+        youtube_id: random_yt_id(),
+        expires_at: future,
+        used_at: used_at,
+        video_duration: 60,
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+        updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+        keepalive: false
+      }
+    end)
+    |> Enum.chunk_every(200)
+    |> Enum.map(fn chunk ->
+      first = chunk |> Enum.at(0)
+      last = chunk |> Enum.at(-1)
+
+      IO.puts("insert chunk ids #{first.id}..#{last.id}")
+
+      {amount_inserted, nil} =
+        YtSearch.Data.SlotRepo.insert_all(module, chunk, on_conflict: :nothing)
+
+      amount_inserted
+    end)
+    |> Enum.reduce(fn x, y -> x + y end)
+
+    # TODO
+
+    YtSearch.SlotUtilities.generate_id_v3(YtSearch.Slot)
+  end
 end

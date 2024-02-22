@@ -100,38 +100,55 @@ defmodule YtSearch.SlotUtilities do
     use Prometheus.Metric
 
     def setup() do
-      Histogram.declare(
-        name: :yts_recycle_slot_age,
-        help: "age of slots when they're forcefully recycled back for reallocation",
-        labels: [:type],
-        buckets: [
-          10,
-          20,
-          30,
-          40,
-          60,
-          2 * 60,
-          10 * 60,
-          20 * 60,
-          60 * 60,
-          2 * 60 * 60,
-          3 * 60 * 60,
-          6 * 60 * 60,
-          8 * 60 * 60,
-          12 * 60 * 60
-        ]
+      Gauge.declare(
+        name: :yts_expiration_delta_force_expiry,
+        help:
+          "when a slot is force-expired, how many seconds until a slot would've expired (HIGHER is WORSE)",
+        labels: [:type]
+      )
+
+      Gauge.declare(
+        name: :yts_used_at_delta_force_expiry,
+        help:
+          "when a slot is force-expired, how many seconds since a user has used the slot (LOWER is WORSE)",
+        labels: [:type]
       )
     end
 
-    def register(type, age) do
-      Histogram.observe(
+    def register_delta(:expires_at, type, delta) do
+      Gauge.set(
         [
-          name: :yts_recycle_slot_age,
+          name: :yts_expiration_delta_force_expiry,
           labels: [type]
         ],
-        age
+        delta
       )
     end
+
+    def register_delta(:used_at, type, delta) do
+      Gauge.set(
+        [
+          name: :yts_used_at_delta_force_expiry,
+          labels: [type]
+        ],
+        delta
+      )
+    end
+  end
+
+  def calc_seconds_until_expiry(slot, now) do
+    NaiveDateTime.diff(slot.expires_at, now, :second)
+  end
+
+  def register_worst_by_field(now, slots, enum_fn, delta_fn, target) do
+    slots
+    |> Enum.map(fn slot ->
+      {slot, delta_fn.(slot, now)}
+    end)
+    |> enum_fn.(fn {slot, delta} -> delta end)
+    |> then(fn {slot, delta} ->
+      RecycledSlotAge.register_delta(target, delta)
+    end)
   end
 
   def generate_id_v3(module) do
@@ -155,11 +172,31 @@ defmodule YtSearch.SlotUtilities do
         )
         |> repo(module).replica().all()
         |> then(fn slots ->
+          now = generate_unix_timestamp()
+
+          register_worst_by_field(
+            now,
+            slots,
+            &Enum.max_by/2,
+            fn slot, t ->
+              NaiveDateTime.diff(slot.expires_at, t, :second)
+            end,
+            :expires_at
+          )
+
+          register_worst_by_field(
+            now,
+            slots,
+            &Enum.min_by/2,
+            fn slot, t ->
+              NaiveDateTime.diff(t, slot.used_at, :second)
+            end,
+            :used_at
+          )
+
           slot_ids =
             slots
             |> Enum.map(fn slot ->
-              age = NaiveDateTime.diff(slot.expires_at, generate_unix_timestamp(), :second)
-              RecycledSlotAge.register(module, age)
               slot.id
             end)
 
