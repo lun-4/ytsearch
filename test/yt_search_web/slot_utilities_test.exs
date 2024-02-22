@@ -124,14 +124,14 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     0..(YtSearch.Slot.slot_spec().max_ids - 1)
     |> Enum.map(fn id ->
       future =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(66_666_666_666_666, :second)
+        YtSearch.SlotUtilities.generate_unix_timestamp()
+        |> NaiveDateTime.add(66666, :second)
 
       used_at =
         if id == 666 do
-          future
-        else
           ~N[2020-01-01 00:00:00]
+        else
+          future
         end
 
       %{
@@ -153,14 +153,17 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
       IO.puts("insert chunk ids #{first.id}..#{last.id}")
 
       {amount_inserted, nil} =
-        YtSearch.Data.SlotRepo.insert_all(module, chunk, on_conflict: :nothing)
+        YtSearch.Data.SlotRepo.insert_all(YtSearch.Slot, chunk, on_conflict: :replace_all)
 
       amount_inserted
     end)
     |> Enum.reduce(fn x, y -> x + y end)
 
-    # TODO
-
+    slot = YtSearch.Slot.fetch_by_id(666)
+    assert slot != nil
+    # it should force-expire 666 due to used_at being set in the future
     YtSearch.SlotUtilities.generate_id_v3(YtSearch.Slot)
+    slot = YtSearch.Slot.fetch_by_id(666)
+    assert slot == nil
   end
 end

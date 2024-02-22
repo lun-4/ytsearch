@@ -140,14 +140,14 @@ defmodule YtSearch.SlotUtilities do
     NaiveDateTime.diff(slot.expires_at, now, :second)
   end
 
-  def register_worst_by_field(now, slots, enum_fn, delta_fn, target) do
+  def register_worst_by_field(module, now, slots, enum_fn, delta_fn, target) do
     slots
     |> Enum.map(fn slot ->
       {slot, delta_fn.(slot, now)}
     end)
     |> enum_fn.(fn {slot, delta} -> delta end)
     |> then(fn {slot, delta} ->
-      RecycledSlotAge.register_delta(target, delta)
+      RecycledSlotAge.register_delta(target, module, delta)
     end)
   end
 
@@ -175,6 +175,7 @@ defmodule YtSearch.SlotUtilities do
           now = generate_unix_timestamp()
 
           register_worst_by_field(
+            module,
             now,
             slots,
             &Enum.max_by/2,
@@ -185,6 +186,7 @@ defmodule YtSearch.SlotUtilities do
           )
 
           register_worst_by_field(
+            module,
             now,
             slots,
             &Enum.min_by/2,
