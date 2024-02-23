@@ -145,8 +145,8 @@ defmodule YtSearch.SlotUtilities do
     |> Enum.map(fn slot ->
       {slot, delta_fn.(slot, now)}
     end)
-    |> enum_fn.(fn {slot, delta} -> delta end)
-    |> then(fn {slot, delta} ->
+    |> enum_fn.(fn {_slot, delta} -> delta end)
+    |> then(fn {_slot, delta} ->
       RecycledSlotAge.register_delta(target, module, delta)
     end)
   end
@@ -189,7 +189,7 @@ defmodule YtSearch.SlotUtilities do
             module,
             now,
             slots,
-            &Enum.min_by/2,
+            &Enum.max_by/2,
             fn slot, t ->
               NaiveDateTime.diff(t, slot.used_at, :second)
             end,

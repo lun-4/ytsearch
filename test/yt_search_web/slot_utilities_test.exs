@@ -121,43 +121,31 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
   test "it correctly expires the oldest-used slot" do
     # setup by writing all of em
 
-    0..(YtSearch.Slot.slot_spec().max_ids - 1)
-    |> Enum.map(fn id ->
-      future =
-        YtSearch.SlotUtilities.generate_unix_timestamp()
-        |> NaiveDateTime.add(66666, :second)
+    future =
+      YtSearch.SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(66666, :second)
 
-      used_at =
-        if id == 666 do
-          ~N[2020-01-01 00:00:00]
-        else
-          future
-        end
+    past =
+      YtSearch.SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(-66666, :second)
 
-      %{
-        id: id,
-        youtube_id: random_yt_id(),
+    from(s in YtSearch.Slot, select: s)
+    |> YtSearch.Data.SlotRepo.update_all(
+      set: [
         expires_at: future,
-        used_at: used_at,
+        used_at: past,
         video_duration: 60,
         inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
         updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
         keepalive: false
-      }
-    end)
-    |> Enum.chunk_every(200)
-    |> Enum.map(fn chunk ->
-      first = chunk |> Enum.at(0)
-      last = chunk |> Enum.at(-1)
+      ]
+    )
 
-      IO.puts("insert chunk ids #{first.id}..#{last.id}")
-
-      {amount_inserted, nil} =
-        YtSearch.Data.SlotRepo.insert_all(YtSearch.Slot, chunk, on_conflict: :replace_all)
-
-      amount_inserted
-    end)
-    |> Enum.reduce(fn x, y -> x + y end)
+    YtSearch.Slot.fetch_by_id(666)
+    |> Ecto.Changeset.change(%{
+      used_at: ~N[2020-01-01 00:00:00]
+    })
+    |> YtSearch.Data.SlotRepo.update!()
 
     slot = YtSearch.Slot.fetch_by_id(666)
     assert slot != nil
@@ -165,5 +153,15 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     YtSearch.SlotUtilities.generate_id_v3(YtSearch.Slot)
     slot = YtSearch.Slot.fetch_by_id(666)
     assert slot == nil
+
+    assert Prometheus.Metric.Gauge.value(
+             name: :yts_expiration_delta_force_expiry,
+             labels: [YtSearch.Slot]
+           ) > 66600
+
+    assert Prometheus.Metric.Gauge.value(
+             name: :yts_used_at_delta_force_expiry,
+             labels: [YtSearch.Slot]
+           ) > 13_086_000
   end
 end
