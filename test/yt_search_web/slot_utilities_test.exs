@@ -127,7 +127,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
     past =
       YtSearch.SlotUtilities.generate_unix_timestamp()
-      |> NaiveDateTime.add(-66666, :second)
+      |> NaiveDateTime.add(-99999, :second)
 
     from(s in YtSearch.Slot, select: s)
     |> YtSearch.Data.SlotRepo.update_all(
@@ -143,6 +143,7 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
     YtSearch.Slot.fetch_by_id(666)
     |> Ecto.Changeset.change(%{
+      expires_at: ~N[2025-01-01 00:00:00],
       used_at: ~N[2020-01-01 00:00:00]
     })
     |> YtSearch.Data.SlotRepo.update!()
@@ -157,11 +158,16 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     assert Prometheus.Metric.Gauge.value(
              name: :yts_expiration_delta_force_expiry,
              labels: [YtSearch.Slot]
-           ) > 66600
+           ) > 99900
 
     assert Prometheus.Metric.Gauge.value(
              name: :yts_used_at_delta_force_expiry,
              labels: [YtSearch.Slot]
-           ) > 13_086_000
+           ) > 99900
+
+    assert Prometheus.Metric.Gauge.value(
+             name: :yts_used_at_delta_force_expiry,
+             labels: [YtSearch.Slot]
+           ) < 1_000_000
   end
 end

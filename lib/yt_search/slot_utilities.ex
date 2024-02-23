@@ -189,7 +189,7 @@ defmodule YtSearch.SlotUtilities do
             module,
             now,
             slots,
-            &Enum.max_by/2,
+            &Enum.min_by/2,
             fn slot, t ->
               NaiveDateTime.diff(t, slot.used_at, :second)
             end,
