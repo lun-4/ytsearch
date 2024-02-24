@@ -1,4 +1,5 @@
 import requests
+import os
 import httpx
 import random
 import sys
@@ -14,6 +15,9 @@ log = logging.getLogger(__name__)
 yts_url = "http://localhost:4000"
 
 
+ok_500 = bool(os.environ.get("OK_500"))
+
+
 def random_string(length: int = 100, alphabet=string.ascii_letters):
     return "".join([random.choice(alphabet) for _ in range(length)])
 
@@ -21,6 +25,16 @@ def random_string(length: int = 100, alphabet=string.ascii_letters):
 @dataclass
 class Context:
     client: httpx.AsyncClient
+
+
+def check_response(resp, expected_status: int):
+    if resp.status_code != expected_status:
+        if resp.status_code == 500 and ok_500:
+            log.warn("got 500 %s", resp.text)
+            return False
+        else:
+            raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
+    return True
 
 
 @dataclass
@@ -36,7 +50,8 @@ class Agent:
         choice = random.randint(1, 100)
         if choice < 3:
             search = await self.search()
-            return random.choice(search)
+            if search:
+                return random.choice(search)
         if self.self_tick % 10 == 0:
             # heartbeat with the server every 10 ticks
             await self.heartbeat()
@@ -57,14 +72,16 @@ class Agent:
             f"{yts_url}/api/v5/search?q={search_term}",
             headers={"user-agent": "UnityWebRequest"},
         )
-        if resp.status_code != 200:
-            raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
-        rjson = resp.json()
-        atlas_id = rjson["slot_id"]
-        resp = await self.ctx.client.get(f"{yts_url}/a/5/at/{atlas_id}")
-        if resp.status_code != 200:
-            raise AssertionError(f"expected 200, got {resp.status_code}, {resp.text}")
-        return rjson["search_results"]
+        if check_response(resp, 200):
+            rjson = resp.json()
+            atlas_id = rjson["slot_id"]
+            resp = await self.ctx.client.get(f"{yts_url}/a/5/at/{atlas_id}")
+            if check_response(resp, 200):
+                return rjson["search_results"]
+            else:
+                return []
+        else:
+            return []
 
     async def watch(self, video):
         if self.is_quest:
@@ -76,15 +93,15 @@ class Agent:
             f'{yts_url}/a/5/sl/{video["slot_id"]}',
             headers={"user-agent": user_agent},
         )
-        assert resp.status_code == 302
-        redirect_to = resp.headers["location"]
-        if not redirect_to.endswith(video["youtube_id"]):
-            raise AssertionError(f'wanted {video["youtube_id"]}, got {redirect_to}')
+        if check_response(resp, 302):
+            redirect_to = resp.headers["location"]
+            if not redirect_to.endswith(video["youtube_id"]):
+                raise AssertionError(f'wanted {video["youtube_id"]}, got {redirect_to}')
         resp = await self.ctx.client.get(
             f'{yts_url}/a/5/sl/{video["slot_id"]}',
             headers={"user-agent": "UnityWebRequest"},
         )
-        assert resp.status_code == 200
+        check_response(resp, 200)
 
 
 @dataclass
@@ -143,7 +160,8 @@ class Instance:
         if not self.watching_video:
             if not self.video_queue:
                 results = await self.agents[0].search()
-                await self.watch(random.choice(results), current_tick)
+                if results:
+                    await self.watch(random.choice(results), current_tick)
             else:
                 # we finished playing a video, and we have queue entry. play it
                 new_video_on_queue = self.video_queue.pop(0)
@@ -200,7 +218,7 @@ async def main():
         target_instance_count,
         target_agents_per_instance,
     )
-    client = httpx.AsyncClient(headers={"Accept": "application/json"})
+    client = httpx.AsyncClient(headers={"Accept": "application/json"}, timeout=20)
     ctx = Context(client=client)
 
     random.seed(seed)

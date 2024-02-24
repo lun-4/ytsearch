@@ -96,6 +96,61 @@ defmodule YtSearch.SlotUtilities do
   def repo(YtSearch.SearchSlot), do: YtSearch.Data.SearchSlotRepo
   def repo(YtSearch.Thumbnail), do: YtSearch.Data.ThumbnailRepo
 
+  defmodule RecycledSlotAge do
+    use Prometheus.Metric
+
+    def setup() do
+      Gauge.declare(
+        name: :yts_expiration_delta_force_expiry,
+        help:
+          "when a slot is force-expired, how many seconds until a slot would've expired (HIGHER is WORSE)",
+        labels: [:type]
+      )
+
+      Gauge.declare(
+        name: :yts_used_at_delta_force_expiry,
+        help:
+          "when a slot is force-expired, how many seconds since a user has used the slot (LOWER is WORSE)",
+        labels: [:type]
+      )
+    end
+
+    def register_delta(:expires_at, type, delta) do
+      Gauge.set(
+        [
+          name: :yts_expiration_delta_force_expiry,
+          labels: [type]
+        ],
+        delta
+      )
+    end
+
+    def register_delta(:used_at, type, delta) do
+      Gauge.set(
+        [
+          name: :yts_used_at_delta_force_expiry,
+          labels: [type]
+        ],
+        delta
+      )
+    end
+  end
+
+  def calc_seconds_until_expiry(slot, now) do
+    NaiveDateTime.diff(slot.expires_at, now, :second)
+  end
+
+  def register_worst_by_field(module, now, slots, enum_fn, delta_fn, target) do
+    slots
+    |> Enum.map(fn slot ->
+      {slot, delta_fn.(slot, now)}
+    end)
+    |> enum_fn.(fn {_slot, delta} -> delta end)
+    |> then(fn {_slot, delta} ->
+      RecycledSlotAge.register_delta(target, module, delta)
+    end)
+  end
+
   def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
 
@@ -117,9 +172,35 @@ defmodule YtSearch.SlotUtilities do
         )
         |> repo(module).replica().all()
         |> then(fn slots ->
+          now = generate_unix_timestamp()
+
+          register_worst_by_field(
+            module,
+            now,
+            slots,
+            &Enum.max_by/2,
+            fn slot, t ->
+              NaiveDateTime.diff(slot.expires_at, t, :second)
+            end,
+            :expires_at
+          )
+
+          register_worst_by_field(
+            module,
+            now,
+            slots,
+            &Enum.min_by/2,
+            fn slot, t ->
+              NaiveDateTime.diff(t, slot.used_at, :second)
+            end,
+            :used_at
+          )
+
           slot_ids =
             slots
-            |> Enum.map(fn slot -> slot.id end)
+            |> Enum.map(fn slot ->
+              slot.id
+            end)
 
           from(s in module,
             update: [set: [expires_at: ^~N[2020-01-01 00:00:00]]],

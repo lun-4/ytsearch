@@ -117,4 +117,57 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     assert same_slot.id == slot.id
     assert same_slot.expires_at > changed_slot.expires_at
   end
+
+  test "it correctly expires the oldest-used slot" do
+    # setup by writing all of em
+
+    future =
+      YtSearch.SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(66666, :second)
+
+    past =
+      YtSearch.SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(-99999, :second)
+
+    from(s in YtSearch.Slot, select: s)
+    |> YtSearch.Data.SlotRepo.update_all(
+      set: [
+        expires_at: future,
+        used_at: past,
+        video_duration: 60,
+        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+        updated_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+        keepalive: false
+      ]
+    )
+
+    YtSearch.Slot.fetch_by_id(666)
+    |> Ecto.Changeset.change(%{
+      expires_at: ~N[2025-01-01 00:00:00],
+      used_at: ~N[2020-01-01 00:00:00]
+    })
+    |> YtSearch.Data.SlotRepo.update!()
+
+    slot = YtSearch.Slot.fetch_by_id(666)
+    assert slot != nil
+    # it should force-expire 666 due to used_at being set in the future
+    YtSearch.SlotUtilities.generate_id_v3(YtSearch.Slot)
+    slot = YtSearch.Slot.fetch_by_id(666)
+    assert slot == nil
+
+    assert Prometheus.Metric.Gauge.value(
+             name: :yts_expiration_delta_force_expiry,
+             labels: [YtSearch.Slot]
+           ) > 99900
+
+    assert Prometheus.Metric.Gauge.value(
+             name: :yts_used_at_delta_force_expiry,
+             labels: [YtSearch.Slot]
+           ) > 99900
+
+    assert Prometheus.Metric.Gauge.value(
+             name: :yts_used_at_delta_force_expiry,
+             labels: [YtSearch.Slot]
+           ) < 1_000_000
+  end
 end
