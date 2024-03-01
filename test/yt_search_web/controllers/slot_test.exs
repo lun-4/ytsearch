@@ -424,12 +424,10 @@ defmodule YtSearchWeb.SlotTest do
     1..10
     |> Enum.map(fn _ ->
       Task.async(fn ->
-        resp =
-          Phoenix.ConnTest.build_conn()
-          |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/a/5/sl/#{slot.id}")
-
-        assert resp.status == 302
+        Phoenix.ConnTest.build_conn()
+        |> put_req_header("user-agent", "UnityWebRequest")
+        |> get(~p"/a/5/sr/#{slot.id}")
+        |> json_response(200)
       end)
     end)
     |> Enum.map(fn task ->
