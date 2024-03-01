@@ -17,6 +17,14 @@ defmodule YtSearch.Slot do
     field(:expires_at, :naive_datetime)
     field(:used_at, :naive_datetime)
     field(:keepalive, :boolean)
+    field(:type, :integer)
+  end
+
+  def type(slot) do
+    case slot.type do
+      0 -> :video
+      1 -> :livestream
+    end
   end
 
   @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
@@ -84,7 +92,7 @@ defmodule YtSearch.Slot do
 
   def changeset(%__MODULE__{} = slot, params) do
     slot
-    |> cast(params, [:id, :youtube_id, :video_duration, :expires_at, :used_at, :keepalive])
+    |> cast(params, [:id, :youtube_id, :video_duration, :expires_at, :used_at, :keepalive, :type])
     |> validate_required([:youtube_id, :video_duration, :expires_at, :used_at])
   end
 
@@ -114,13 +122,20 @@ defmodule YtSearch.Slot do
                   nil -> 10 * 60
                   duration -> duration |> trunc
                 end,
-              keepalive: keepalive
+              keepalive: keepalive,
+              type:
+                case Keyword.get(opts, :type) do
+                  :video -> 0
+                  :short -> 0
+                  :livestream -> 1
+                  nil -> 0
+                end
             }
             |> put_expiration(opts)
             |> SlotUtilities.put_used()
 
           Logger.info(
-            "allocating slot #{new_id} to #{youtube_id} (duration #{params[:video_duration]})"
+            "allocating slot #{new_id} to #{youtube_id} (type #{params[:type]}, duration #{params[:video_duration]})"
           )
 
           params
@@ -132,6 +147,7 @@ defmodule YtSearch.Slot do
                 video_duration: video_duration,
                 expires_at: params.expires_at,
                 used_at: params.used_at,
+                type: params.type,
                 keepalive: keepalive
               ]
             ]

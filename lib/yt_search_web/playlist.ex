@@ -76,7 +76,7 @@ defmodule YtSearchWeb.Playlist do
               YtSearch.Slot.create(
                 youtube_id,
                 data["duration"],
-                opts |> Keyword.put(:entity_type, entity_type)
+                opts |> Keyword.put(:entity_type, entity_type) |> Keyword.put(:type, entity_type)
               )
           end
 
