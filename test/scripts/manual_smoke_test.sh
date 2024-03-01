@@ -31,7 +31,7 @@ check_slot(){
     exit 1
   fi
 
-  unity_request=$(curl -w '%{http_code}' -o /dev/null -A 'UnityWebRequest' "http://$HOST/a/5/sl/$slot_id")
+  unity_request=$(curl -w '%{http_code}' -o /dev/null -A 'UnityWebRequest' "http://$HOST/a/5/sr/$slot_id")
   if [ "$unity_request" != "200" ]; then
     echo "expected 200, got $unity_request"
     exit 1
