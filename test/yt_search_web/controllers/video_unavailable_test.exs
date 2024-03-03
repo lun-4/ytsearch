@@ -66,7 +66,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/sl/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     resp_json = json_response(conn, 200)
     assert resp_json["subtitle_data"] == nil
@@ -80,7 +80,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/a/5/sl/#{slot.id}")
+        |> get(~p"/a/5/sr/#{slot.id}")
       end)
     end)
     |> Enum.map(fn task ->
@@ -93,7 +93,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     resp_json =
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/sl/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
       |> json_response(200)
 
     assert resp_json["subtitle_data"] == nil
@@ -126,19 +126,6 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     assert get_resp_header(conn, "yts-failure-code") == ["E03"]
   end
 
-  # skipped for now as experiment on 302'ing to youtube
-  @tag :skip
-  test "it successfully gives out 404 on unavailable video for m3u8 link", %{
-    conn: conn,
-    slot: slot
-  } do
-    conn =
-      conn
-      |> get(~p"/a/5/sl/#{slot.id}/index.m3u8")
-
-    assert text_response(conn, 404) == "error happened: E01"
-  end
-
   test "it 404s on unavailable channels", %{conn: conn, unavailable_channel_slot: channel_slot} do
     conn =
       conn
@@ -153,20 +140,6 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       |> get(~p"/a/5/c/#{channel_slot.id}")
 
     assert json_response(conn, 404)["detail"] == "channel not found"
-  end
-
-  # TODO understand what's preffered behavior here
-  @tag :skip
-  test "it successfully gives out 200 on upcoming livestream",
-       %{
-         conn: conn,
-         upcoming_livestream_slot: slot
-       } do
-    conn =
-      conn
-      |> get(~p"/a/5/sl/#{slot.id}/index.m3u8")
-
-    assert text_response(conn, 404) == "error happened: E00"
   end
 
   test "it successfully gives out 200 on upcoming video",
