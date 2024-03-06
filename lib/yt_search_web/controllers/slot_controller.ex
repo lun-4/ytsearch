@@ -106,8 +106,7 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp handle_quest_video(conn, slot) do
-    googlevideo? =
-      Application.get_env(:yt_search, YtSearch.Constants)[:redirect_to_googlevideo?] || true
+    googlevideo? = Application.get_env(:yt_search, YtSearch.Constants)[:redirect_to_googlevideo?]
 
     if googlevideo? do
       case Mp4Link.maybe_fetch_upstream(slot) do
