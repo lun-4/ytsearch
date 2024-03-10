@@ -21,17 +21,8 @@ defmodule YtSearchWeb.SlotController do
         |> render("slot.json")
 
       slot ->
-        case UserAgent.for(conn) do
-          :quest_video ->
-            handle_quest_video(conn, slot)
-
-          :unity ->
-            do_slot_metadata(conn, slot)
-
-          _ ->
-            conn
-            |> redirect(external: slot |> Slot.youtube_url())
-        end
+        conn
+        |> redirect(external: slot |> Slot.youtube_url())
     end
   end
 
@@ -115,16 +106,23 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp handle_quest_video(conn, slot) do
-    case Mp4Link.maybe_fetch_upstream(slot) do
-      {:ok, link} ->
-        redirect_to(conn, link)
+    googlevideo? = Application.get_env(:yt_search, YtSearch.Constants)[:redirect_to_googlevideo?]
 
-      {:error, %Mp4Link{} = link} ->
-        redirect_to(conn, link)
+    if googlevideo? do
+      case Mp4Link.maybe_fetch_upstream(slot) do
+        {:ok, link} ->
+          redirect_to(conn, link)
 
-      {:error, _} = error ->
-        Logger.error("failed to fetch upstream: #{inspect(error)}")
-        redirect_to(conn, nil)
+        {:error, %Mp4Link{} = link} ->
+          redirect_to(conn, link)
+
+        {:error, _} = error ->
+          Logger.error("failed to fetch upstream: #{inspect(error)}")
+          redirect_to(conn, nil)
+      end
+    else
+      conn
+      |> redirect(external: slot |> Slot.youtube_url())
     end
   end
 
@@ -142,11 +140,13 @@ defmodule YtSearchWeb.SlotController do
             do_slot_metadata(conn, slot)
 
           _ ->
-            if conn.assigns[:want_stream] do
-              conn
-              |> redirect(external: "https://youtube.com/watch?v=#{slot.youtube_id}")
-            else
-              handle_quest_video(conn, slot)
+            case YtSearch.Slot.type(slot) do
+              :video ->
+                handle_quest_video(conn, slot)
+
+              :livestream ->
+                conn
+                |> redirect(external: slot |> Slot.youtube_url())
             end
         end
     end

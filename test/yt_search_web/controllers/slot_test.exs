@@ -27,8 +27,8 @@ defmodule YtSearchWeb.SlotTest do
     %{slot: slot}
   end
 
-  defp insert_slot() do
-    Factory.Slot.insert(:slot, [], on_conflict: :replace_all)
+  defp insert_slot(attrs \\ []) do
+    Factory.Slot.insert(:slot, attrs, on_conflict: :replace_all)
   end
 
   @custom_expire (System.os_time(:second) + 3_600) |> to_string
@@ -73,8 +73,8 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v5/s/#{slot.id}")
+      # |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     assert conn.status == 302
 
@@ -107,7 +107,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v5/s/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     assert get_resp_header(conn, "location") == ["https://mp5.com"]
 
@@ -140,10 +140,10 @@ defmodule YtSearchWeb.SlotTest do
 
   @run_stream File.read!("test/support/piped_outputs/lofi_stream.json")
               |> String.replace("1691635330", @custom_expire)
-  @expected_stream_url "https://manifest.googlevideo.com/api/manifest/hls_variant/expire/#{@custom_expire}/ei/IvrTZLKgGf_Y1sQPk4KOuAE/ip/2804%3A14d%3A5492%3A8fe8%3A%3A1001/id/jfKfPfyJRdk.2/source/yt_live_broadcast/requiressl/yes/hfr/1/playlist_duration/3600/manifest_duration/3600/demuxed/1/maudio/1/vprv/1/go/1/pacing/0/nvgoi/1/short_key/1/ncsapi/1/keepalive/yes/fexp/24007246%2C51000023/dover/13/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cdemuxed%2Cmaudio%2Cvprv%2Cgo%2Citag%2Cplaylist_type/sig/AOq0QJ8wRQIhANBnLbXAZIDegOLck5OxexbCOmLLVMKOtqukyUpwVnr1AiAHdQByc0Hm-MPN26SmyYflKk9LA905ahxukvjccfzR5w%3D%3D/file/index.m3u8?host=manifest.googlevideo.com"
+  # @expected_stream_url "https://manifest.googlevideo.com/api/manifest/hls_variant/expire/#{@custom_expire}/ei/IvrTZLKgGf_Y1sQPk4KOuAE/ip/2804%3A14d%3A5492%3A8fe8%3A%3A1001/id/jfKfPfyJRdk.2/source/yt_live_broadcast/requiressl/yes/hfr/1/playlist_duration/3600/manifest_duration/3600/demuxed/1/maudio/1/vprv/1/go/1/pacing/0/nvgoi/1/short_key/1/ncsapi/1/keepalive/yes/fexp/24007246%2C51000023/dover/13/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cdemuxed%2Cmaudio%2Cvprv%2Cgo%2Citag%2Cplaylist_type/sig/AOq0QJ8wRQIhANBnLbXAZIDegOLck5OxexbCOmLLVMKOtqukyUpwVnr1AiAHdQByc0Hm-MPN26SmyYflKk9LA905ahxukvjccfzR5w%3D%3D/file/index.m3u8?host=manifest.googlevideo.com"
 
-  test "it gets m3u8 url on streams", %{conn: conn} do
-    slot = insert_slot()
+  test "it redirects to youtube on livestreams", %{conn: conn} do
+    slot = insert_slot(type: 1)
 
     Data.default_global_mock(fn
       %{method: :get, url: "example.org/streams" <> _} ->
@@ -156,13 +156,11 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v5/s/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     assert conn.status == 302
 
-    assert get_resp_header(conn, "location") == [
-             @expected_stream_url
-           ]
+    assert get_resp_header(conn, "location") == ["https://youtube.com/watch?v=#{slot.youtube_id}"]
   end
 
   test "it gives 404 on unknown slot ids", %{conn: conn} do
@@ -356,7 +354,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v5/s/#{slot.id}")
+        |> get(~p"/a/5/sr/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -428,7 +426,7 @@ defmodule YtSearchWeb.SlotTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v5/s/#{slot.id}")
+        |> get(~p"/a/5/sr/#{slot.id}")
         |> json_response(200)
       end)
     end)
@@ -547,8 +545,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
-      |> get(~p"/api/v5/s/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     assert conn.status == 200
     assert response_content_type(conn, :mp4)
@@ -592,7 +589,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/s/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
@@ -611,7 +608,7 @@ defmodule YtSearchWeb.SlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/s/#{slot.id}")
+      |> get(~p"/a/5/sr/#{slot.id}")
 
     assert conn.status == 200
     fetched_slot = Slot.fetch_by_id(slot.id)
