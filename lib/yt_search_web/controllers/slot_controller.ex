@@ -26,28 +26,73 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
-  def refresh(conn, %{"slot_id" => slot_id_query}) do
-    {slot_id, _} = slot_id_query |> Integer.parse()
+  def parse_slot_id(slot_id) do
+    case slot_id |> Integer.parse() do
+      {slot_id_int, ""} -> {:ok, slot_id_int}
+      _ -> {:error, :invalid_slot_id}
+    end
+  end
 
+  defp conn_has_invalid_slot(conn) do
+    conn
+    |> put_status(404)
+    |> assign(:slot, nil)
+    |> render("slot.json")
+  end
+
+  defp fetch_slot(slot_id) do
     case Slot.fetch_by_id(slot_id) do
       nil ->
         Logger.warning("unavailable to refresh (slot not found)")
-
-        conn
-        |> put_status(404)
-        |> assign(:slot, nil)
-        |> render("slot.json")
+        {:error, :slot_not_found}
 
       slot ->
-        if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
-             -SlotUtilities.min_time_between_refreshes() do
-          slot
-          |> Slot.refresh()
-        end
+        {:ok, slot}
+    end
+  end
 
-        conn
-        |> put_status(200)
-        |> json(%{})
+  defp refresh_slot(slot) do
+    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
+         -SlotUtilities.min_time_between_refreshes() do
+      slot
+      |> Slot.refresh()
+    end
+
+    :ok
+  end
+
+  def refresh(conn, %{"slot_id" => slot_id_query}) do
+    with {:ok, slot_id} <- parse_slot_id(slot_id_query),
+         {:ok, slot} <- fetch_slot(slot_id),
+         :ok <- refresh_slot(slot) do
+      conn
+      |> put_status(200)
+      |> json(%{})
+    else
+      {:error, :invalid_slot_id} ->
+        conn_has_invalid_slot(conn)
+
+      {:error, :slot_not_found} ->
+        conn_has_invalid_slot(conn)
+    end
+  end
+
+  # same as angel of death's reply
+  @image_reply Path.join(:code.priv_dir(:yt_search), "static/retry.png")
+
+  def refresh_with_image_reply(conn, %{"slot_id" => slot_id_query}) do
+    with {:ok, slot_id} <- parse_slot_id(slot_id_query),
+         {:ok, slot} <- fetch_slot(slot_id),
+         :ok <- refresh_slot(slot) do
+      conn
+      |> put_resp_header("content-type", "image/png")
+      |> resp(200, File.read!(@image_reply))
+    else
+      {:error, :invalid_slot_id} ->
+        conn_has_invalid_slot(conn)
+
+      {:error, :slot_not_found} ->
+        conn_has_invalid_slot(conn)
     end
   end
 

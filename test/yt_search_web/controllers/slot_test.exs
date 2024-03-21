@@ -633,4 +633,86 @@ defmodule YtSearchWeb.SlotTest do
     assert fetched_slot.expires_at > slot.expires_at
     assert fetched_slot.used_at > slot.used_at
   end
+
+  test "it refreshes the slot if its older than a minute (using qr2)", %{conn: conn} do
+    slot = insert_slot()
+
+    Data.default_global_mock(fn
+      %{method: :get, url: "example.org/streams" <> _} ->
+        Tesla.Mock.json(
+          @run1
+          |> Jason.decode!()
+        )
+
+      %{
+        method: :get,
+        url: "https://www.youtube.com/api/timedtext?v=" <> _
+      } ->
+        %Tesla.Env{status: 200, body: "Among Us"}
+
+      %{method: :get, url: "sb.example.org/api/skipSegments?videoID=" <> _} ->
+        json([
+          %{
+            "category" => "intro",
+            "actionType" => "skip",
+            "segment" => [
+              0,
+              1.925
+            ],
+            "UUID" => "24950dd1f8dc6bacac09a9bba19fee28064e2cf94101b4ec0e2003e2199ef7f57",
+            "videoDuration" => 1626.561,
+            "locked" => 0,
+            "votes" => 0,
+            "description" => ""
+          }
+        ])
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/sr/#{slot.id}")
+
+    assert conn.status == 200
+    fetched_slot = Slot.fetch_by_id(slot.id)
+    assert fetched_slot.inserted_at == slot.inserted_at
+
+    slot =
+      slot
+      |> Ecto.Changeset.change(
+        used_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-61, :second)
+          |> NaiveDateTime.truncate(:second)
+      )
+      |> SlotRepo.update!()
+
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/sr/#{slot.id}")
+
+    assert conn.status == 200
+    fetched_slot = Slot.fetch_by_id(slot.id)
+    assert fetched_slot.expires_at > slot.expires_at
+
+    slot =
+      slot
+      |> Ecto.Changeset.change(
+        used_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-61, :second)
+          |> NaiveDateTime.truncate(:second)
+      )
+      |> SlotRepo.update!()
+
+    conn =
+      build_conn()
+      |> get(~p"/a/5/qr2/#{slot.id}")
+
+    assert conn.status == 200
+    fetched_slot = Slot.fetch_by_id(slot.id)
+    assert fetched_slot.expires_at > slot.expires_at
+    assert fetched_slot.used_at > slot.used_at
+  end
 end
