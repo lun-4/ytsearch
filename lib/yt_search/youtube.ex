@@ -119,47 +119,8 @@ defmodule YtSearch.Youtube do
     if captures != nil do
       [_full, host, url_path] = captures
 
-      with {:ok, youtube_id} <- youtube_id_from_uri(host, url_path),
-           {:ok, piped_response} <-
-             piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
-        raw_upload_date = piped_response["uploadDate"]
-
-        video_result =
-          @keys_to_copy
-          |> Enum.reduce(%{}, fn key, result ->
-            {key_from, key_to} =
-              case key do
-                {_, _} -> key
-                key -> {key, key}
-              end
-
-            result
-            |> Map.put(key_to, piped_response[key_from])
-          end)
-          # NOTE isShort is not shown on stream output. we will show results as type=video
-          # NOTE duration is 0, not -1, for live streams
-          |> Map.put("type", "stream")
-          |> Map.put("url", "/watch?v=#{youtube_id}")
-          |> Map.put(
-            "uploaded",
-            if String.contains?(raw_upload_date, "T") do
-              raw_upload_date
-              |> DateTime.from_iso8601()
-              |> then(fn {:ok, dt, _tz} ->
-                dt
-                |> DateTime.to_unix(:millisecond)
-              end)
-            else
-              # we usually don't get the real uploaded timestamp, so fill it with date at midnight
-              raw_upload_date
-              |> Date.from_iso8601!()
-              |> DateTime.new!(~T[00:00:00])
-              |> DateTime.to_unix(:millisecond)
-            end
-          )
-
-        {:ok, [video_result]}
-      end
+      youtube_entity(host, url_path)
+      |> resolve_youtube_entity
     else
       case Ratelimit.for_text_search() do
         :allow ->
@@ -169,6 +130,100 @@ defmodule YtSearch.Youtube do
           {:error, :overloaded_ytdlp_seats}
       end
     end
+  end
+
+  defp youtube_entity(host, url_path) do
+    case youtube_id_from_uri(host, url_path) do
+      {:ok, youtube_id} ->
+        {:video, youtube_id}
+
+      {:input_error, _} ->
+        case playlist_id_from_uri(host, url_path) do
+          {:ok, playlist_id} ->
+            {:playlist, playlist_id}
+
+          {:input_error, _} = ev ->
+            ev
+        end
+    end
+  end
+
+  defp playlist_id_from_uri(host, url_path) do
+    uri = URI.parse(url_path)
+
+    cond do
+      String.starts_with?(uri.path, "playlist") ->
+        if uri.query != nil do
+          query =
+            uri.query
+            |> URI.decode_query()
+
+          if query["list"] do
+            {:ok, query["list"]}
+          else
+            Logger.error("invalid query params: #{inspect(query)}")
+            {:input_error, :invalid_format}
+          end
+        else
+          Logger.error("invalid /playlist uri: #{inspect(uri)}")
+          {:input_error, :invalid_format}
+        end
+
+      true ->
+        Logger.error("invalid uri path: #{host} #{url_path}")
+        {:input_error, :invalid_format}
+    end
+  end
+
+  defp resolve_youtube_entity({:video, youtube_id}) do
+    with {:ok, piped_response} <-
+           piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
+      raw_upload_date = piped_response["uploadDate"]
+
+      video_result =
+        @keys_to_copy
+        |> Enum.reduce(%{}, fn key, result ->
+          {key_from, key_to} =
+            case key do
+              {_, _} -> key
+              key -> {key, key}
+            end
+
+          result
+          |> Map.put(key_to, piped_response[key_from])
+        end)
+        # NOTE isShort is not shown on stream output. we will show results as type=video
+        # NOTE duration is 0, not -1, for live streams
+        |> Map.put("type", "stream")
+        |> Map.put("url", "/watch?v=#{youtube_id}")
+        |> Map.put(
+          "uploaded",
+          if String.contains?(raw_upload_date, "T") do
+            raw_upload_date
+            |> DateTime.from_iso8601()
+            |> then(fn {:ok, dt, _tz} ->
+              dt
+              |> DateTime.to_unix(:millisecond)
+            end)
+          else
+            # we usually don't get the real uploaded timestamp, so fill it with date at midnight
+            raw_upload_date
+            |> Date.from_iso8601!()
+            |> DateTime.new!(~T[00:00:00])
+            |> DateTime.to_unix(:millisecond)
+          end
+        )
+
+      {:ok, [video_result]}
+    end
+  end
+
+  defp resolve_youtube_entity({:playlist, playlist_id}) do
+    videos_for(%PlaylistSlot{youtube_id: playlist_id})
+  end
+
+  defp resolve_youtube_entity(err) do
+    err
   end
 
   defp youtube_id_from_uri(host, url_path) do
