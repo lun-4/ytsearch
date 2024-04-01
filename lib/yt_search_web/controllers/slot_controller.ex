@@ -236,7 +236,8 @@ defmodule YtSearchWeb.SlotController do
 
     audio_config =
       with {:ok, metadata} <- maybe_await(metadata_task) do
-        metadata["audioConfig"]
+        metadata
+        |> Map.get("audioConfig")
       else
         nil -> nil
       end
