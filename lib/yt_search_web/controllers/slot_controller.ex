@@ -225,16 +225,29 @@ defmodule YtSearchWeb.SlotController do
         do_chapters(slot) |> Jason.decode!()
       end)
 
+    metadata_task =
+      Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
+        YtSearch.Metadata.Worker.fetch_for(slot.youtube_id)
+      end)
+
     subtitle_data = maybe_await(subtitle_task)
     sponsorblock_data = maybe_await(sponsorblock_task)
     chapters_data = maybe_await(chapters_task)
+
+    audio_config =
+      with {:ok, metadata} <- maybe_await(metadata_task) do
+        metadata["audioConfig"]
+      else
+        nil -> nil
+      end
 
     conn
     |> json(%{
       duration: slot.video_duration,
       subtitle_data: subtitle_data,
       sponsorblock_segments: sponsorblock_data,
-      chapters: chapters_data
+      chapters: chapters_data,
+      audio_config: audio_config
     })
   end
 
