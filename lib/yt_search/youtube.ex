@@ -132,6 +132,18 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def parse_url(text) when is_bitstring(text) do
+    captures = Regex.run(@youtube_url_regex, text)
+
+    if captures != nil do
+      [_full, host, url_path] = captures
+
+      youtube_entity(host, url_path)
+    else
+      nil
+    end
+  end
+
   defp youtube_entity(host, url_path) do
     case youtube_id_from_uri(host, url_path) do
       {:ok, youtube_id} ->
@@ -266,7 +278,7 @@ defmodule YtSearch.Youtube do
         {:ok, video_id}
 
       true ->
-        Logger.error("invalid uri: #{host} #{url_path}")
+        Logger.error("invalid uri (for video parse): #{host} #{url_path}")
         {:input_error, :invalid_format}
     end
     |> then(fn
