@@ -239,7 +239,9 @@ defmodule YtSearchWeb.SlotController do
         metadata
         |> Map.get("audioConfig")
       else
-        nil -> nil
+        value ->
+          Logger.warning("failed to get audioConfig: #{inspect(value)}")
+          nil
       end
 
     conn
