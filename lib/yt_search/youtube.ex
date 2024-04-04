@@ -144,7 +144,7 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  def parse_url(nil), do: nil
+  def parse_url(_), do: nil
 
   defp youtube_entity(host, url_path) do
     case youtube_id_from_uri(host, url_path) do
