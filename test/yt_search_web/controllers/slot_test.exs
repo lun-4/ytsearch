@@ -364,7 +364,7 @@ defmodule YtSearchWeb.SlotTest do
       assert resp["subtitle_data"] == "Among Us ORIGINAL"
       assert length(resp["sponsorblock_segments"]) == 2
       assert length(resp["chapters"]) == 2
-      assert resp["audioConfig"]["holy"] == "shit"
+      assert resp["audio_config"]["holy"] == "shit"
       assert resp["duration"] == slot.video_duration
     end)
   end
