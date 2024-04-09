@@ -154,4 +154,16 @@ defmodule YtSearch.Data do
         YtSearch.Data.LinkRepo.JanitorReplica
       ]
   end
+
+  defmodule AudioConfigRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.AudioConfigRepo,
+      read_replicas: [
+        YtSearch.Data.AudioConfigRepo.Replica1,
+        YtSearch.Data.AudioConfigRepo.Replica2
+      ],
+      dedicated_replicas: [
+        YtSearch.Data.AudioConfigRepo.JanitorReplica
+      ]
+  end
 end
