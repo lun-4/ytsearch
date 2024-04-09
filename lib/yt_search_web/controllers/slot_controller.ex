@@ -368,10 +368,11 @@ defmodule YtSearchWeb.SlotController do
       nil ->
         with {:ok, metadata} <-
                YtSearch.Metadata.Worker.fetch_for(youtube_id) do
-          maybe_config = metadata |> Map.get("audioConfig")
-          encoded_config = maybe_config |> Jason.encode!()
-          AudioConfig.insert(youtube_id, encoded_config)
-          encoded_config
+          maybe_config =
+            metadata |> Map.get("audioConfig") |> Jason.encode!()
+
+          config = AudioConfig.insert(youtube_id, maybe_config)
+          config.audio_config_data
         else
           value ->
             Logger.warning("failed to get audioConfig: #{inspect(value)}")

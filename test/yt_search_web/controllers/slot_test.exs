@@ -320,7 +320,8 @@ defmodule YtSearchWeb.SlotTest do
                   "title" => "chhaslkfh lkjgflj gjksdjg",
                   "start" => 100
                 }
-              ]
+              ],
+              "audioConfig" => %{"holy" => "shit"}
             })
           else
             %Tesla.Env{status: 500, body: "called mock too much"}
@@ -363,6 +364,7 @@ defmodule YtSearchWeb.SlotTest do
       assert resp["subtitle_data"] == "Among Us ORIGINAL"
       assert length(resp["sponsorblock_segments"]) == 2
       assert length(resp["chapters"]) == 2
+      assert resp["audioConfig"]["holy"] == "shit"
       assert resp["duration"] == slot.video_duration
     end)
   end
