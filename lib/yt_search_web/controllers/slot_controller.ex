@@ -1,6 +1,7 @@
 defmodule YtSearchWeb.SlotController do
   use YtSearchWeb, :controller
   require Logger
+  alias YtSearch.AudioConfig
   alias YtSearch.SlotUtilities
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
@@ -225,16 +226,23 @@ defmodule YtSearchWeb.SlotController do
         do_chapters(slot) |> Jason.decode!()
       end)
 
+    audio_config_task =
+      Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
+        do_audio_config(slot) |> Jason.decode!()
+      end)
+
     subtitle_data = maybe_await(subtitle_task)
     sponsorblock_data = maybe_await(sponsorblock_task)
     chapters_data = maybe_await(chapters_task)
+    audio_config = maybe_await(audio_config_task)
 
     conn
     |> json(%{
       duration: slot.video_duration,
       subtitle_data: subtitle_data,
       sponsorblock_segments: sponsorblock_data,
-      chapters: chapters_data
+      chapters: chapters_data,
+      audio_config: audio_config
     })
   end
 
@@ -351,6 +359,31 @@ defmodule YtSearchWeb.SlotController do
 
       %Chapters{} = chapters ->
         chapters.chapter_data
+    end
+  end
+
+  @spec do_audio_config(Slot.t()) :: String.t()
+  defp do_audio_config(%{youtube_id: youtube_id}) do
+    case AudioConfig.fetch(youtube_id) do
+      nil ->
+        with {:ok, metadata} <-
+               YtSearch.Metadata.Worker.fetch_for(youtube_id) do
+          maybe_config =
+            metadata |> Map.get("audioConfig") |> Jason.encode!()
+
+          config = AudioConfig.insert(youtube_id, maybe_config)
+          config.audio_config_data
+        else
+          value ->
+            Logger.warning("failed to get audioConfig: #{inspect(value)}")
+            "null"
+        end
+
+      %AudioConfig{} = audio_config ->
+        audio_config.audio_config_data
+
+      v ->
+        raise "invalid audioconfig return #{inspect(v)}"
     end
   end
 end

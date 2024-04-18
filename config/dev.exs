@@ -65,6 +65,15 @@ import Config
       YtSearch.Data.LinkRepo.JanitorReplica
     ],
     "links"
+  },
+  {
+    [
+      YtSearch.Data.AudioConfigRepo,
+      YtSearch.Data.AudioConfigRepo.Replica1,
+      YtSearch.Data.AudioConfigRepo.Replica2,
+      YtSearch.Data.AudioConfigRepo.JanitorReplica
+    ],
+    "audio_configs"
   }
 ]
 |> Enum.each(fn {repos, name} ->

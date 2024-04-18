@@ -67,6 +67,12 @@ defmodule YtSearchWeb.SearchController do
   end
 
   defp fetch_by_query_and_valid(url) do
+    maybe_playlist_id =
+      case Youtube.parse_url(url) do
+        {:playlist, playlist_id} -> playlist_id
+        _ -> nil
+      end
+
     case SearchSlot.fetch_by_query(url) do
       nil ->
         nil
@@ -86,13 +92,18 @@ defmodule YtSearchWeb.SearchController do
           end)
 
         is_valid_slot =
-          if Enum.empty?(valid_slots) do
-            false
-          else
-            valid_slots
-            |> Enum.reduce(fn x, acc ->
-              x and acc
-            end)
+          cond do
+            maybe_playlist_id != nil ->
+              false
+
+            Enum.empty?(valid_slots) ->
+              false
+
+            true ->
+              valid_slots
+              |> Enum.reduce(fn x, acc ->
+                x and acc
+              end)
           end
 
         Logger.info("attempting to reuse search slot #{data.id}, is valid? #{is_valid_slot}")
