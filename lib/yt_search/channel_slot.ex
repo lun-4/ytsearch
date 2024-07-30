@@ -87,8 +87,7 @@ defmodule YtSearch.ChannelSlot do
     %{
       # this number must be synced with the world build
       max_ids: 60_000,
-      # 2 hours
-      ttl: 2 * 60 * 60
+      ttl: 20 * 60
     }
   end
 

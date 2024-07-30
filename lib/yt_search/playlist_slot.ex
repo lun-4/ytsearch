@@ -21,9 +21,7 @@ defmodule YtSearch.PlaylistSlot do
     %{
       # this number must be synced with the world build
       max_ids: 20_000,
-      # 12 hours
-      # TODO we can tweak this thanks to autorefresh
-      ttl: 12 * 60 * 60
+      ttl: 20 * 60
     }
   end
 
