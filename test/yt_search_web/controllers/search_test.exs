@@ -302,7 +302,7 @@ defmodule YtSearchWeb.SearchTest do
       slot = YtSearch.Slot.fetch_by_id(first_result["slot_id"])
       assert slot != nil
       delta = NaiveDateTime.diff(slot.expires_at, NaiveDateTime.utc_now())
-      assert delta > 1 * 60 * 60
+      assert delta >= 20 * 60
 
       slot
       |> Ecto.Changeset.change(
@@ -324,7 +324,7 @@ defmodule YtSearchWeb.SearchTest do
       slot = YtSearch.Slot.fetch_by_id(first_result["slot_id"])
       assert slot != nil
       delta = NaiveDateTime.diff(slot.expires_at, NaiveDateTime.utc_now())
-      assert delta > 1 * 60 * 60
+      assert delta >= 20 * 60
     end
   end)
 end

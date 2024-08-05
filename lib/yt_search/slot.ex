@@ -46,48 +46,11 @@ defmodule YtSearch.Slot do
   def slot_spec() do
     %{
       # this number must be synced with the world build
-      max_ids: 100_000
+      max_ids: 100_000,
+
+      # 20 minutes so that we can reuse search slots
+      ttl: 20 * 60
     }
-  end
-
-  @min_ttl 10 * 60
-  @default_ttl 30 * 60
-  @max_ttl 12 * 60 * 60
-
-  defp expiration_for(duration, opts \\ []) do
-    ttl =
-      if opts |> Keyword.get(:entity_type) == :livestream do
-        3 * 60 * 60
-      else
-        if duration != nil do
-          max(@min_ttl, min((4 * duration) |> trunc, @max_ttl))
-        else
-          @default_ttl
-        end
-      end
-
-    NaiveDateTime.utc_now()
-    |> NaiveDateTime.add(ttl)
-    |> NaiveDateTime.truncate(:second)
-  end
-
-  def put_expiration(params) do
-    params
-    |> Map.put(:expires_at, expiration_for(params.video_duration))
-  end
-
-  def put_expiration(params, %__MODULE__{} = slot, opts) do
-    params
-    |> Map.put(:expires_at, expiration_for(slot.video_duration, opts))
-  end
-
-  def put_expiration(params, opts) do
-    params
-    |> Map.put(:expires_at, expiration_for(params.video_duration, opts))
-  end
-
-  def is_expired?(%__MODULE__{} = slot) do
-    NaiveDateTime.compare(NaiveDateTime.utc_now(), slot.expires_at) == :gt
   end
 
   def changeset(%__MODULE__{} = slot, params) do
@@ -131,7 +94,7 @@ defmodule YtSearch.Slot do
                   nil -> 0
                 end
             }
-            |> put_expiration(opts)
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
             |> SlotUtilities.put_used()
 
           Logger.info(
@@ -174,7 +137,7 @@ defmodule YtSearch.Slot do
     slot
     |> changeset(
       %{}
-      |> put_expiration(slot, opts)
+      |> SlotUtilities.put_simple_expiration(__MODULE__)
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
@@ -187,7 +150,7 @@ defmodule YtSearch.Slot do
     slot
     |> change(
       %{}
-      |> put_expiration(slot, opts)
+      |> SlotUtilities.put_simple_expiration(__MODULE__)
       |> SlotUtilities.put_used()
       |> SlotUtilities.put_opts(opts)
     )
