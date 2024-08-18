@@ -431,6 +431,9 @@ defmodule YtSearch.Youtube do
           String.contains?(message, "Could not get channel name") ->
             {:error, :channel_unavailable}
 
+          String.contains?(message, "Sign in to confirm") ->
+            {:error, :blocked}
+
           true ->
             {:error, response}
         end
@@ -636,7 +639,13 @@ defmodule YtSearch.Youtube do
   end
 
   def video_metadata(youtube_id) do
-    piped_call(:streams, &Piped.streams/2, youtube_id, nil)
+    case piped_call(:streams, &Piped.streams/2, youtube_id, nil) do
+      {:error, :blocked} ->
+        piped_call(:streams_retry, &Piped.streams/2, youtube_id, nil)
+
+      v ->
+        v
+    end
   end
 
   defmodule Latency do
