@@ -91,11 +91,11 @@ defmodule YtSearch.Youtube do
   end
 
   def videos_for(%ChannelSlot{youtube_id: channel_id}) do
-    piped_search_call(&Piped.channel/2, channel_id, "relatedStreams")
+    piped_search_call(&Piped.channel/2, channel_id, "relatedStreams", channel_result_limit())
   end
 
   def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
-    piped_search_call(&Piped.playlists/2, playlist_id, "relatedStreams")
+    piped_search_call(&Piped.playlists/2, playlist_id, "relatedStreams", playlist_result_limit())
   end
 
   @youtube_url_regex ~r/(www\.youtube\.com|youtube\.com|youtu\.be)\/(.+)$/
@@ -124,7 +124,7 @@ defmodule YtSearch.Youtube do
     else
       case Ratelimit.for_text_search() do
         :allow ->
-          piped_search_call(&Piped.search/2, text, "items")
+          piped_search_call(&Piped.search/2, text, "items", result_count())
 
         :deny ->
           {:error, :overloaded_ytdlp_seats}
@@ -301,8 +301,18 @@ defmodule YtSearch.Youtube do
       raise "invalid configuration"
   end
 
-  defp piped_search_call(func, id, list_field) do
-    piped_call(:search, func, id, list_field, limit: result_limit())
+  defp channel_result_limit do
+    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_channels] ||
+      result_limit()
+  end
+
+  defp playlist_result_limit do
+    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_playlists] ||
+      result_limit()
+  end
+
+  defp piped_search_call(func, id, list_field, limit) do
+    piped_call(:search, func, id, list_field, limit: limit)
   end
 
   defp piped_call(call_type, func, id, list_field, opts \\ []) do
