@@ -190,8 +190,7 @@ defmodule YtSearch.Youtube do
   end
 
   defp resolve_youtube_entity({:video, youtube_id}) do
-    with {:ok, piped_response} <-
-           piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
+    with {:ok, piped_response} <- video_metadata(youtube_id) do
       raw_upload_date = piped_response["uploadDate"]
 
       video_result =
@@ -431,6 +430,9 @@ defmodule YtSearch.Youtube do
           String.contains?(message, "Could not get channel name") ->
             {:error, :channel_unavailable}
 
+          String.contains?(message, "Sign in to confirm") ->
+            {:error, :blocked}
+
           true ->
             {:error, response}
         end
@@ -636,7 +638,13 @@ defmodule YtSearch.Youtube do
   end
 
   def video_metadata(youtube_id) do
-    piped_call(:streams, &Piped.streams/2, youtube_id, nil)
+    case piped_call(:streams, &Piped.streams/2, youtube_id, nil) do
+      {:error, :blocked} ->
+        piped_call(:streams_retry, &Piped.streams/2, youtube_id, nil)
+
+      v ->
+        v
+    end
   end
 
   defmodule Latency do

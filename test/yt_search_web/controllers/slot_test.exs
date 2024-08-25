@@ -717,4 +717,48 @@ defmodule YtSearchWeb.SlotTest do
     assert fetched_slot.expires_at > slot.expires_at
     assert fetched_slot.used_at > slot.used_at
   end
+
+  @bot_detection_error "Sign in to confirm that you're not a bot"
+  test "it retries once on bot detection error", %{
+    conn: conn,
+    ets_table: table
+  } do
+    slot = insert_slot()
+
+    Data.default_global_mock(fn
+      %{method: :get, url: "example.org/streams/" <> wanted_youtube_id} = env ->
+        if wanted_youtube_id == slot.youtube_id do
+          calls = :ets.update_counter(table, :ytdlp_cmd_3, 1, {:ytdlp_cmd_3, 0})
+
+          case calls do
+            1 ->
+              Tesla.Mock.json(
+                %{
+                  message: "Got Error: \"#{@bot_detection_error}\""
+                },
+                status: 500
+              )
+
+            2 ->
+              Tesla.Mock.json(
+                @run1
+                |> Jason.decode!()
+              )
+          end
+        else
+          # ignore requests not to the generated slot
+          env
+        end
+    end)
+
+    conn =
+      conn
+      |> get(~p"/a/5/sr/#{slot.id}")
+
+    assert conn.status == 302
+
+    assert get_resp_header(conn, "location") == [
+             @expected_run1_url
+           ]
+  end
 end
