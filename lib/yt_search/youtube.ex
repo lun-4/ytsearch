@@ -190,8 +190,7 @@ defmodule YtSearch.Youtube do
   end
 
   defp resolve_youtube_entity({:video, youtube_id}) do
-    with {:ok, piped_response} <-
-           piped_call(:search_url, &Piped.streams/2, youtube_id, nil) do
+    with {:ok, piped_response} <- video_metadata(youtube_id) do
       raw_upload_date = piped_response["uploadDate"]
 
       video_result =
