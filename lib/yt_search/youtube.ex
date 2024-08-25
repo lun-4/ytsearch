@@ -124,7 +124,7 @@ defmodule YtSearch.Youtube do
     else
       case Ratelimit.for_text_search() do
         :allow ->
-          piped_search_call(&Piped.search/2, text, "items", result_count())
+          piped_search_call(&Piped.search/2, text, "items", result_limit())
 
         :deny ->
           {:error, :overloaded_ytdlp_seats}
