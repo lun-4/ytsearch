@@ -106,6 +106,25 @@ defmodule YtSearchWeb.SearchTest do
     assert json_response["slot_id"] != nil
   end
 
+  defp verify_long_search_results(json_response) do
+    verify_search_results(json_response)
+
+    verify_single_result(
+      json_response["search_results"] |> Enum.at(49),
+      %{
+        "channel_name" => "The Urban Rescue Ranch",
+        "description" => "kldslsdfljksdljkasdfjk",
+        "duration" => 83891,
+        "thumbnail" => %{"aspect_ratio" => 1.77},
+        "title" => "dies",
+        "type" => "video",
+        "uploaded_at" => 1_672_963_200,
+        "view_count" => 3_384_156,
+        "youtube_id" => "asdkjsdlfkj"
+      }
+    )
+  end
+
   @piped_search_output File.read!("test/support/piped_outputs/urban_rescue_ranch_search.json")
   @piped_channel_output File.read!(
                           "test/support/piped_outputs/the_urban_rescue_ranch_channel.json"
