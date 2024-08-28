@@ -63,39 +63,58 @@ defmodule YtSearch.Youtube do
   # workaround for now is to strip off any brace character. we could write a balancer and strip
   # off the edge case, but i dont think i care enough to do that just for vrchat.
 
-  defp vrcjson_workaround(incoming_data) do
+  defp vrcjson_workaround(incoming_data, opts \\ []) do
+    ignore_keys = Keyword.get(opts, :ignore_keys, [])
+
     case incoming_data do
+      data when is_bitstring(data) ->
+        data
+        |> String.replace(~r/[\[\]{}]/, "")
+        |> String.trim(" ")
+
       data when is_map(data) ->
         data
-        |> Map.keys()
-        |> Enum.map(fn key ->
-          value =
-            case Map.get(data, key) do
-              v when is_bitstring(v) ->
-                v
-                |> String.replace(~r/[\[\]{}]/, "")
-                |> String.trim(" ")
-
-              any ->
-                any
-            end
-
-          {key, value}
+        |> Map.to_list()
+        |> Enum.map(fn {key, value} ->
+          if key in ignore_keys do
+            {key, value}
+          else
+            {key |> vrcjson_workaround(opts), value |> vrcjson_workaround(opts)}
+          end
         end)
         |> Map.new()
 
       data when is_list(data) ->
         data
-        |> Enum.map(&vrcjson_workaround/1)
+        |> Enum.map(fn x -> vrcjson_workaround(x, opts) end)
+
+      v when is_atom(v) ->
+        raise "Unsupported type #{inspect(v)}"
+
+      v when is_tuple(v) ->
+        raise "Unsupported type  #{inspect(v)}"
+
+      v ->
+        v
     end
   end
 
   def videos_for(%ChannelSlot{youtube_id: channel_id}) do
-    piped_search_call(&Piped.channel/2, channel_id, "relatedStreams", channel_result_limit())
+    piped_search_call(
+      &Piped.channel/2,
+      channel_id,
+      fn x -> x["relatedStreams"] end,
+      channel_result_limit()
+    )
   end
 
   def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
-    piped_search_call(&Piped.playlists/2, playlist_id, "relatedStreams", playlist_result_limit())
+    piped_search_call(
+      &Piped.playlists/2,
+      playlist_id,
+      fn x -> x["relatedStreams"] end,
+      playlist_result_limit()
+    )
   end
 
   @youtube_url_regex ~r/(www\.youtube\.com|youtube\.com|youtu\.be)\/(.+)$/
@@ -124,7 +143,7 @@ defmodule YtSearch.Youtube do
     else
       case Ratelimit.for_text_search() do
         :allow ->
-          piped_search_call(&Piped.search/2, text, "items", result_limit())
+          piped_search_call(&Piped.search/2, text, fn x -> x["items"] end, result_limit())
 
         :deny ->
           {:error, :overloaded_ytdlp_seats}
@@ -311,11 +330,52 @@ defmodule YtSearch.Youtube do
       result_limit()
   end
 
-  defp piped_search_call(func, id, list_field, limit) do
-    piped_call(:search, func, id, list_field, limit: limit)
+  defp piped_search_call(func, id, result_list_extractor_fn, limit) do
+    do_piped_search_call(func, id, result_list_extractor_fn, limit, %{})
   end
 
-  defp piped_call(call_type, func, id, list_field, opts \\ []) do
+  defp do_piped_search_call(func, id, result_list_extractor_fn, limit, state) do
+    current_results = state[:results] || []
+
+    if Enum.count(current_results) >= limit do
+      {:ok,
+       state.results
+       |> Enum.take(-limit)}
+    else
+      # TODO (do not merge) if this failed, work with what we got
+      {:ok, results} =
+        if state[:nextpage] do
+          piped_call(
+            :search,
+            fn url, text ->
+              Piped.nextpage_search(url, text, state.nextpage)
+            end,
+            id,
+            ignore_keys: ["nextpage"]
+          )
+        else
+          piped_call(:search, func, id, ignore_keys: ["nextpage"])
+        end
+
+      new_state = %{
+        results:
+          results
+          |> result_list_extractor_fn.()
+          |> then(fn x -> Enum.concat(current_results, x) end),
+        nextpage: results["nextpage"]
+      }
+
+      do_piped_search_call(
+        func,
+        id,
+        result_list_extractor_fn,
+        limit,
+        new_state
+      )
+    end
+  end
+
+  defp piped_call(call_type, func, id, opts) do
     CallCounter.inc(call_type)
 
     start_ts = System.monotonic_time(:millisecond)
@@ -328,23 +388,14 @@ defmodule YtSearch.Youtube do
       {:ok, %{status: 200} = response} ->
         {:ok,
          response.body
-         |> then(fn body ->
-           limit = Keyword.get(opts, :limit)
+         |> then(fn
+           {:ok, body} ->
+             body
+             |> vrcjson_workaround(opts)
 
-           result =
-             if list_field != nil do
-               body[list_field]
-             else
-               body
-             end
-
-           if is_list(result) and limit != nil do
-             result |> Enum.slice(0, limit)
-           else
-             result
-           end
-         end)
-         |> vrcjson_workaround}
+           v ->
+             v
+         end)}
 
       {:ok, %{status: 500, body: raw_body} = response} ->
         body =
@@ -456,7 +507,8 @@ defmodule YtSearch.Youtube do
   end
 
   def trending(region \\ "US") do
-    piped_call(:search, &Piped.trending/2, region, nil, limit: result_limit())
+    # TODO (DO NOT MERGE) wrap in normal search function
+    piped_call(:search, &Piped.trending/2, region, [])
   end
 
   def extract_valid_streams(incoming_video_streams) do
@@ -719,7 +771,7 @@ defmodule YtSearch.Youtube do
     sponsorblock_call(
       :sponsorblock_segments,
       &YtSearch.Sponsorblock.skip_segments/2,
-      youtube_id,
+      youtube_id
     )
   end
 end
