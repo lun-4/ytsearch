@@ -10,6 +10,9 @@ defmodule YtSearchWeb.SearchTest do
       %{method: :get, url: "https://yt3.ggpht.com/" <> _} ->
         Data.png_response()
     end)
+
+    ets = :ets.new(:mock_call_counter, [:public])
+    %{ets_table: ets}
   end
 
   defp assert_int_or_null(nil), do: nil
@@ -347,29 +350,42 @@ defmodule YtSearchWeb.SearchTest do
     end
   end)
 
-  test "nextpage works", %{conn: conn} do
+  test "nextpage works", %{conn: conn, ets_table: table} do
     mock(fn
       %{method: :get, url: "example.org/channel/" <> _whatever} ->
         json(Jason.decode!(@piped_channel_output))
 
       %{method: :get, url: "example.org/search" <> _whatever} ->
-        # TODO check parsmasm
+        # TODO check parsmasm (must not have nextpage)
         json(Jason.decode!(@piped_search_output))
 
       %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
-        # TODO(DO NOT MERGE) diff search out
+        # TODO(DO NOT MERGE) send different search
+        :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
+
         json(Jason.decode!(@piped_search_output))
     end)
 
     # TODO DO NOT MERGE configure test with 50 result
+
+    existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
+
+    YtSearch.Constants.apply(
+      existing_constants
+      |> Keyword.put(:results_from_search, 50)
+    )
 
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/api/v5/search?search=urban+rescue+ranch")
 
+    YtSearch.Constants.apply(existing_constants)
+
     resp_json = json_response(conn, 200)
     verify_long_search_results(resp_json)
     assert length(resp_json["search_results"]) == 50
+    # it must call the nextpage handler
+    assert :ets.lookup(table, :nextpage) == {:nextpage, 1}
   end
 end
