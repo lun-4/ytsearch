@@ -370,12 +370,9 @@ defmodule YtSearchWeb.SearchTest do
         json(Jason.decode!(@piped_search_output))
 
       %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
-        # TODO(DO NOT MERGE) send different search
         :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
         json(Jason.decode!(@miku_search_output))
     end)
-
-    # TODO DO NOT MERGE configure test with 50 result
 
     existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
 
