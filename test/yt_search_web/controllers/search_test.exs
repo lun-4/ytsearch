@@ -327,4 +327,30 @@ defmodule YtSearchWeb.SearchTest do
       assert delta >= 20 * 60
     end
   end)
+
+  test "nextpage works", %{conn: conn} do
+    mock(fn
+      %{method: :get, url: "example.org/channel/" <> _whatever} ->
+        json(Jason.decode!(@piped_channel_output))
+
+      %{method: :get, url: "example.org/search" <> _whatever} ->
+        # TODO check parsmasm
+        json(Jason.decode!(@piped_search_output))
+
+      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
+        # TODO(DO NOT MERGE) diff search out
+        json(Jason.decode!(@piped_search_output))
+    end)
+
+    # TODO DO NOT MERGE configure test with 50 result
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+
+    resp_json = json_response(conn, 200)
+    verify_long_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 50
+  end
 end
