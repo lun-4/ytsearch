@@ -342,8 +342,7 @@ defmodule YtSearch.Youtube do
        state.results
        |> Enum.take(-limit)}
     else
-      # TODO (do not merge) if this failed, work with what we got
-      {:ok, results} =
+      given_page_results =
         if state[:nextpage] do
           piped_call(
             :search,
@@ -357,21 +356,32 @@ defmodule YtSearch.Youtube do
           piped_call(:search, func, id, ignore_keys: ["nextpage"])
         end
 
-      new_state = %{
-        results:
-          results
-          |> result_list_extractor_fn.()
-          |> then(fn x -> Enum.concat(current_results, x) end),
-        nextpage: results["nextpage"]
-      }
+      case given_page_results do
+        {:ok, results} ->
+          new_state = %{
+            results:
+              results
+              |> result_list_extractor_fn.()
+              |> then(fn x -> Enum.concat(current_results, x) end),
+            nextpage: results["nextpage"]
+          }
 
-      do_piped_search_call(
-        func,
-        id,
-        result_list_extractor_fn,
-        limit,
-        new_state
-      )
+          do_piped_search_call(
+            func,
+            id,
+            result_list_extractor_fn,
+            limit,
+            new_state
+          )
+
+        # if it errors out, stop the flow entirely and return what we got
+        v ->
+          Logger.error(
+            "Piped call to #{inspect(func)} failed, degrading list (to #{length(current_results)} entries): #{inspect(v)}"
+          )
+
+          current_results
+      end
     end
   end
 
