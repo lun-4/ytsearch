@@ -115,3 +115,12 @@ config :tesla, adapter: Tesla.Mock
 config :yt_search, YtSearch.Youtube, piped_url: "example.org", sponsorblock_url: "sb.example.org"
 
 config :yt_search, YtSearch.Ratelimit, ytdlp_search: {1_000_000, 1}
+
+config :yt_search, YtSearch.Constants,
+  results_from_search: 50,
+  results_from_channels: 30,
+  results_from_playlists: 30,
+  minimum_time_between_refreshes: 60,
+  enable_periodic_tasks: true,
+  enable_periodic_janitors: true,
+  redirect_to_googlevideo?: true
