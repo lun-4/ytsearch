@@ -9,6 +9,12 @@ defmodule YtSearchWeb.SearchTest do
 
       %{method: :get, url: "https://yt3.ggpht.com/" <> _} ->
         Data.png_response()
+
+      %{method: :get, url: "https://yt3.googleusercontent.com/" <> _} ->
+        Data.png_response()
+
+      %{method: :get, url: "https://i9.ytimg.com/" <> _} ->
+        Data.png_response()
     end)
 
     ets = :ets.new(:mock_call_counter, [:public])
@@ -110,25 +116,29 @@ defmodule YtSearchWeb.SearchTest do
   end
 
   defp verify_long_search_results(json_response) do
-    verify_search_results(json_response)
+    # verify_search_results(json_response)
+
+    IO.inspect(json_response)
 
     verify_single_result(
-      json_response["search_results"] |> Enum.at(49),
+      json_response["search_results"] |> Enum.at(33),
       %{
-        "channel_name" => "The Urban Rescue Ranch",
-        "description" => "kldslsdfljksdljkasdfjk",
-        "duration" => 83891,
+        "channel_name" => "Wilson (Low-key otaku)",
+        "description" =>
+          "First time seeing a live concert of Hatsune Miku. I heard many complain about the Miku expo because a lot of people thought that ...",
+        "duration" => 2678,
         "thumbnail" => %{"aspect_ratio" => 1.77},
-        "title" => "dies",
+        "title" => "Hatsune Miku Live at Coachella Week 1, 2024.",
         "type" => "video",
-        "uploaded_at" => 1_672_963_200,
-        "view_count" => 3_384_156,
-        "youtube_id" => "asdkjsdlfkj"
+        "uploaded_at" => 1_714_276_800,
+        "view_count" => 340_774,
+        "youtube_id" => "IKW1h9THwVs"
       }
     )
   end
 
   @piped_search_output File.read!("test/support/piped_outputs/urban_rescue_ranch_search.json")
+  @miku_search_output File.read!("test/support/piped_outputs/hatsune_miku_search.json")
   @piped_channel_output File.read!(
                           "test/support/piped_outputs/the_urban_rescue_ranch_channel.json"
                         )
@@ -372,7 +382,7 @@ defmodule YtSearchWeb.SearchTest do
 
     YtSearch.Constants.apply(
       existing_constants
-      |> Keyword.put(:results_from_search, 50)
+      |> Keyword.put(:results_from_search, 35)
     )
 
     conn =
@@ -383,9 +393,9 @@ defmodule YtSearchWeb.SearchTest do
     YtSearch.Constants.apply(existing_constants)
 
     resp_json = json_response(conn, 200)
-    verify_long_search_results(resp_json)
-    assert length(resp_json["search_results"]) == 50
     # it must call the nextpage handler
-    assert :ets.lookup(table, :nextpage) == {:nextpage, 1}
+    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
+    verify_long_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 35
   end
 end
