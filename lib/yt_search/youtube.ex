@@ -690,7 +690,7 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp sponsorblock_call(call_type, func, id, list_field, opts \\ []) do
+  defp sponsorblock_call(call_type, func, id) do
     CallCounter.inc(call_type)
 
     start_ts = System.monotonic_time(:millisecond)
@@ -702,22 +702,6 @@ defmodule YtSearch.Youtube do
       {:ok, %{status: 200} = response} ->
         {:ok,
          response.body
-         |> then(fn body ->
-           limit = Keyword.get(opts, :limit)
-
-           result =
-             if list_field != nil do
-               body[list_field]
-             else
-               body
-             end
-
-           if is_list(result) and limit != nil do
-             result |> Enum.slice(0, limit)
-           else
-             result
-           end
-         end)
          |> vrcjson_workaround}
 
       {:ok, %{status: 404}} ->
@@ -736,7 +720,6 @@ defmodule YtSearch.Youtube do
       :sponsorblock_segments,
       &YtSearch.Sponsorblock.skip_segments/2,
       youtube_id,
-      nil
     )
   end
 end
