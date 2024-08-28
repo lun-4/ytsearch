@@ -28,13 +28,15 @@ defmodule YtSearchWeb.TrendingTabTest do
           )
       end)
 
+      expected_length = Application.get_env(:yt_search, YtSearch.Constants)[:results_from_search]
+
       conn =
         conn
         |> get(~p"/api/v5/hello")
 
       resp_json = json_response(conn, 200)
       results = resp_json["trending_tab"]["search_results"]
-      assert length(results) == 20
+      assert length(results) == expected_length
       assert results |> Enum.at(0) |> Map.get("youtube_id") == "HYzyRHAHJl8"
       assert results |> Enum.at(3) |> Map.get("youtube_id") == "AsvGScyj4gw"
 
