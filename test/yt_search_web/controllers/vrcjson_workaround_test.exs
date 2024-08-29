@@ -10,16 +10,20 @@ defmodule YtSearchWeb.VRCJSONWorkaroundTest do
   test "works at small scale" do
     assert YtSearch.Youtube.vrcjson_workaround(%{
              "description" => "[amogus]",
-             "asd" => %{
-               "abc" =>
-                 "Peaceful Summer Night  Chill Summer Lofi  Deep Focus To Study/Work [ Lofi Hip Hop - Lofi Chill ]"
-             }
+             "asd" => [
+               %{
+                 "abc" =>
+                   "Peaceful Summer Night  Chill Summer Lofi  Deep Focus To Study/Work [ Lofi Hip Hop - Lofi Chill ]"
+               }
+             ]
            }) == %{
              "description" => "amogus",
-             "asd" => %{
-               "abc" =>
-                 "Peaceful Summer Night  Chill Summer Lofi  Deep Focus To Study/Work  Lofi Hip Hop - Lofi Chill"
-             }
+             "asd" => [
+               %{
+                 "abc" =>
+                   "Peaceful Summer Night  Chill Summer Lofi  Deep Focus To Study/Work  Lofi Hip Hop - Lofi Chill"
+               }
+             ]
            }
   end
 

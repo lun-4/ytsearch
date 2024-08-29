@@ -88,11 +88,17 @@ defmodule YtSearch.Youtube do
         data
         |> Enum.map(fn x -> vrcjson_workaround(x, opts) end)
 
+      v when is_boolean(v) ->
+        v
+
+      nil ->
+        nil
+
       v when is_atom(v) ->
         raise "Unsupported type #{inspect(v)}"
 
       v when is_tuple(v) ->
-        raise "Unsupported type  #{inspect(v)}"
+        raise "Unsupported type #{inspect(v)}"
 
       v ->
         v
@@ -436,14 +442,7 @@ defmodule YtSearch.Youtube do
       {:ok, %{status: 200} = response} ->
         {:ok,
          response.body
-         |> then(fn
-           {:ok, body} ->
-             body
-             |> vrcjson_workaround(opts)
-
-           v ->
-             v
-         end)}
+         |> vrcjson_workaround(opts)}
 
       {:ok, %{status: 500, body: raw_body} = response} ->
         body =
