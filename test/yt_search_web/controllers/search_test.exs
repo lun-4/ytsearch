@@ -103,13 +103,13 @@ defmodule YtSearchWeb.SearchTest do
       json_response["search_results"] |> Enum.at(0),
       %{
         "channel_name" => "The Urban Rescue Ranch",
-        "duration" => 687,
+        "duration" => 638,
         "thumbnail" => %{"aspect_ratio" => 1.77},
-        "title" => "How to Exploit Interns for Free Labor (@Crispy dies)",
+        "title" => "I Fed a Bat to My Prairie Dog (Big Ounce Dies)",
         "type" => "video",
-        "uploaded_at" => 1_688_601_600,
-        "view_count" => 595_124,
-        "youtube_id" => "MSZPuqjm89A"
+        "uploaded_at" => 1_691_278_208,
+        "view_count" => 40177,
+        "youtube_id" => "E-iZ-MPQu1Y"
       }
     )
 
@@ -126,7 +126,7 @@ defmodule YtSearchWeb.SearchTest do
       %{
         "channel_name" => "Wilson (Low-key otaku)",
         "description" =>
-          "First time seeing a live concert of Hatsune Miku. I heard many complain about the Miku expo because a lot of people thought that ...",
+          "Event title 初音ミク ライブパーティー 2012 「ミクパ」 Hatsune Miku Live Party 2012 (MikuPa) Date March 8 (MikuPa), ...",
         "duration" => 2678,
         "thumbnail" => %{"aspect_ratio" => 1.77},
         "title" => "Hatsune Miku Live at Coachella Week 1, 2024.",

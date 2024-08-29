@@ -64,7 +64,7 @@ defmodule YtSearch.Youtube do
   # off the edge case, but i dont think i care enough to do that just for vrchat.
 
   def vrcjson_workaround(incoming_data, opts \\ []) do
-    ignore_keys = Keyword.get(opts, :ignore_keys, [])
+    ignore_keys = Keyword.get(opts || [], :ignore_keys, [])
 
     case incoming_data do
       data when is_bitstring(data) ->
@@ -387,34 +387,40 @@ defmodule YtSearch.Youtube do
           piped_call(:search, func, id, ignore_keys: ["nextpage"])
         end
 
+      IO.inspect(given_page_results)
+
       case given_page_results do
-        {:ok, []} ->
-          # no results? stop now.
-          current_results
-
         {:ok, results} ->
-          new_state = %{
-            results:
-              results
-              |> result_list_extractor_fn.()
-              |> then(fn x -> Enum.concat(current_results, x) end),
-            current_page: current_page + 1,
-            nextpage:
-              case results do
-                v when is_list(v) -> nil
-                v when is_map(v) -> v["nextpage"]
-              end
-          }
+          result_list =
+            results
+            |> result_list_extractor_fn.()
 
-          do_piped_search_call(
-            func,
-            nextpage_func,
-            id,
-            result_list_extractor_fn,
-            limit,
-            opts,
-            new_state
-          )
+          if Enum.empty?(result_list) do
+            # no results? stop now.
+            {:ok, current_results}
+          else
+            new_state = %{
+              results:
+                result_list
+                |> then(fn x -> Enum.concat(current_results, x) end),
+              current_page: current_page + 1,
+              nextpage:
+                case results do
+                  v when is_list(v) -> nil
+                  v when is_map(v) -> v["nextpage"]
+                end
+            }
+
+            do_piped_search_call(
+              func,
+              nextpage_func,
+              id,
+              result_list_extractor_fn,
+              limit,
+              opts,
+              new_state
+            )
+          end
 
         # if it errors out, stop the flow entirely and return what we got
         v ->
