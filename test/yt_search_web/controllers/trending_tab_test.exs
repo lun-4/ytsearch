@@ -28,7 +28,8 @@ defmodule YtSearchWeb.TrendingTabTest do
           )
       end)
 
-      expected_length = Application.get_env(:yt_search, YtSearch.Constants)[:results_from_search]
+      expected_length =
+        Application.get_env(:yt_search, YtSearch.Constants)[:results_from_trending]
 
       conn =
         conn
