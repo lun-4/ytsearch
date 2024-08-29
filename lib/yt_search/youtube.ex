@@ -63,7 +63,7 @@ defmodule YtSearch.Youtube do
   # workaround for now is to strip off any brace character. we could write a balancer and strip
   # off the edge case, but i dont think i care enough to do that just for vrchat.
 
-  defp vrcjson_workaround(incoming_data, opts \\ []) do
+  def vrcjson_workaround(incoming_data, opts \\ []) do
     ignore_keys = Keyword.get(opts, :ignore_keys, [])
 
     case incoming_data do
@@ -79,7 +79,7 @@ defmodule YtSearch.Youtube do
           if key in ignore_keys do
             {key, value}
           else
-            {key |> vrcjson_workaround(opts), value |> vrcjson_workaround(opts)}
+            {key, value |> vrcjson_workaround(opts)}
           end
         end)
         |> Map.new()
