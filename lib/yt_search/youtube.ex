@@ -356,10 +356,14 @@ defmodule YtSearch.Youtube do
     support_nextpage? = opts |> Keyword.get(:nextpage?, true)
     max_pages = opts |> Keyword.get(:max_pages, 5)
 
-    if current_page > max_pages or Enum.count(current_results) >= limit do
+    if current_page > max_pages do
+      raise "fetched too many pages. preventing infinite recursion and not continuing."
+    end
+
+    if Enum.count(current_results) >= limit do
       {:ok,
        state.results
-       |> Enum.take(-limit)}
+       |> Enum.take(limit)}
     else
       given_page_results =
         if state[:nextpage] && support_nextpage? do

@@ -20,10 +20,10 @@ defmodule YtSearchWeb.VRCJSONWorkaroundTest do
 
     resp_json = json_response(conn, 200)
     fourth_result = resp_json["search_results"] |> Enum.at(0)
-    assert fourth_result["youtube_id"] == "-pYfWVHBv04"
+    assert fourth_result["youtube_id"] == "rSXWZzh-GaU"
 
     assert fourth_result["title"] ==
-             "\"Peaceful Summer Night \\ud83c\\udf03 Night Lofi Playlist \\ud83c\\udf03 Deep Focus To Study/Work [ Lofi Hip Hop - Lofi Chill ]\""
+             "\"Peaceful Summer Night \\uD83C\\uDF1D Chill Summer Lofi \\uD83C\\uDF1D Deep Focus To Study/Work  Lofi Hip Hop - Lofi Chill\""
              |> Jason.decode!()
   end
 end
