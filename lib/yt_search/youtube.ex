@@ -387,8 +387,6 @@ defmodule YtSearch.Youtube do
           piped_call(:search, func, id, ignore_keys: ["nextpage"])
         end
 
-      IO.inspect(given_page_results)
-
       case given_page_results do
         {:ok, results} ->
           result_list =
