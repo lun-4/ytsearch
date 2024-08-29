@@ -429,7 +429,7 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp piped_call(call_type, func, id, opts) do
+  defp piped_call(call_type, func, id, opts \\ []) do
     CallCounter.inc(call_type)
 
     start_ts = System.monotonic_time(:millisecond)
