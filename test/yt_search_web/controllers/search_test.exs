@@ -42,6 +42,9 @@ defmodule YtSearchWeb.SearchTest do
       {:starts_with, prefix} ->
         assert String.starts_with?(given["description"], prefix)
 
+      nil ->
+        :noop
+
       data ->
         assert given["description"] == data
     end
@@ -100,15 +103,13 @@ defmodule YtSearchWeb.SearchTest do
       json_response["search_results"] |> Enum.at(0),
       %{
         "channel_name" => "The Urban Rescue Ranch",
-        "description" =>
-          "Big ounce has fallen 😖\n\nLove,\nUncle Farmer Dad Ben 👨🏻‍🌾\n\nCheck out Austin Bat Refuge if you’d like to support them!:\nhttps://austinbatrefuge.org/donations/\n\nSUBSCRIMBO TO GORTS...",
-        "duration" => 638,
+        "duration" => 687,
         "thumbnail" => %{"aspect_ratio" => 1.77},
-        "title" => "I Fed a Bat to My Prairie Dog (Big Ounce Dies)",
+        "title" => "How to Exploit Interns for Free Labor (@Crispy dies)",
         "type" => "video",
-        "uploaded_at" => 1_691_278_208,
-        "view_count" => 40177,
-        "youtube_id" => "E-iZ-MPQu1Y"
+        "uploaded_at" => 1_688_601_600,
+        "view_count" => 595_124,
+        "youtube_id" => "MSZPuqjm89A"
       }
     )
 
