@@ -102,18 +102,22 @@ defmodule YtSearch.Youtube do
   def videos_for(%ChannelSlot{youtube_id: channel_id}) do
     piped_search_call(
       &Piped.channel/2,
+      &Piped.nextpage_channel/3,
       channel_id,
       fn x -> x["relatedStreams"] end,
-      channel_result_limit()
+      channel_result_limit(),
+      []
     )
   end
 
   def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
     piped_search_call(
       &Piped.playlists/2,
+      &Piped.nextpage_playlists/3,
       playlist_id,
       fn x -> x["relatedStreams"] end,
-      playlist_result_limit()
+      playlist_result_limit(),
+      []
     )
   end
 
@@ -143,7 +147,14 @@ defmodule YtSearch.Youtube do
     else
       case Ratelimit.for_text_search() do
         :allow ->
-          piped_search_call(&Piped.search/2, text, fn x -> x["items"] end, result_limit())
+          piped_search_call(
+            &Piped.search/2,
+            &Piped.nextpage_search/3,
+            text,
+            fn x -> x["items"] end,
+            result_limit(),
+            []
+          )
 
         :deny ->
           {:error, :overloaded_ytdlp_seats}
@@ -330,24 +341,34 @@ defmodule YtSearch.Youtube do
       result_limit()
   end
 
-  defp piped_search_call(func, id, result_list_extractor_fn, limit) do
-    do_piped_search_call(func, id, result_list_extractor_fn, limit, %{})
+  defp trending_result_limit do
+    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_trending] ||
+      result_limit()
   end
 
-  defp do_piped_search_call(func, id, result_list_extractor_fn, limit, state) do
-    current_results = state[:results] || []
+  defp piped_search_call(func, nextpage_func, id, result_list_extractor_fn, limit, opts) do
+    do_piped_search_call(func, nextpage_func, id, result_list_extractor_fn, limit, opts, %{})
+  end
 
-    if Enum.count(current_results) >= limit do
+  defp do_piped_search_call(func, nextpage_func, id, result_list_extractor_fn, limit, opts, state) do
+    current_results = state[:results] || []
+    current_page = state[:current_page] || 0
+    support_nextpage? = opts |> Keyword.get(:nextpage?, true)
+    max_pages = opts |> Keyword.get(:max_pages, 5)
+
+    if current_page > max_pages or Enum.count(current_results) >= limit do
       {:ok,
        state.results
        |> Enum.take(-limit)}
     else
       given_page_results =
-        if state[:nextpage] do
+        if state[:nextpage] && support_nextpage? do
+          Logger.debug("bumping to nextpage #{current_page}")
+
           piped_call(
             :search,
             fn url, text ->
-              Piped.nextpage_search(url, text, state.nextpage)
+              nextpage_func.(url, text, state.nextpage)
             end,
             id,
             ignore_keys: ["nextpage"]
@@ -357,30 +378,43 @@ defmodule YtSearch.Youtube do
         end
 
       case given_page_results do
+        {:ok, []} ->
+          # no results? stop now.
+          current_results
+
         {:ok, results} ->
           new_state = %{
             results:
               results
               |> result_list_extractor_fn.()
               |> then(fn x -> Enum.concat(current_results, x) end),
-            nextpage: results["nextpage"]
+            current_page: current_page + 1,
+            nextpage:
+              case results do
+                v when is_list(v) -> nil
+                v when is_map(v) -> v["nextpage"]
+              end
           }
 
           do_piped_search_call(
             func,
+            nextpage_func,
             id,
             result_list_extractor_fn,
             limit,
+            opts,
             new_state
           )
 
         # if it errors out, stop the flow entirely and return what we got
         v ->
-          Logger.error(
-            "Piped call to #{inspect(func)} failed, degrading list (to #{length(current_results)} entries): #{inspect(v)}"
-          )
+          # TODO only apply degradation logic to text search
+          # Logger.error(
+          #  "Piped call to #{inspect(func)} failed, degrading list (to #{length(current_results)} entries): #{inspect(v)}"
+          # )
 
-          current_results
+          # current_results
+          v
       end
     end
   end
@@ -517,8 +551,14 @@ defmodule YtSearch.Youtube do
   end
 
   def trending(region \\ "US") do
-    # TODO (DO NOT MERGE) wrap in normal search function
-    piped_call(:search, &Piped.trending/2, region, [])
+    piped_search_call(
+      &Piped.trending/2,
+      nil,
+      region,
+      fn x -> x end,
+      trending_result_limit(),
+      nextpage?: false
+    )
   end
 
   def extract_valid_streams(incoming_video_streams) do
