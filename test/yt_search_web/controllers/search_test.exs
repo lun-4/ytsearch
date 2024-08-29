@@ -124,16 +124,14 @@ defmodule YtSearchWeb.SearchTest do
     verify_single_result(
       json_response["search_results"] |> Enum.at(33),
       %{
-        "channel_name" => "Wilson (Low-key otaku)",
-        "description" =>
-          "Event title 初音ミク ライブパーティー 2012 「ミクパ」 Hatsune Miku Live Party 2012 (MikuPa) Date March 8 (MikuPa), ...",
-        "duration" => 2678,
+        "channel_name" => "VIV - Vocaloid Live Concert",
+        "duration" => 8034,
         "thumbnail" => %{"aspect_ratio" => 1.77},
-        "title" => "Hatsune Miku Live at Coachella Week 1, 2024.",
+        "title" => "Hatsune Miku Live Party (MikuPa) (Subtitles cc) FULL HD",
         "type" => "video",
-        "uploaded_at" => 1_714_276_800,
-        "view_count" => 340_774,
-        "youtube_id" => "IKW1h9THwVs"
+        "uploaded_at" => 1_535_342_400,
+        "view_count" => 5_064_343,
+        "youtube_id" => "wJA8-Z6H5dM"
       }
     )
   end

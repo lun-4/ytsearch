@@ -411,15 +411,19 @@ defmodule YtSearch.Youtube do
                 end
             }
 
-            do_piped_search_call(
-              func,
-              nextpage_func,
-              id,
-              result_list_extractor_fn,
-              limit,
-              opts,
-              new_state
-            )
+            if new_state.nextpage == nil do
+              {:ok, new_state.results}
+            else
+              do_piped_search_call(
+                func,
+                nextpage_func,
+                id,
+                result_list_extractor_fn,
+                limit,
+                opts,
+                new_state
+              )
+            end
           end
 
         # if it errors out, stop the flow entirely and return what we got
