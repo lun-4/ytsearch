@@ -269,8 +269,11 @@ defmodule YtSearchWeb.SearchTest do
       |> get(~p"/a/5/s?q=whatever")
 
     rjson = json_response(conn, 200)
-    # the original response containns 20, the channel entry is the only removed
-    assert length(rjson["search_results"]) == 19
+
+    rjson["search_results"]
+    |> Enum.each(fn res ->
+      assert res["youtube_id"] != "UCE-0bs8PtC2nWFgXwtkCUAA"
+    end)
   end
 
   @piped_upcoming_premiere File.read!(
@@ -288,7 +291,11 @@ defmodule YtSearchWeb.SearchTest do
       |> get(~p"/a/5/s?q=whatever")
 
     rjson = json_response(conn, 200)
-    assert length(rjson["search_results"]) == 19
+
+    rjson["search_results"]
+    |> Enum.each(fn res ->
+      assert res["youtube_id"] != "_SvFetHaJpo"
+    end)
   end
 
   test "it encodes the search query properly", %{conn: conn} do
