@@ -395,7 +395,9 @@ defmodule YtSearch.Youtube do
 
           if Enum.empty?(result_list) do
             # no results? stop now.
-            {:ok, current_results}
+            {:ok,
+             current_results
+             |> Enum.take(limit)}
           else
             new_state = %{
               results:
@@ -410,7 +412,9 @@ defmodule YtSearch.Youtube do
             }
 
             if new_state.nextpage == nil do
-              {:ok, new_state.results}
+              {:ok,
+               new_state.results
+               |> Enum.take(limit)}
             else
               do_piped_search_call(
                 func,
