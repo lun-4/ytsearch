@@ -140,8 +140,3 @@ config :phoenix, :plug_init_mode, :runtime
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
-
-config :yt_search, YtSearch.Constants,
-  results_from_search: 35,
-  results_from_channels: 35,
-  results_from_playlists: 35

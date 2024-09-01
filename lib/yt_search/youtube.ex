@@ -107,6 +107,7 @@ defmodule YtSearch.Youtube do
 
   def videos_for(%ChannelSlot{youtube_id: channel_id}) do
     piped_search_call(
+      :channel,
       &Piped.channel/2,
       &Piped.nextpage_channel/3,
       channel_id,
@@ -118,6 +119,7 @@ defmodule YtSearch.Youtube do
 
   def videos_for(%PlaylistSlot{youtube_id: playlist_id}) do
     piped_search_call(
+      :playlist,
       &Piped.playlists/2,
       &Piped.nextpage_playlists/3,
       playlist_id,
@@ -154,6 +156,7 @@ defmodule YtSearch.Youtube do
       case Ratelimit.for_text_search() do
         :allow ->
           piped_search_call(
+            :search,
             &Piped.search/2,
             &Piped.nextpage_search/3,
             text,
@@ -352,11 +355,20 @@ defmodule YtSearch.Youtube do
       result_limit()
   end
 
-  defp piped_search_call(func, nextpage_func, id, result_list_extractor_fn, limit, opts) do
-    do_piped_search_call(func, nextpage_func, id, result_list_extractor_fn, limit, opts, %{})
+  defp piped_search_call(tag, func, nextpage_func, id, result_list_extractor_fn, limit, opts) do
+    do_piped_search_call(tag, func, nextpage_func, id, result_list_extractor_fn, limit, opts, %{})
   end
 
-  defp do_piped_search_call(func, nextpage_func, id, result_list_extractor_fn, limit, opts, state) do
+  defp do_piped_search_call(
+         tag,
+         func,
+         nextpage_func,
+         id,
+         result_list_extractor_fn,
+         limit,
+         opts,
+         state
+       ) do
     current_results = state[:results] || []
     current_page = state[:current_page] || 0
     support_nextpage? = opts |> Keyword.get(:nextpage?, true)
@@ -367,16 +379,18 @@ defmodule YtSearch.Youtube do
     end
 
     if Enum.count(current_results) >= limit do
+      Logger.debug("nextpage #{inspect(id)}: completed!")
+
       {:ok,
        state.results
        |> Enum.take(limit)}
     else
       given_page_results =
         if state[:nextpage] && support_nextpage? do
-          Logger.debug("bumping to nextpage #{current_page}")
+          Logger.debug("nextpage #{inspect(id)}: bumping to nextpage #{current_page}")
 
           piped_call(
-            :search,
+            tag,
             fn url, text ->
               nextpage_func.(url, text, state.nextpage)
             end,
@@ -384,7 +398,8 @@ defmodule YtSearch.Youtube do
             ignore_keys: ["nextpage"]
           )
         else
-          piped_call(:search, func, id, ignore_keys: ["nextpage"])
+          Logger.debug("nextpage #{inspect(id)}: first call")
+          piped_call(tag, func, id, ignore_keys: ["nextpage"])
         end
 
       case given_page_results do
@@ -417,6 +432,7 @@ defmodule YtSearch.Youtube do
                |> Enum.take(limit)}
             else
               do_piped_search_call(
+                tag,
                 func,
                 nextpage_func,
                 id,
@@ -567,6 +583,7 @@ defmodule YtSearch.Youtube do
 
   def trending(region \\ "US") do
     piped_search_call(
+      :trending,
       &Piped.trending/2,
       nil,
       region,
