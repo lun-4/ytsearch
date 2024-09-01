@@ -395,92 +395,95 @@ defmodule YtSearch.Youtube do
     max_pages = conf.max_pages
     limit = conf.max_result_count
 
-    if current_page >= max_pages do
-      {:ok, current_results}
-    end
+    cond do
+      current_page >= max_pages ->
+        {:ok,
+         current_results
+         |> Enum.take(limit)}
 
-    if Enum.count(current_results) >= limit do
-      Logger.debug("nextpage #{inspect(id)}: completed!")
+      Enum.count(current_results) >= limit ->
+        Logger.debug("nextpage #{inspect(id)}: completed!")
 
-      {:ok,
-       state.results
-       |> Enum.take(limit)}
-    else
-      given_page_results =
-        if state[:nextpage] && support_nextpage? do
-          Logger.debug("nextpage #{inspect(id)}: bumping to nextpage #{current_page}")
+        {:ok,
+         state.results
+         |> Enum.take(limit)}
 
-          piped_call(
-            tag
-            |> to_string
-            |> then(fn x ->
-              [x, "nextpage"]
-              |> Enum.join("_")
-            end)
-            |> String.to_atom(),
-            fn url, text ->
-              nextpage_func.(url, text, state.nextpage)
-            end,
-            id,
-            ignore_keys: ["nextpage"]
-          )
-        else
-          Logger.debug("nextpage #{inspect(id)}: first call")
-          piped_call(tag, func, id, ignore_keys: ["nextpage"])
-        end
+      true ->
+        given_page_results =
+          if state[:nextpage] && support_nextpage? do
+            Logger.debug("nextpage #{inspect(id)}: bumping to nextpage #{current_page}")
 
-      case given_page_results do
-        {:ok, results} ->
-          result_list =
-            results
-            |> result_list_extractor_fn.()
-
-          if Enum.empty?(result_list) do
-            # no results? stop now.
-            {:ok,
-             current_results
-             |> Enum.take(limit)}
+            piped_call(
+              tag
+              |> to_string
+              |> then(fn x ->
+                [x, "nextpage"]
+                |> Enum.join("_")
+              end)
+              |> String.to_atom(),
+              fn url, text ->
+                nextpage_func.(url, text, state.nextpage)
+              end,
+              id,
+              ignore_keys: ["nextpage"]
+            )
           else
-            new_state = %{
-              results:
-                result_list
-                |> then(fn x -> Enum.concat(current_results, x) end),
-              current_page: current_page + 1,
-              nextpage:
-                case results do
-                  v when is_list(v) -> nil
-                  v when is_map(v) -> v["nextpage"]
-                end
-            }
-
-            if new_state.nextpage == nil do
-              {:ok,
-               new_state.results
-               |> Enum.take(limit)}
-            else
-              do_piped_search_call(
-                tag,
-                func,
-                nextpage_func,
-                id,
-                result_list_extractor_fn,
-                conf,
-                opts,
-                new_state
-              )
-            end
+            Logger.debug("nextpage #{inspect(id)}: first call")
+            piped_call(tag, func, id, ignore_keys: ["nextpage"])
           end
 
-        # if it errors out, stop the flow entirely and return what we got
-        v ->
-          # TODO only apply degradation logic to text search
-          # Logger.error(
-          #  "Piped call to #{inspect(func)} failed, degrading list (to #{length(current_results)} entries): #{inspect(v)}"
-          # )
+        case given_page_results do
+          {:ok, results} ->
+            result_list =
+              results
+              |> result_list_extractor_fn.()
 
-          # current_results
-          v
-      end
+            if Enum.empty?(result_list) do
+              # no results? stop now.
+              {:ok,
+               current_results
+               |> Enum.take(limit)}
+            else
+              new_state = %{
+                results:
+                  result_list
+                  |> then(fn x -> Enum.concat(current_results, x) end),
+                current_page: current_page + 1,
+                nextpage:
+                  case results do
+                    v when is_list(v) -> nil
+                    v when is_map(v) -> v["nextpage"]
+                  end
+              }
+
+              if new_state.nextpage == nil do
+                {:ok,
+                 new_state.results
+                 |> Enum.take(limit)}
+              else
+                do_piped_search_call(
+                  tag,
+                  func,
+                  nextpage_func,
+                  id,
+                  result_list_extractor_fn,
+                  conf,
+                  opts,
+                  new_state
+                )
+              end
+            end
+
+          # if it errors out, stop the flow entirely and return what we got
+          v ->
+            # TODO only apply degradation logic to text search
+            # Logger.error(
+            #  "Piped call to #{inspect(func)} failed, degrading list (to #{length(current_results)} entries): #{inspect(v)}"
+            # )
+
+            # current_results
+            v
+        end
     end
   end
 
