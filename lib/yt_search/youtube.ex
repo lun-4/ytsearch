@@ -432,7 +432,7 @@ defmodule YtSearch.Youtube do
                |> Enum.take(limit)}
             else
               do_piped_search_call(
-                tag,
+                :nextpage,
                 func,
                 nextpage_func,
                 id,
