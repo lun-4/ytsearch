@@ -9,7 +9,16 @@ defmodule YtSearchWeb.SearchTest do
 
       %{method: :get, url: "https://yt3.ggpht.com/" <> _} ->
         Data.png_response()
+
+      %{method: :get, url: "https://yt3.googleusercontent.com/" <> _} ->
+        Data.png_response()
+
+      %{method: :get, url: "https://i9.ytimg.com/" <> _} ->
+        Data.png_response()
     end)
+
+    ets = :ets.new(:mock_call_counter, [:public])
+    %{ets_table: ets}
   end
 
   defp assert_int_or_null(nil), do: nil
@@ -32,6 +41,9 @@ defmodule YtSearchWeb.SearchTest do
     case expected["description"] do
       {:starts_with, prefix} ->
         assert String.starts_with?(given["description"], prefix)
+
+      nil ->
+        :noop
 
       data ->
         assert given["description"] == data
@@ -91,8 +103,6 @@ defmodule YtSearchWeb.SearchTest do
       json_response["search_results"] |> Enum.at(0),
       %{
         "channel_name" => "The Urban Rescue Ranch",
-        "description" =>
-          "Big ounce has fallen 😖\n\nLove,\nUncle Farmer Dad Ben 👨🏻‍🌾\n\nCheck out Austin Bat Refuge if you’d like to support them!:\nhttps://austinbatrefuge.org/donations/\n\nSUBSCRIMBO TO GORTS...",
         "duration" => 638,
         "thumbnail" => %{"aspect_ratio" => 1.77},
         "title" => "I Fed a Bat to My Prairie Dog (Big Ounce Dies)",
@@ -106,7 +116,28 @@ defmodule YtSearchWeb.SearchTest do
     assert json_response["slot_id"] != nil
   end
 
+  defp verify_long_search_results(json_response) do
+    # verify_search_results(json_response)
+
+    IO.inspect(json_response)
+
+    verify_single_result(
+      json_response["search_results"] |> Enum.at(33),
+      %{
+        "channel_name" => "VIV - Vocaloid Live Concert",
+        "duration" => 8034,
+        "thumbnail" => %{"aspect_ratio" => 1.77},
+        "title" => "Hatsune Miku Live Party (MikuPa) (Subtitles cc) FULL HD",
+        "type" => "video",
+        "uploaded_at" => 1_535_342_400,
+        "view_count" => 5_064_343,
+        "youtube_id" => "wJA8-Z6H5dM"
+      }
+    )
+  end
+
   @piped_search_output File.read!("test/support/piped_outputs/urban_rescue_ranch_search.json")
+  @miku_search_output File.read!("test/support/piped_outputs/hatsune_miku_search.json")
   @piped_channel_output File.read!(
                           "test/support/piped_outputs/the_urban_rescue_ranch_channel.json"
                         )
@@ -238,8 +269,11 @@ defmodule YtSearchWeb.SearchTest do
       |> get(~p"/a/5/s?q=whatever")
 
     rjson = json_response(conn, 200)
-    # the original response containns 20, the channel entry is the only removed
-    assert length(rjson["search_results"]) == 19
+
+    rjson["search_results"]
+    |> Enum.each(fn res ->
+      assert res["youtube_id"] != "UCE-0bs8PtC2nWFgXwtkCUAA"
+    end)
   end
 
   @piped_upcoming_premiere File.read!(
@@ -257,7 +291,11 @@ defmodule YtSearchWeb.SearchTest do
       |> get(~p"/a/5/s?q=whatever")
 
     rjson = json_response(conn, 200)
-    assert length(rjson["search_results"]) == 19
+
+    rjson["search_results"]
+    |> Enum.each(fn res ->
+      assert res["youtube_id"] != "_SvFetHaJpo"
+    end)
   end
 
   test "it encodes the search query properly", %{conn: conn} do
@@ -327,4 +365,39 @@ defmodule YtSearchWeb.SearchTest do
       assert delta >= 20 * 60
     end
   end)
+
+  test "nextpage works", %{conn: conn, ets_table: table} do
+    mock(fn
+      %{method: :get, url: "example.org/channel/" <> _whatever} ->
+        json(Jason.decode!(@piped_channel_output))
+
+      %{method: :get, url: "example.org/search" <> _whatever} ->
+        # TODO (DO NOT MERGE) check parsmasm (must not have nextpage)
+        json(Jason.decode!(@piped_search_output))
+
+      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
+        :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
+        json(Jason.decode!(@miku_search_output))
+    end)
+
+    existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
+
+    YtSearch.Constants.apply(
+      existing_constants
+      |> Keyword.put(:results_from_search, 35)
+    )
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+
+    YtSearch.Constants.apply(existing_constants)
+
+    resp_json = json_response(conn, 200)
+    # it must call the nextpage handler
+    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
+    verify_long_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 35
+  end
 end

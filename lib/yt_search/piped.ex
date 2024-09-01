@@ -10,12 +10,30 @@ defmodule YtSearch.Piped do
     get("#{url}/search", query: [q: text, filter: "all"])
   end
 
+  def nextpage_search(url, text, nextpage) do
+    get("#{url}/nextpage/search",
+      query: [q: text, filter: "all", nextpage: nextpage]
+    )
+  end
+
   def channel(url, id) do
     get("#{url}/channel/#{id}")
   end
 
+  def nextpage_channel(url, id, nextpage) do
+    get("#{url}/nextpage/channel/#{id}",
+      query: [nextpage: nextpage]
+    )
+  end
+
   def playlists(url, id) do
     get("#{url}/playlists/#{id}")
+  end
+
+  def nextpage_playlists(url, id, nextpage) do
+    get("#{url}/nextpage/playlists/#{id}",
+      query: [nextpage: nextpage]
+    )
   end
 
   def streams(url, id) do
