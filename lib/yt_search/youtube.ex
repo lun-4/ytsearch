@@ -395,7 +395,7 @@ defmodule YtSearch.Youtube do
     max_pages = conf.max_pages
     limit = conf.max_result_count
 
-    if current_page > max_pages do
+    if current_page >= max_pages do
       {:ok, current_results}
     end
 
