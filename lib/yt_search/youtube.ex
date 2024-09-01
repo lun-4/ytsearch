@@ -390,7 +390,10 @@ defmodule YtSearch.Youtube do
           Logger.debug("nextpage #{inspect(id)}: bumping to nextpage #{current_page}")
 
           piped_call(
-            tag,
+            tag
+            |> to_string
+            |> then(fn x -> x + "_nextpage" end)
+            |> String.to_atom(),
             fn url, text ->
               nextpage_func.(url, text, state.nextpage)
             end,
@@ -432,7 +435,7 @@ defmodule YtSearch.Youtube do
                |> Enum.take(limit)}
             else
               do_piped_search_call(
-                :nextpage,
+                tag,
                 func,
                 nextpage_func,
                 id,
