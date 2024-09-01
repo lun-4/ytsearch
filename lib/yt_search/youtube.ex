@@ -336,27 +336,47 @@ defmodule YtSearch.Youtube do
   end
 
   defp result_limit do
-    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_search] ||
-      raise "invalid configuration"
+    max_pages =
+      Application.get_env(:yt_search, YtSearch.Constants)[:pages_from_search] ||
+        raise "invalid configuration"
+
+    max_result_count =
+      Application.get_env(:yt_search, YtSearch.Constants)[:results_from_search] ||
+        raise("invalid configuration")
+
+    %{
+      max_pages: max_pages,
+      max_result_count: max_result_count
+    }
+  end
+
+  defp limit_config(entity) do
+    page_key = ["pages_from_", entity] |> List.to_string() |> String.to_atom()
+    max_pages = Application.get_env(:yt_search, YtSearch.Constants)[page_key]
+    result_key = ["results_from_", entity] |> List.to_string() |> String.to_atom()
+    max_result_count = Application.get_env(:yt_search, YtSearch.Constants)[result_key]
+    search_config = result_limit()
+
+    %{
+      max_pages: max_pages || search_config[:max_pages],
+      max_result_count: max_result_count || search_config[:max_result_count]
+    }
   end
 
   defp channel_result_limit do
-    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_channels] ||
-      result_limit()
+    limit_config("channels")
   end
 
   defp playlist_result_limit do
-    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_playlists] ||
-      result_limit()
+    limit_config("playlists")
   end
 
   defp trending_result_limit do
-    Application.get_env(:yt_search, YtSearch.Constants)[:results_from_trending] ||
-      result_limit()
+    limit_config("trending")
   end
 
-  defp piped_search_call(tag, func, nextpage_func, id, result_list_extractor_fn, limit, opts) do
-    do_piped_search_call(tag, func, nextpage_func, id, result_list_extractor_fn, limit, opts, %{})
+  defp piped_search_call(tag, func, nextpage_func, id, result_list_extractor_fn, conf, opts) do
+    do_piped_search_call(tag, func, nextpage_func, id, result_list_extractor_fn, conf, opts, %{})
   end
 
   defp do_piped_search_call(
@@ -365,17 +385,18 @@ defmodule YtSearch.Youtube do
          nextpage_func,
          id,
          result_list_extractor_fn,
-         limit,
+         conf,
          opts,
          state
        ) do
     current_results = state[:results] || []
     current_page = state[:current_page] || 0
     support_nextpage? = opts |> Keyword.get(:nextpage?, true)
-    max_pages = opts |> Keyword.get(:max_pages, 5)
+    max_pages = conf.max_pages
+    limit = conf.max_result_count
 
     if current_page > max_pages do
-      raise "fetched too many pages. preventing infinite recursion and not continuing."
+      {:ok, current_results}
     end
 
     if Enum.count(current_results) >= limit do
@@ -443,7 +464,7 @@ defmodule YtSearch.Youtube do
                 nextpage_func,
                 id,
                 result_list_extractor_fn,
-                limit,
+                conf,
                 opts,
                 new_state
               )

@@ -138,9 +138,13 @@ config :phoenix_ecto,
   exclude_ecto_exceptions_from_plug: [Ecto.StaleEntryError]
 
 config :yt_search, YtSearch.Constants,
+  pages_from_search: 1,
   results_from_search: 20,
+  pages_from_channels: 1,
   results_from_channels: 30,
+  pages_from_playlists: 1,
   results_from_playlists: 30,
+  pages_from_trending: 1,
   results_from_trending: 30,
   minimum_time_between_refreshes: 60,
   enable_periodic_tasks: true,
