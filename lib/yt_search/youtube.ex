@@ -392,7 +392,10 @@ defmodule YtSearch.Youtube do
           piped_call(
             tag
             |> to_string
-            |> then(fn x -> x + "_nextpage" end)
+            |> then(fn x ->
+              [x, "nextpage"]
+              |> Enum.join("_")
+            end)
             |> String.to_atom(),
             fn url, text ->
               nextpage_func.(url, text, state.nextpage)
