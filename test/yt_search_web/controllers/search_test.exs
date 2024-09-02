@@ -372,7 +372,6 @@ defmodule YtSearchWeb.SearchTest do
         json(Jason.decode!(@piped_channel_output))
 
       %{method: :get, url: "example.org/search" <> _whatever} ->
-        # TODO (DO NOT MERGE) check parsmasm (must not have nextpage)
         json(Jason.decode!(@piped_search_output))
 
       %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
@@ -384,6 +383,7 @@ defmodule YtSearchWeb.SearchTest do
 
     YtSearch.Constants.apply(
       existing_constants
+      |> Keyword.put(:pages_from_search, 2)
       |> Keyword.put(:results_from_search, 35)
     )
 
@@ -399,5 +399,43 @@ defmodule YtSearchWeb.SearchTest do
     assert :ets.lookup(table, :nextpage) == [nextpage: 1]
     verify_long_search_results(resp_json)
     assert length(resp_json["search_results"]) == 35
+  end
+
+  test "user can fetch nextpage", %{conn: conn, ets_table: table} do
+    mock(fn
+      %{method: :get, url: "example.org/channel/" <> _whatever} ->
+        json(Jason.decode!(@piped_channel_output))
+
+      %{method: :get, url: "example.org/search" <> _whatever} ->
+        json(Jason.decode!(@piped_search_output))
+
+      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
+        :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
+        json(Jason.decode!(@miku_search_output))
+    end)
+
+    existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
+
+    YtSearch.Constants.apply(
+      existing_constants
+      |> Keyword.put(:pages_from_search, 1)
+      |> Keyword.put(:results_from_search, 20)
+    )
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+
+    YtSearch.Constants.apply(existing_constants)
+
+    resp_json = json_response(conn, 200)
+    # it must NOT call the nextpage handler, yet.
+    assert :ets.lookup(table, :nextpage) == []
+    verify_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 19
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot != nil
   end
 end
