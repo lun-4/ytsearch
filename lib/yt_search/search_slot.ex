@@ -15,6 +15,7 @@ defmodule YtSearch.SearchSlot do
 
   schema "search_slots_v3" do
     field(:slots_json, :string)
+    field(:slots_json_v2, :string)
     field(:query, :string)
     timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
     field(:expires_at, :naive_datetime)
@@ -91,14 +92,32 @@ defmodule YtSearch.SearchSlot do
 
   def changeset(%__MODULE__{} = slot, params) do
     slot
-    |> cast(params, [:id, :query, :slots_json, :expires_at, :used_at, :keepalive])
-    |> validate_required([:query, :slots_json, :expires_at, :used_at])
+    |> cast(params, [
+      :id,
+      :query,
+      :slots_json,
+      :expires_at,
+      :used_at,
+      :keepalive,
+      :nextpage,
+      :type
+    ])
+    |> validate_required([:query, :expires_at, :used_at, :type])
   end
 
   def from_playlist(playlist, search_query, opts \\ []) do
-    playlist
-    |> Jason.encode!()
-    |> from_slots_json(search_query |> internal_id_for, opts)
+    nextpage = opts |> Keyword.get(:nextpage?, false)
+
+    if nextpage do
+      {playlist.results
+       |> Jason.encode!()
+       |> from_slots_json(search_query |> internal_id_for, opts),
+       from_nextpage(playlist.nextpage)}
+    else
+      playlist
+      |> Jason.encode!()
+      |> from_slots_json(search_query |> internal_id_for, opts)
+    end
   end
 
   @spec from_slots_json(String.t(), String.t(), Keyword.t()) :: SearchSlot.t()
@@ -117,7 +136,8 @@ defmodule YtSearch.SearchSlot do
             id: new_id,
             query: search_query,
             slots_json: slots_json,
-            keepalive: keepalive
+            keepalive: keepalive,
+            type: :fetched
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_used()
@@ -131,7 +151,8 @@ defmodule YtSearch.SearchSlot do
               slots_json: params.slots_json,
               expires_at: params.expires_at,
               used_at: params.used_at,
-              keepalive: params.keepalive
+              keepalive: params.keepalive,
+              type: :fetched
             ]
           ]
         )
@@ -144,6 +165,62 @@ defmodule YtSearch.SearchSlot do
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_opts(opts)
+          |> SlotUtilities.put_used()
+        )
+        |> SearchSlotRepo.update!()
+      end
+    end)
+    |> then(fn {:ok, slot} -> slot end)
+  end
+
+  defp from_nextpage(nil, opts), do: nil
+
+  defp from_nextpage(nextpage) do
+    SearchSlotRepo.transaction(fn ->
+      query = from s in __MODULE__, where: s.nextpage_data == ^nextpage, select: s
+      search_slot = SearchSlotRepo.replica(nextpage).one(query)
+
+      if search_slot == nil do
+        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+
+        params =
+          %{
+            id: new_id,
+            slots_json: nil,
+            query: nil,
+            nextpage: nextpage,
+            type: :unfetched
+          }
+          # TODO (DO NOT MERGE) set expiration based on the parent
+          |> SlotUtilities.put_simple_expiration(__MODULE__)
+          |> SlotUtilities.put_used()
+
+        %__MODULE__{}
+        |> changeset(params)
+        |> SearchSlotRepo.insert!(
+          on_conflict: [
+            set: [
+              query: nil,
+              slots_json: nil,
+              nextpage: params.nextpage,
+              type: params.type,
+              expires_at: params.expires_at,
+              used_at: params.used_at,
+              keepalive: false
+            ]
+          ]
+        )
+      else
+        search_slot
+        |> changeset(
+          %{
+            query: nil,
+            slots_json: nil,
+            nextpage: nextpage,
+            type: :unfetched,
+            keepalive: false
+          }
+          |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_used()
         )
         |> SearchSlotRepo.update!()

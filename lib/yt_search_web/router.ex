@@ -11,6 +11,7 @@ defmodule YtSearchWeb.Router do
 
   scope "/api/v5", YtSearchWeb do
     get("/search", SearchController, :search_by_text)
+    get("/search/:id", SearchController, :search_by_preallocated_id)
     get("/c/:channel_slot_id", SearchController, :fetch_channel)
     get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
     get("/s/:slot_id", SlotController, :fetch_video)

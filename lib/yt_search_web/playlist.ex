@@ -3,7 +3,15 @@ defmodule YtSearchWeb.Playlist do
   require Logger
 
   def from_piped_data(json, opts \\ []) do
-    json
+    nextpage? = opts |> Keyword.get(:nextpage?, false)
+
+    nextpage_data = json["nextpage"]
+
+    if nextpage? do
+      json.results
+    else
+      json
+    end
     |> Enum.map(fn entry ->
       entity_type =
         case entry["type"] do
@@ -42,6 +50,9 @@ defmodule YtSearchWeb.Playlist do
       Mutex.under(PlaylistEntryCreatorMutex, "#{entity_type}:#{youtube_id}", fn ->
         do_create_playlist_entry_piped(entity_type, data, thumbnail_metadata, youtube_id, opts)
       end)
+    end)
+    |> then(fn result_list ->
+      %{results: result_list, nextpage: nextpage_data}
     end)
   end
 

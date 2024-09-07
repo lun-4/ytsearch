@@ -117,10 +117,6 @@ defmodule YtSearchWeb.SearchTest do
   end
 
   defp verify_long_search_results(json_response) do
-    # verify_search_results(json_response)
-
-    IO.inspect(json_response)
-
     verify_single_result(
       json_response["search_results"] |> Enum.at(33),
       %{
@@ -132,6 +128,22 @@ defmodule YtSearchWeb.SearchTest do
         "uploaded_at" => 1_535_342_400,
         "view_count" => 5_064_343,
         "youtube_id" => "wJA8-Z6H5dM"
+      }
+    )
+  end
+
+  defp verify_miku_search_results(json_response) do
+    verify_single_result(
+      json_response["search_results"] |> Enum.at(6),
+      %{
+        "channel_name" => "VIV - Vocaloid Live Concert",
+        "duration" => 8034,
+        "thumbnail" => %{"aspect_ratio" => 1.77},
+        "title" => "HATSUNE MIKU DEFEATS RACISM",
+        "type" => "video",
+        "uploaded_at" => 1_535_342_400,
+        "view_count" => 5_064_343,
+        "youtube_id" => "AAAAa"
       }
     )
   end
@@ -410,8 +422,19 @@ defmodule YtSearchWeb.SearchTest do
         json(Jason.decode!(@piped_search_output))
 
       %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
-        :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
-        json(Jason.decode!(@miku_search_output))
+        calls = :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
+
+        json(
+          case calls do
+            1 ->
+              Jason.decode!(@miku_search_output)
+
+            2 ->
+              %{
+                nextpage: "null"
+              }
+          end
+        )
     end)
 
     existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
@@ -437,5 +460,35 @@ defmodule YtSearchWeb.SearchTest do
 
     nextpage_slot = resp_json["nextpage_slot_id"]
     assert nextpage_slot != nil
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search/#{nextpage_slot}")
+
+    YtSearch.Constants.apply(existing_constants)
+
+    resp_json = json_response(conn, 200)
+    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
+    verify_miku_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 19
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot != nil
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search/#{nextpage_slot}")
+
+    YtSearch.Constants.apply(existing_constants)
+
+    resp_json = json_response(conn, 200)
+    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
+    verify_miku_search_results(resp_json)
+    assert length(resp_json["search_results"]) == 19
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot == nil
   end
 end
