@@ -14,13 +14,14 @@ defmodule YtSearch.SearchSlot do
   @primary_key {:id, :integer, autogenerate: false}
 
   schema "search_slots_v3" do
-    field(:slots_json, :string)
-    field(:slots_json_v2, :string)
-    field(:query, :string)
+    field(:slots_json, :string, default: "")
+    field(:query, :string, default: "")
     timestamps(autogenerate: {SlotUtilities, :generate_unix_timestamp, []})
     field(:expires_at, :naive_datetime)
     field(:used_at, :naive_datetime)
     field(:keepalive, :boolean)
+    field(:nextpage_data, :string)
+    field(:type, Ecto.Enum, values: [:fetched, :unfetched])
   end
 
   def slot_spec() do
@@ -99,10 +100,21 @@ defmodule YtSearch.SearchSlot do
       :expires_at,
       :used_at,
       :keepalive,
-      :nextpage,
+      :nextpage_data,
       :type
     ])
-    |> validate_required([:query, :expires_at, :used_at, :type])
+    |> validate_required([:expires_at, :used_at, :type])
+    |> validate_not_nil([:query, :slots_json])
+  end
+
+  defp validate_not_nil(changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, changeset ->
+      if get_field(changeset, field) == nil do
+        add_error(changeset, field, "is fckin nil")
+      else
+        changeset
+      end
+    end)
   end
 
   def from_playlist(playlist, search_query, opts \\ []) do
@@ -173,11 +185,15 @@ defmodule YtSearch.SearchSlot do
     |> then(fn {:ok, slot} -> slot end)
   end
 
-  defp from_nextpage(nil, opts), do: nil
+  defp from_nextpage(nil), do: nil
 
   defp from_nextpage(nextpage) do
     SearchSlotRepo.transaction(fn ->
-      query = from s in __MODULE__, where: s.nextpage_data == ^nextpage, select: s
+      query =
+        from s in __MODULE__,
+          where: not is_nil(s.nextpage_data) and s.nextpage_data == ^nextpage,
+          select: s
+
       search_slot = SearchSlotRepo.replica(nextpage).one(query)
 
       if search_slot == nil do
@@ -186,10 +202,11 @@ defmodule YtSearch.SearchSlot do
         params =
           %{
             id: new_id,
-            slots_json: nil,
-            query: nil,
-            nextpage: nextpage,
-            type: :unfetched
+            slots_json: "",
+            query: "",
+            nextpage_data: nextpage,
+            type: :unfetched,
+            keepalive: false
           }
           # TODO (DO NOT MERGE) set expiration based on the parent
           |> SlotUtilities.put_simple_expiration(__MODULE__)
@@ -200,9 +217,9 @@ defmodule YtSearch.SearchSlot do
         |> SearchSlotRepo.insert!(
           on_conflict: [
             set: [
-              query: nil,
-              slots_json: nil,
-              nextpage: params.nextpage,
+              query: params.query,
+              slots_json: params.slots_json,
+              nextpage_data: params.nextpage_data,
               type: params.type,
               expires_at: params.expires_at,
               used_at: params.used_at,
@@ -214,9 +231,9 @@ defmodule YtSearch.SearchSlot do
         search_slot
         |> changeset(
           %{
-            query: nil,
-            slots_json: nil,
-            nextpage: nextpage,
+            query: "",
+            slots_json: "",
+            nextpage_data: nextpage,
             type: :unfetched,
             keepalive: false
           }

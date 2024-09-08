@@ -5,7 +5,12 @@ defmodule YtSearchWeb.Playlist do
   def from_piped_data(json, opts \\ []) do
     nextpage? = opts |> Keyword.get(:nextpage?, false)
 
-    nextpage_data = json["nextpage"]
+    nextpage_data =
+      if nextpage? do
+        json.nextpage
+      else
+        nil
+      end
 
     if nextpage? do
       json.results
@@ -52,7 +57,11 @@ defmodule YtSearchWeb.Playlist do
       end)
     end)
     |> then(fn result_list ->
-      %{results: result_list, nextpage: nextpage_data}
+      if nextpage? do
+        %{results: result_list, nextpage: nextpage_data}
+      else
+        result_list
+      end
     end)
   end
 

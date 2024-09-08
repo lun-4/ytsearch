@@ -171,6 +171,32 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def fetch(text) when is_bitstring(text) do
+    captures = Regex.run(@youtube_url_regex, text)
+
+    if captures != nil do
+      [_full, host, url_path] = captures
+
+      youtube_entity(host, url_path)
+      |> resolve_youtube_entity
+    else
+      case Ratelimit.for_text_search() do
+        :allow ->
+          do_a_search(
+            :search,
+            &Piped.search/2,
+            text,
+            fn x -> x["items"] end,
+            fn x -> x["nextpage"] end,
+            result_limit()
+          )
+
+        :deny ->
+          {:error, :overloaded_ytdlp_seats}
+      end
+    end
+  end
+
   def parse_url(text) when is_bitstring(text) do
     captures = Regex.run(@youtube_url_regex, text)
 
@@ -484,6 +510,34 @@ defmodule YtSearch.Youtube do
             # current_results
             v
         end
+    end
+  end
+
+  defp do_a_search(
+         tag,
+         func,
+         id,
+         result_list_extractor_fn,
+         nextpage_extractor_fn,
+         conf
+       ) do
+    limit = conf.max_result_count
+
+    with {:ok, results} <- piped_call(tag, func, id, ignore_keys: ["nextpage"]) do
+      result_list =
+        results
+        |> result_list_extractor_fn.()
+        |> Enum.take(limit)
+
+      nextpage =
+        results
+        |> nextpage_extractor_fn.()
+
+      {:ok,
+       %{
+         results: result_list,
+         nextpage: nextpage
+       }}
     end
   end
 

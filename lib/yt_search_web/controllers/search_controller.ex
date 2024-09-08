@@ -242,7 +242,7 @@ defmodule YtSearchWeb.SearchController do
   def search_text(text) do
     case fetch_by_query_and_valid(text) do
       nil ->
-        case Youtube.videos_for(text, nextpage?: true) do
+        case Youtube.fetch(text) do
           {:ok, ytdlp_data} ->
             results =
               ytdlp_data
