@@ -254,7 +254,7 @@ defmodule YtSearchWeb.SearchController do
 
             {:ok,
              %{
-               search_results: results,
+               search_results: results.results,
                slot_id: "#{search_slot.id}",
                nextpage_slot_id:
                  if nextpage_search_slot != nil do
