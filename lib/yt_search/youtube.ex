@@ -571,6 +571,13 @@ defmodule YtSearch.Youtube do
       nextpage =
         results
         |> nextpage_extractor_fn.()
+        |> then(fn
+          # search results return nextpage as null string instead of null entity
+          # channels and playlists return json entity tho
+          # good code
+          "null" -> nil
+          v -> v
+        end)
 
       {:ok,
        %{

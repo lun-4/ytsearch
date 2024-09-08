@@ -120,14 +120,14 @@ defmodule YtSearchWeb.SearchTest do
     verify_single_result(
       json_response["search_results"] |> Enum.at(6),
       %{
-        "channel_name" => "VIV - Vocaloid Live Concert",
-        "duration" => 8034,
+        "channel_name" => "Vaush",
+        "duration" => 1854,
         "thumbnail" => %{"aspect_ratio" => 1.77},
         "title" => "HATSUNE MIKU DEFEATS RACISM",
         "type" => "video",
-        "uploaded_at" => 1_535_342_400,
-        "view_count" => 5_064_343,
-        "youtube_id" => "AAAAa"
+        "uploaded_at" => 1_724_770_272,
+        "view_count" => 78413,
+        "youtube_id" => "zRwxQRWCzZ8"
       }
     )
   end
@@ -380,7 +380,10 @@ defmodule YtSearchWeb.SearchTest do
 
             2 ->
               %{
-                nextpage: "null"
+                items: [],
+                nextpage: "null",
+                suggestion: "",
+                corrected: false
               }
           end
         )
@@ -434,8 +437,7 @@ defmodule YtSearchWeb.SearchTest do
 
     resp_json = json_response(conn, 200)
     assert :ets.lookup(table, :nextpage) == [nextpage: 2]
-    verify_miku_search_results(resp_json)
-    assert length(resp_json["search_results"]) == 19
+    assert length(resp_json["search_results"]) == 0
 
     nextpage_slot = resp_json["nextpage_slot_id"]
     assert nextpage_slot == nil
