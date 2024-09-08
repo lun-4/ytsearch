@@ -331,12 +331,12 @@ defmodule YtSearch.Youtube do
           end
         )
 
-      {:ok, [video_result]}
+      {:ok, %{results: [video_result], nextpage: nil}}
     end
   end
 
   defp resolve_youtube_entity({:playlist, playlist_id}) do
-    videos_for(%PlaylistSlot{youtube_id: playlist_id})
+    fetch(%PlaylistSlot{youtube_id: playlist_id})
   end
 
   defp resolve_youtube_entity(err) do

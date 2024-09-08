@@ -163,7 +163,7 @@ defmodule YtSearchWeb.SearchController do
     case fetch_by_query_and_valid(entity) do
       nil ->
         case Youtube.fetch(entity) do
-          {:ok, ytdlp_data} ->
+          {:ok, %{results: _, nextpage: _} = ytdlp_data} ->
             results =
               ytdlp_data
               |> Playlist.from_piped_data(nextpage?: true)
@@ -201,7 +201,8 @@ defmodule YtSearchWeb.SearchController do
         end
 
       %YtSearch.SearchSlot{type: :unfetched} = unfetched_slot ->
-        with {:ok, ytdlp_data} <- Youtube.nextpage_fetch(unfetched_slot) do
+        with {:ok, %{results: _, nextpage: _} = ytdlp_data} <-
+               Youtube.nextpage_fetch(unfetched_slot) do
           results =
             ytdlp_data
             |> Playlist.from_piped_data(nextpage?: true)
