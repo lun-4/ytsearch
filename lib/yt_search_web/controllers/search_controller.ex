@@ -51,7 +51,7 @@ defmodule YtSearchWeb.SearchController do
       search_query
       |> String.trim()
 
-    case search_text(escaped_query) do
+    case search(escaped_query) do
       {:ok, response} ->
         conn
         |> put_status(200)
@@ -77,22 +77,7 @@ defmodule YtSearchWeb.SearchController do
   end
 
   def do_search_by_slot(conn, id) do
-    case search_id(id) do
-      {:ok, response} ->
-        conn
-        |> put_status(200)
-        |> json(response)
-
-      {:error, :video_unavailable} ->
-        conn
-        |> put_status(404)
-        |> json(%{error: false, detail: "video not found"})
-
-      {:error, v} ->
-        conn
-        |> put_status(200)
-        |> json(%{error: true, detail: to_string(v)})
-    end
+    fetch_youtube_entity(conn, YtSearch.SearchSlot, id)
   end
 
   defp fetch_by_query_and_valid(url) do
@@ -171,78 +156,10 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  defp fetch_by_id_and_valid(id) do
-    case SearchSlot.fetch_by_id(id) do
+  def search(entity) do
+    case fetch_by_query_and_valid(entity) do
       nil ->
-        nil
-
-      # TODO (DO NOT MERGE): decrease repetition
-      data ->
-        # we want to have a search slot that contains valid slots within
-        # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
-
-        child_slots =
-          data
-          |> SearchSlot.fetched_slots_from_search()
-
-        valid_slots =
-          child_slots
-          |> Enum.map(fn maybe_slot ->
-            maybe_slot != nil
-          end)
-
-        is_valid_slot =
-          cond do
-            Enum.empty?(valid_slots) ->
-              false
-
-            true ->
-              valid_slots
-              |> Enum.reduce(fn x, acc ->
-                x and acc
-              end)
-          end
-
-        Logger.info("attempting to reuse search slot #{data.id}, is valid? #{is_valid_slot}")
-        Logger.debug("valid_slots = #{inspect(valid_slots)}")
-        Logger.debug("child_slots = #{inspect(child_slots)}")
-
-        if is_valid_slot do
-          child_slots
-          |> Enum.reduce(%{}, fn slot, acc ->
-            Logger.debug("attempt to refresh #{inspect(slot)}")
-
-            %module{} = slot
-            refreshed? = Map.get(acc, {module, slot.id})
-
-            unless refreshed? do
-              case slot do
-                %YtSearch.Slot{} ->
-                  YtSearch.Slot.refresh(slot)
-
-                other_slot ->
-                  other_slot
-                  |> SlotUtilities.refresh_expiration()
-              end
-            end
-
-            acc |> Map.put({module, slot.id}, true)
-          end)
-
-          data
-          |> SlotUtilities.refresh_expiration()
-
-          data
-        else
-          nil
-        end
-    end
-  end
-
-  def search_text(text) do
-    case fetch_by_query_and_valid(text) do
-      nil ->
-        case Youtube.fetch(text) do
+        case Youtube.fetch(entity) do
           {:ok, ytdlp_data} ->
             results =
               ytdlp_data
@@ -250,7 +167,7 @@ defmodule YtSearchWeb.SearchController do
 
             {search_slot, nextpage_search_slot} =
               results
-              |> SearchSlot.from_playlist(text, nextpage?: true)
+              |> SearchSlot.from_playlist(entity, nextpage?: true)
 
             {:ok,
              %{
@@ -280,49 +197,22 @@ defmodule YtSearchWeb.SearchController do
             {:input_error, err}
         end
 
+      %YtSearch.SearchSlot{type: :unfetched} = unfetched_slot ->
+        with {:ok, ytdlp_data} <- Youtube.nextpage_for(unfetched_slot) do
+          results =
+            ytdlp_data
+            |> Playlist.from_piped_data(nextpage: true)
+
+          search_slot =
+            results
+            |> SearchSlot.from_playlist(results, nextpage: true)
+
+          {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+        end
+
       search_slot ->
         {:ok,
          %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
-    end
-  end
-
-  def search_id(id) do
-    case fetch_by_id_and_valid(id) do
-      {:ok, search_slot} ->
-        {:ok,
-         %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
-
-      {:unfetched, slot_nextpage_data} ->
-        case Youtube.nextpage_for(slot_nextpage_data) do
-          {:ok, ytdlp_data} ->
-            results =
-              ytdlp_data
-              |> Playlist.from_piped_data(nextpage: true)
-
-            search_slot =
-              results
-              |> SearchSlot.from_playlist(results, nextpage: true)
-
-            {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
-
-          {:error, :overloaded_ytdlp_seats} ->
-            {:error, :overloaded_ytdlp_seats}
-
-          {:error, :video_unavailable} ->
-            {:error, :video_unavailable}
-
-          {:error, :channel_unavailable} ->
-            {:error, :channel_unavailable}
-
-          {:error, :channel_not_found} ->
-            {:error, :channel_not_found}
-
-          {:input_error, err} ->
-            {:input_error, err}
-        end
-
-      nil ->
-        {:error, :not_found}
     end
   end
 
@@ -338,7 +228,7 @@ defmodule YtSearchWeb.SearchController do
 
       slot ->
         case slot
-             |> search_text() do
+             |> search() do
           {:ok, resp} ->
             slot |> SlotUtilities.mark_used()
 

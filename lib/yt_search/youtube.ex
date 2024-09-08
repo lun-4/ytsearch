@@ -197,6 +197,28 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  def fetch(%ChannelSlot{youtube_id: channel_id}) do
+    do_a_search(
+      :channel,
+      &Piped.channel/2,
+      channel_id,
+      fn x -> x["relatedStreams"] end,
+      fn x -> x["nextpage"] end,
+      channel_result_limit()
+    )
+  end
+
+  def fetch(%PlaylistSlot{youtube_id: playlist_id}) do
+    do_a_search(
+      :playlist,
+      &Piped.playlists/2,
+      playlist_id,
+      fn x -> x["relatedStreams"] end,
+      fn x -> x["nextpage"] end,
+      playlist_result_limit()
+    )
+  end
+
   def parse_url(text) when is_bitstring(text) do
     captures = Regex.run(@youtube_url_regex, text)
 

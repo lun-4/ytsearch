@@ -47,6 +47,10 @@ defmodule YtSearch.SearchSlot do
     "ytplaylist://#{playlist_id}"
   end
 
+  defp internal_id_for(%__MODULE__{id: id}) do
+    "ytsearch://#{id}"
+  end
+
   defp internal_id_for(text) when is_bitstring(text) do
     "ytsearch://#{text}"
   end
@@ -203,7 +207,7 @@ defmodule YtSearch.SearchSlot do
           %{
             id: new_id,
             slots_json: "",
-            query: "",
+            query: internal_id_for(%__MODULE__{id: new_id}),
             nextpage_data: nextpage,
             type: :unfetched,
             keepalive: false
@@ -231,7 +235,7 @@ defmodule YtSearch.SearchSlot do
         search_slot
         |> changeset(
           %{
-            query: "",
+            query: internal_id_for(%__MODULE__{id: search_slot.id}),
             slots_json: "",
             nextpage_data: nextpage,
             type: :unfetched,
