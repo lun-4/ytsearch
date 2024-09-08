@@ -7,7 +7,7 @@ defmodule YtSearch.Thumbnail.Atlas do
   @spec assemble(String.t()) ::
           {:ok, String.t(), binary()} | {:error, :unknown_search_slot}
   def assemble(search_slot_id) do
-    case SearchSlot.fetch_by_id(search_slot_id) do
+    case SearchSlot.fetch(search_slot_id) do
       nil ->
         {:error, :unknown_search_slot}
 

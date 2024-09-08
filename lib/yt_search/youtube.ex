@@ -219,6 +219,23 @@ defmodule YtSearch.Youtube do
     )
   end
 
+  def nextpage_fetch(%YtSearch.SearchSlot{type: :unfetched, nextpage_data: nextpage_data}) do
+    do_a_search(
+      :search,
+      fn url, data ->
+        %{"v" => 1, "q" => q, "n" => n} =
+          data
+          |> Jason.decode!()
+
+        Piped.nextpage_search(url, q, n)
+      end,
+      nextpage_data,
+      fn x -> x["items"] end,
+      fn x -> x["nextpage"] end,
+      result_limit()
+    )
+  end
+
   def parse_url(text) when is_bitstring(text) do
     captures = Regex.run(@youtube_url_regex, text)
 

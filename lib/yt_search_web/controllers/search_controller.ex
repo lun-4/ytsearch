@@ -91,6 +91,9 @@ defmodule YtSearchWeb.SearchController do
       nil ->
         nil
 
+      %{type: :unfetched} = data ->
+        data
+
       data ->
         # we want to have a search slot that contains valid slots within
         # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
@@ -198,16 +201,31 @@ defmodule YtSearchWeb.SearchController do
         end
 
       %YtSearch.SearchSlot{type: :unfetched} = unfetched_slot ->
-        with {:ok, ytdlp_data} <- Youtube.nextpage_for(unfetched_slot) do
+        with {:ok, ytdlp_data} <- Youtube.nextpage_fetch(unfetched_slot) do
           results =
             ytdlp_data
-            |> Playlist.from_piped_data(nextpage: true)
+            |> Playlist.from_piped_data(nextpage?: true)
 
-          search_slot =
+          {search_slot, nextpage_search_slot} =
             results
-            |> SearchSlot.from_playlist(results, nextpage: true)
+            |> SearchSlot.from_playlist(
+              unfetched_slot
+              |> SearchSlot.unpack_nextpage()
+              |> then(fn {q, _} -> q end),
+              nextpage?: true
+            )
 
-          {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+          {:ok,
+           %{
+             search_results: results.results,
+             slot_id: "#{search_slot.id}",
+             nextpage_slot_id:
+               if nextpage_search_slot != nil do
+                 "#{nextpage_search_slot.id}"
+               else
+                 nil
+               end
+           }}
         end
 
       search_slot ->

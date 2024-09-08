@@ -31,8 +31,8 @@ defmodule YtSearch.SearchSlot do
     }
   end
 
-  @spec fetch_by_id(Integer.t()) :: SearchSlot.t() | nil
-  def fetch_by_id(slot_id) do
+  @spec fetch(Integer.t()) :: SearchSlot.t() | nil
+  def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     SearchSlotRepo.replica(slot_id).one(query)
@@ -48,7 +48,7 @@ defmodule YtSearch.SearchSlot do
   end
 
   defp internal_id_for(%__MODULE__{id: id}) do
-    "ytsearch://#{id}"
+    "ytsearchslot://#{id}"
   end
 
   defp internal_id_for(text) when is_bitstring(text) do
@@ -128,7 +128,7 @@ defmodule YtSearch.SearchSlot do
       {playlist.results
        |> Jason.encode!()
        |> from_slots_json(search_query |> internal_id_for, opts),
-       from_nextpage(playlist.nextpage)}
+       from_nextpage(search_query, playlist.nextpage)}
     else
       playlist
       |> Jason.encode!()
@@ -189,16 +189,36 @@ defmodule YtSearch.SearchSlot do
     |> then(fn {:ok, slot} -> slot end)
   end
 
-  defp from_nextpage(nil), do: nil
+  def unpack_nextpage(slot),
+    do:
+      slot.nextpage_data
+      |> Jason.decode!()
+      |> then(fn
+        %{"v" => 1, "q" => q, "n" => n} -> {q, n}
+      end)
 
-  defp from_nextpage(nextpage) do
+  defp from_nextpage(_, nil), do: nil
+
+  defp from_nextpage(query, nextpage_queryparam) do
+    nextpage_packed =
+      %{
+        v: 1,
+        q:
+          case query do
+            v when is_bitstring(v) -> v
+            %{youtube_id: ytid} -> ytid
+          end,
+        n: nextpage_queryparam
+      }
+      |> Jason.encode!()
+
     SearchSlotRepo.transaction(fn ->
       query =
         from s in __MODULE__,
-          where: not is_nil(s.nextpage_data) and s.nextpage_data == ^nextpage,
+          where: not is_nil(s.nextpage_data) and s.nextpage_data == ^nextpage_packed,
           select: s
 
-      search_slot = SearchSlotRepo.replica(nextpage).one(query)
+      search_slot = SearchSlotRepo.replica(nextpage_packed).one(query)
 
       if search_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -208,7 +228,7 @@ defmodule YtSearch.SearchSlot do
             id: new_id,
             slots_json: "",
             query: internal_id_for(%__MODULE__{id: new_id}),
-            nextpage_data: nextpage,
+            nextpage_data: nextpage_packed,
             type: :unfetched,
             keepalive: false
           }
@@ -237,7 +257,7 @@ defmodule YtSearch.SearchSlot do
           %{
             query: internal_id_for(%__MODULE__{id: search_slot.id}),
             slots_json: "",
-            nextpage_data: nextpage,
+            nextpage_data: nextpage_packed,
             type: :unfetched,
             keepalive: false
           }
