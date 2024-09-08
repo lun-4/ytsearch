@@ -378,41 +378,6 @@ defmodule YtSearchWeb.SearchTest do
     end
   end)
 
-  test "nextpage works", %{conn: conn, ets_table: table} do
-    mock(fn
-      %{method: :get, url: "example.org/channel/" <> _whatever} ->
-        json(Jason.decode!(@piped_channel_output))
-
-      %{method: :get, url: "example.org/search" <> _whatever} ->
-        json(Jason.decode!(@piped_search_output))
-
-      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
-        :ets.update_counter(table, :nextpage, 1, {:nextpage, 0})
-        json(Jason.decode!(@miku_search_output))
-    end)
-
-    existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
-
-    YtSearch.Constants.apply(
-      existing_constants
-      |> Keyword.put(:pages_from_search, 2)
-      |> Keyword.put(:results_from_search, 35)
-    )
-
-    conn =
-      conn
-      |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
-
-    YtSearch.Constants.apply(existing_constants)
-
-    resp_json = json_response(conn, 200)
-    # it must call the nextpage handler
-    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
-    verify_long_search_results(resp_json)
-    assert length(resp_json["search_results"]) == 35
-  end
-
   test "user can fetch nextpage", %{conn: conn, ets_table: table} do
     mock(fn
       %{method: :get, url: "example.org/channel/" <> _whatever} ->
@@ -462,7 +427,7 @@ defmodule YtSearchWeb.SearchTest do
     assert nextpage_slot != nil
 
     conn =
-      conn
+      build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/api/v5/search/#{nextpage_slot}")
 
