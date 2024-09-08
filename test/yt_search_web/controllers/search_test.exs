@@ -116,22 +116,6 @@ defmodule YtSearchWeb.SearchTest do
     assert json_response["slot_id"] != nil
   end
 
-  defp verify_long_search_results(json_response) do
-    verify_single_result(
-      json_response["search_results"] |> Enum.at(33),
-      %{
-        "channel_name" => "VIV - Vocaloid Live Concert",
-        "duration" => 8034,
-        "thumbnail" => %{"aspect_ratio" => 1.77},
-        "title" => "Hatsune Miku Live Party (MikuPa) (Subtitles cc) FULL HD",
-        "type" => "video",
-        "uploaded_at" => 1_535_342_400,
-        "view_count" => 5_064_343,
-        "youtube_id" => "wJA8-Z6H5dM"
-      }
-    )
-  end
-
   defp verify_miku_search_results(json_response) do
     verify_single_result(
       json_response["search_results"] |> Enum.at(6),
@@ -442,14 +426,14 @@ defmodule YtSearchWeb.SearchTest do
     assert nextpage_slot != nil
 
     conn =
-      conn
+      build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/api/v5/search/#{nextpage_slot}")
 
     YtSearch.Constants.apply(existing_constants)
 
     resp_json = json_response(conn, 200)
-    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
+    assert :ets.lookup(table, :nextpage) == [nextpage: 2]
     verify_miku_search_results(resp_json)
     assert length(resp_json["search_results"]) == 19
 
