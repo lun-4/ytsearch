@@ -142,13 +142,13 @@ defmodule YtSearch.SearchSlot do
     end
   end
 
-  def from_unfetched_slot(playlist, unfetched_slot, search_query) do
-    nextpage_slot = from_nextpage(search_query, playlist.nextpage)
+  def from_unfetched_slot(playlist, unfetched_slot) do
+    nextpage_slot = from_nextpage(unfetched_slot, playlist.nextpage)
 
     slot =
       playlist.results
       |> Jason.encode!()
-      |> from_slots_json(unfetched_slot.query, nextpage_slot: nextpage_slot)
+      |> from_slots_json(unfetched_slot |> internal_id_for, nextpage_slot: nextpage_slot)
 
     {slot, nextpage_slot}
   end
@@ -221,7 +221,7 @@ defmodule YtSearch.SearchSlot do
       slot.nextpage_data
       |> Jason.decode!()
       |> then(fn
-        %{"v" => 1, "q" => q, "n" => n} -> {q, n}
+        %{"v" => 1, "t" => t, "q" => q, "n" => n} -> {t, q, n}
       end)
 
   defp from_nextpage(_, nil), do: nil
@@ -230,10 +230,34 @@ defmodule YtSearch.SearchSlot do
     nextpage_packed =
       %{
         v: 1,
+        t:
+          case query do
+            v when is_bitstring(v) ->
+              "s"
+
+            %ChannelSlot{} ->
+              "c"
+
+            %PlaylistSlot{} ->
+              "p"
+
+            %__MODULE__{} = query_slot ->
+              query_slot
+              |> unpack_nextpage
+              |> then(fn {t, _, _} -> t end)
+          end,
         q:
           case query do
-            v when is_bitstring(v) -> v
-            %{youtube_id: ytid} -> ytid
+            v when is_bitstring(v) ->
+              v
+
+            %__MODULE__{} = query_slot ->
+              query_slot
+              |> unpack_nextpage
+              |> then(fn {_, q, _} -> q end)
+
+            %{youtube_id: ytid} ->
+              ytid
           end,
         n: nextpage_queryparam
       }

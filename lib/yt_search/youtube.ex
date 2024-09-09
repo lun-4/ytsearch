@@ -223,14 +223,23 @@ defmodule YtSearch.Youtube do
     do_a_search(
       :search,
       fn url, data ->
-        %{"v" => 1, "q" => q, "n" => n} =
+        %{"v" => 1, "t" => t, "q" => q, "n" => n} =
           data
           |> Jason.decode!()
 
-        Piped.nextpage_search(url, q, n)
+        case t do
+          "s" ->
+            Piped.nextpage_search(url, q, n)
+
+          "c" ->
+            Piped.nextpage_channel(url, q, n)
+
+          "p" ->
+            Piped.nextpage_playlists(url, q, n)
+        end
       end,
       nextpage_data,
-      fn x -> x["items"] end,
+      fn x -> x["items"] || x["relatedStreams"] end,
       fn x -> x["nextpage"] end,
       result_limit()
     )

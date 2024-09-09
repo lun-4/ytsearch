@@ -209,12 +209,7 @@ defmodule YtSearchWeb.SearchController do
 
           {search_slot, nextpage_search_slot} =
             results
-            |> SearchSlot.from_unfetched_slot(
-              unfetched_slot,
-              unfetched_slot
-              |> SearchSlot.unpack_nextpage()
-              |> then(fn {q, _} -> q end)
-            )
+            |> SearchSlot.from_unfetched_slot(unfetched_slot)
 
           {:ok,
            %{

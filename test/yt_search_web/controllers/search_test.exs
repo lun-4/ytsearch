@@ -132,11 +132,28 @@ defmodule YtSearchWeb.SearchTest do
     )
   end
 
+  defp verify_tomscott_search_results(json_response) do
+    verify_single_result(
+      json_response["search_results"] |> Enum.at(3),
+      %{
+        "channel_name" => "Tom Scott",
+        "duration" => 324,
+        "thumbnail" => %{"aspect_ratio" => 1.77},
+        "title" => "A robot just swapped my electric car's battery",
+        "type" => "video",
+        "uploaded_at" => 1_704_762_000,
+        "view_count" => 1_869_524,
+        "youtube_id" => "hNZy603as5w"
+      }
+    )
+  end
+
   @piped_search_output File.read!("test/support/piped_outputs/urban_rescue_ranch_search.json")
   @miku_search_output File.read!("test/support/piped_outputs/hatsune_miku_search.json")
   @piped_channel_output File.read!(
                           "test/support/piped_outputs/the_urban_rescue_ranch_channel.json"
                         )
+  @tomscott_channel_output File.read!("test/support/piped_outputs/tom_scott_channel.json")
   import Tesla.Mock
 
   test "it does the thing", %{conn: conn} do
@@ -432,6 +449,94 @@ defmodule YtSearchWeb.SearchTest do
 
     resp_json = json_response(conn, 200)
     assert :ets.lookup(table, :nextpage) == [nextpage: 2]
+    assert length(resp_json["search_results"]) == 0
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot == nil
+  end
+
+  test "user can fetch nextpage for channels", %{conn: conn, ets_table: table} do
+    mock(fn
+      %{method: :get, url: "example.org/search" <> _whatever} ->
+        json(Jason.decode!(@piped_search_output))
+
+      %{method: :get, url: "example.org/channel/" <> _whatever} ->
+        json(Jason.decode!(@piped_channel_output))
+
+      %{method: :get, url: "example.org/nextpage/channel" <> _whatever} ->
+        calls = :ets.update_counter(table, :channel_nextpage, 1, {:channel_nextpage, 0})
+
+        json(
+          case calls do
+            1 ->
+              Jason.decode!(@tomscott_channel_output)
+
+            2 ->
+              %{
+                relatedStreams: [],
+                nextpage: nil
+              }
+          end
+        )
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+
+    resp_json = json_response(conn, 200)
+    # it must NOT call the channel nextpage handler, yet.
+    assert :ets.lookup(table, :channel_nextpage) == []
+    verify_search_results(resp_json)
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot != nil
+    channel_slot = resp_json["search_results"] |> Enum.at(1) |> Access.get("channel_slot")
+    assert channel_slot != nil
+
+    # fetch channel, then fetch nextpages coming from it
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/c/#{channel_slot}")
+
+    resp_json = json_response(conn, 200)
+    assert :ets.lookup(table, :nextpage) == []
+    verify_channel_results(resp_json)
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot != nil
+
+    # fetch the nextpage twice, it should not request piped nextpage twice
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/r/#{nextpage_slot}")
+
+    resp_json = json_response(conn, 200)
+
+    conn2 =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/r/#{nextpage_slot}")
+
+    resp_json2 = json_response(conn2, 200)
+    assert :ets.lookup(table, :channel_nextpage) == [channel_nextpage: 1]
+    assert resp_json |> Map.delete("__x_request_id") == resp_json2 |> Map.delete("__x_request_id")
+    verify_tomscott_search_results(resp_json)
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot != nil
+
+    # fetch nextpage, which will return nothing and nil nextpage
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/r/#{nextpage_slot}")
+
+    resp_json = json_response(conn, 200)
+    assert :ets.lookup(table, :channel_nextpage) == [channel_nextpage: 2]
     assert length(resp_json["search_results"]) == 0
 
     nextpage_slot = resp_json["nextpage_slot_id"]
