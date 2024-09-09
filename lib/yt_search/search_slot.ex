@@ -142,19 +142,14 @@ defmodule YtSearch.SearchSlot do
   end
 
   def from_unfetched_slot(playlist, unfetched_slot, search_query) do
-    slots_json =
-      playlist.results
-      |> Jason.encode!()
+    nextpage_slot = from_nextpage(search_query, playlist.nextpage)
 
     slot =
-      unfetched_slot
-      |> changeset(%{
-        type: :fetched,
-        slots_json: slots_json
-      })
-      |> SearchSlotRepo.update!()
+      playlist.results
+      |> Jason.encode!()
+      |> from_slots_json(unfetched_slot.query, nextpage_slot: nextpage_slot)
 
-    {slot, from_nextpage(search_query, playlist.nextpage)}
+    {slot, nextpage_slot}
   end
 
   @spec from_slots_json(String.t(), String.t(), Keyword.t()) :: SearchSlot.t()
