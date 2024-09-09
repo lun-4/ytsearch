@@ -22,6 +22,7 @@ defmodule YtSearch.SearchSlot do
     field(:keepalive, :boolean)
     field(:nextpage_data, :string)
     field(:type, Ecto.Enum, values: [:fetched, :unfetched])
+    field(:nextpage_slot_id, :integer)
   end
 
   def slot_spec() do
@@ -136,6 +137,22 @@ defmodule YtSearch.SearchSlot do
     end
   end
 
+  def from_unfetched_slot(playlist, unfetched_slot, search_query) do
+    slots_json =
+      playlist.results
+      |> Jason.encode!()
+
+    slot =
+      unfetched_slot
+      |> changeset(%{
+        type: :fetched,
+        slots_json: slots_json
+      })
+      |> SearchSlotRepo.update!()
+
+    {slot, from_nextpage(search_query, playlist.nextpage)}
+  end
+
   @spec from_slots_json(String.t(), String.t(), Keyword.t()) :: SearchSlot.t()
   defp from_slots_json(slots_json, search_query, opts) do
     keepalive = Keyword.get(opts, :keepalive, false)
@@ -177,7 +194,8 @@ defmodule YtSearch.SearchSlot do
         |> changeset(
           %{
             slots_json: slots_json,
-            keepalive: keepalive
+            keepalive: keepalive,
+            type: :fetched
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_opts(opts)

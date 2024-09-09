@@ -209,11 +209,11 @@ defmodule YtSearchWeb.SearchController do
 
           {search_slot, nextpage_search_slot} =
             results
-            |> SearchSlot.from_playlist(
+            |> SearchSlot.from_unfetched_slot(
+              unfetched_slot,
               unfetched_slot
               |> SearchSlot.unpack_nextpage()
-              |> then(fn {q, _} -> q end),
-              nextpage?: true
+              |> then(fn {q, _} -> q end)
             )
 
           {:ok,
@@ -231,7 +231,11 @@ defmodule YtSearchWeb.SearchController do
 
       search_slot ->
         {:ok,
-         %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
+         %{
+           search_results: search_slot |> SearchSlot.get_slots(),
+           slot_id: "#{search_slot.id}",
+           nextpage_slot_id: search_slot.nextpage_slot_id
+         }}
     end
   end
 
