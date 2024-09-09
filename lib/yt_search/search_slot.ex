@@ -126,10 +126,14 @@ defmodule YtSearch.SearchSlot do
     nextpage = opts |> Keyword.get(:nextpage?, false)
 
     if nextpage do
+      nextpage_slot = from_nextpage(search_query, playlist.nextpage)
+
       {playlist.results
        |> Jason.encode!()
-       |> from_slots_json(search_query |> internal_id_for, opts),
-       from_nextpage(search_query, playlist.nextpage)}
+       |> from_slots_json(
+         search_query |> internal_id_for,
+         opts |> Keyword.put(:nextpage_slot, nextpage_slot)
+       ), nextpage_slot}
     else
       playlist
       |> Jason.encode!()
@@ -157,6 +161,12 @@ defmodule YtSearch.SearchSlot do
   defp from_slots_json(slots_json, search_query, opts) do
     keepalive = Keyword.get(opts, :keepalive, false)
 
+    nextpage_slot_id =
+      case Keyword.get(opts, :nextpage_slot, nil) do
+        nil -> nil
+        v -> v.id
+      end
+
     SearchSlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.query == ^search_query, select: s
       search_slot = SearchSlotRepo.replica(search_query).one(query)
@@ -170,7 +180,8 @@ defmodule YtSearch.SearchSlot do
             query: search_query,
             slots_json: slots_json,
             keepalive: keepalive,
-            type: :fetched
+            type: :fetched,
+            nextpage_slot_id: nextpage_slot_id
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_used()
@@ -185,6 +196,7 @@ defmodule YtSearch.SearchSlot do
               expires_at: params.expires_at,
               used_at: params.used_at,
               keepalive: params.keepalive,
+              nextpage_slot_id: params.nextpage_slot_id,
               type: :fetched
             ]
           ]
@@ -195,6 +207,7 @@ defmodule YtSearch.SearchSlot do
           %{
             slots_json: slots_json,
             keepalive: keepalive,
+            nextpage_slot_id: nextpage_slot_id,
             type: :fetched
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)

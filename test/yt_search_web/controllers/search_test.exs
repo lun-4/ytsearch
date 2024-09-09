@@ -389,51 +389,46 @@ defmodule YtSearchWeb.SearchTest do
         )
     end)
 
-    existing_constants = Application.get_env(:yt_search, YtSearch.Constants)
-
-    YtSearch.Constants.apply(
-      existing_constants
-      |> Keyword.put(:pages_from_search, 1)
-      |> Keyword.put(:results_from_search, 20)
-    )
-
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/api/v5/search?search=urban+rescue+ranch")
 
-    YtSearch.Constants.apply(existing_constants)
-
     resp_json = json_response(conn, 200)
     # it must NOT call the nextpage handler, yet.
     assert :ets.lookup(table, :nextpage) == []
     verify_search_results(resp_json)
-    assert length(resp_json["search_results"]) == 19
 
     nextpage_slot = resp_json["nextpage_slot_id"]
     assert nextpage_slot != nil
 
+    # fetch first nextpage twice to assert both return the same data
+    # and dont call nextpage twice internally
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/api/v5/search/#{nextpage_slot}")
-
-    YtSearch.Constants.apply(existing_constants)
 
     resp_json = json_response(conn, 200)
-    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
-    verify_miku_search_results(resp_json)
-    assert length(resp_json["search_results"]) == 19
 
-    nextpage_slot = resp_json["nextpage_slot_id"]
-    assert nextpage_slot != nil
-
-    conn =
+    conn2 =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/api/v5/search/#{nextpage_slot}")
 
-    YtSearch.Constants.apply(existing_constants)
+    resp_json2 = json_response(conn2, 200)
+    assert resp_json == resp_json2
+    assert :ets.lookup(table, :nextpage) == [nextpage: 1]
+    verify_miku_search_results(resp_json)
+
+    nextpage_slot = resp_json["nextpage_slot_id"]
+    assert nextpage_slot != nil
+
+    # fetch yet again, which will return nothing and nil nextpage
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/api/v5/search/#{nextpage_slot}")
 
     resp_json = json_response(conn, 200)
     assert :ets.lookup(table, :nextpage) == [nextpage: 2]
