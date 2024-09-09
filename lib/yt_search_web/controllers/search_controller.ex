@@ -234,7 +234,7 @@ defmodule YtSearchWeb.SearchController do
          %{
            search_results: search_slot |> SearchSlot.get_slots(),
            slot_id: "#{search_slot.id}",
-           nextpage_slot_id: search_slot.nextpage_slot_id
+           nextpage_slot_id: "#{search_slot.nextpage_slot_id}"
          }}
     end
   end

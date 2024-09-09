@@ -106,6 +106,7 @@ defmodule YtSearch.SearchSlot do
       :used_at,
       :keepalive,
       :nextpage_data,
+      :nextpage_slot_id,
       :type
     ])
     |> validate_required([:expires_at, :used_at, :type])
