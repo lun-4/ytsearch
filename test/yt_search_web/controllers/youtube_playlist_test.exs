@@ -66,6 +66,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
           case calls do
             1 ->
               Jason.decode!(@playlist_data)
+              |> Map.put("nextpage", "test13951830498")
 
             2 ->
               %{
