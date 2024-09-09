@@ -67,12 +67,14 @@ defmodule YtSearchWeb.SearchWithURLTest do
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)
+      assert resp_json["result_type"] == "video"
       assert length(resp_json["search_results"]) == 1
       first = resp_json["search_results"] |> Enum.at(0)
       assert first["youtube_id"] == @test_youtube_id
       assert first["description"] != nil
       assert first["title"] != nil
       assert first["channel_name"] != nil
+      assert resp_json["result_title"] == first["title"]
     end)
   end
 
@@ -115,6 +117,8 @@ defmodule YtSearchWeb.SearchWithURLTest do
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)
+      assert resp_json["result_type"] == "playlist"
+      assert resp_json["result_title"] == "test unlisted playlist"
       assert length(resp_json["search_results"]) == 2
     end)
   end

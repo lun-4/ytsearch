@@ -58,7 +58,7 @@ defmodule YtSearchWeb.Playlist do
     end)
     |> then(fn result_list ->
       if nextpage? do
-        %{results: result_list, nextpage: nextpage_data}
+        %{results: result_list, nextpage: nextpage_data, type: json.type, title: json.title}
       else
         result_list
       end

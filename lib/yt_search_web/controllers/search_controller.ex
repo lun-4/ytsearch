@@ -174,6 +174,8 @@ defmodule YtSearchWeb.SearchController do
 
             {:ok,
              %{
+               result_type: search_slot.result_type,
+               result_title: search_slot.result_title,
                search_results: results.results,
                slot_id: "#{search_slot.id}",
                nextpage_slot_id:
@@ -213,6 +215,8 @@ defmodule YtSearchWeb.SearchController do
 
           {:ok,
            %{
+             result_type: search_slot.result_type,
+             result_title: search_slot.result_title,
              search_results: results.results,
              slot_id: "#{search_slot.id}",
              nextpage_slot_id:
@@ -227,6 +231,8 @@ defmodule YtSearchWeb.SearchController do
       search_slot ->
         {:ok,
          %{
+           result_type: search_slot.result_type,
+           result_title: search_slot.result_title,
            search_results: search_slot |> SearchSlot.get_slots(),
            slot_id: "#{search_slot.id}",
            nextpage_slot_id: "#{search_slot.nextpage_slot_id}"

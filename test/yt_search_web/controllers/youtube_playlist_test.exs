@@ -54,6 +54,13 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     assert conn.status == 404
   end
 
+  defp assert_playlist_result(rjson) do
+    assert rjson["type"] == nil || rjson["type"] == "playlist"
+    assert rjson["title"] == nil || rjson["title"] == "Rez Infinite Original Soundtrack"
+    first_result = rjson["search_results"] |> Enum.at(0)
+    assert first_result["youtube_id"] == @expected_youtube_id
+  end
+
   test "nextpage works on playlists", %{conn: conn, ets_table: table} do
     mock(fn
       %{method: :get, url: "example.org/playlists" <> _} ->
@@ -98,8 +105,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
 
     rjson = json_response(conn, 200)
     assert :ets.lookup(table, :playlist_nextpage) == []
-    first_result = rjson["search_results"] |> Enum.at(0)
-    assert first_result["youtube_id"] == @expected_youtube_id
+    assert_playlist_result(rjson)
 
     nextpage_slot_id = rjson["nextpage_slot_id"]
     assert nextpage_slot_id != nil
@@ -120,8 +126,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     assert rjson |> Map.delete("__x_request_id") == rjson2 |> Map.delete("__x_request_id")
 
     assert :ets.lookup(table, :playlist_nextpage) == [playlist_nextpage: 1]
-    first_result = rjson["search_results"] |> Enum.at(0)
-    assert first_result["youtube_id"] == @expected_youtube_id
+    assert_playlist_result(rjson)
 
     nextpage_slot_id = rjson["nextpage_slot_id"]
     assert nextpage_slot_id != nil

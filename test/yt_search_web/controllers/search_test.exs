@@ -99,6 +99,9 @@ defmodule YtSearchWeb.SearchTest do
   end
 
   def verify_channel_results(json_response) do
+    assert json_response["result_type"] == "channel"
+    assert json_response["result_title"] == "The Urban Rescue Ranch"
+
     verify_single_result(
       json_response["search_results"] |> Enum.at(0),
       %{

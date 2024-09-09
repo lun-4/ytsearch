@@ -145,6 +145,7 @@ defmodule YtSearch.Youtube do
   ]
 
   def videos_for(text) when is_bitstring(text) do
+    raise "do not use"
     captures = Regex.run(@youtube_url_regex, text)
 
     if captures != nil do
@@ -188,6 +189,12 @@ defmodule YtSearch.Youtube do
             text,
             fn x -> x["items"] end,
             fn x -> x["nextpage"] end,
+            fn _ ->
+              %{
+                type: :text,
+                title: text
+              }
+            end,
             result_limit()
           )
 
@@ -204,6 +211,12 @@ defmodule YtSearch.Youtube do
       channel_id,
       fn x -> x["relatedStreams"] end,
       fn x -> x["nextpage"] end,
+      fn x ->
+        %{
+          type: :channel,
+          title: x["name"]
+        }
+      end,
       channel_result_limit()
     )
   end
@@ -215,6 +228,12 @@ defmodule YtSearch.Youtube do
       playlist_id,
       fn x -> x["relatedStreams"] end,
       fn x -> x["nextpage"] end,
+      fn x ->
+        %{
+          type: :playlist,
+          title: x["name"]
+        }
+      end,
       playlist_result_limit()
     )
   end
@@ -241,6 +260,9 @@ defmodule YtSearch.Youtube do
       nextpage_data,
       fn x -> x["items"] || x["relatedStreams"] end,
       fn x -> x["nextpage"] end,
+      fn _ ->
+        %{type: nil, title: nil}
+      end,
       result_limit()
     )
   end
@@ -340,7 +362,7 @@ defmodule YtSearch.Youtube do
           end
         )
 
-      {:ok, %{results: [video_result], nextpage: nil}}
+      {:ok, %{results: [video_result], type: :video, title: video_result["title"], nextpage: nil}}
     end
   end
 
@@ -567,6 +589,7 @@ defmodule YtSearch.Youtube do
          id,
          result_list_extractor_fn,
          nextpage_extractor_fn,
+         extra_fields_fn,
          conf
        ) do
     limit = conf.max_result_count
@@ -592,7 +615,14 @@ defmodule YtSearch.Youtube do
        %{
          results: result_list,
          nextpage: nextpage
-       }}
+       }
+       |> Map.merge(
+         if extra_fields_fn != nil do
+           extra_fields_fn.(results)
+         else
+           %{}
+         end
+       )}
     end
   end
 

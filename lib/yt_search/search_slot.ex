@@ -23,6 +23,8 @@ defmodule YtSearch.SearchSlot do
     field(:nextpage_data, :string)
     field(:type, Ecto.Enum, values: [:fetched, :unfetched])
     field(:nextpage_slot_id, :integer)
+    field(:result_type, Ecto.Enum, values: [:text, :video, :playlist, :channel])
+    field(:result_title, :string)
   end
 
   def slot_spec() do
@@ -107,6 +109,8 @@ defmodule YtSearch.SearchSlot do
       :keepalive,
       :nextpage_data,
       :nextpage_slot_id,
+      :result_type,
+      :result_title,
       :type
     ])
     |> validate_required([:expires_at, :used_at, :type])
@@ -133,7 +137,10 @@ defmodule YtSearch.SearchSlot do
        |> Jason.encode!()
        |> from_slots_json(
          search_query |> internal_id_for,
-         opts |> Keyword.put(:nextpage_slot, nextpage_slot)
+         opts
+         |> Keyword.put(:nextpage_slot, nextpage_slot)
+         |> Keyword.put(:result_type, playlist.type)
+         |> Keyword.put(:result_title, playlist.title)
        ), nextpage_slot}
     else
       playlist
@@ -163,6 +170,9 @@ defmodule YtSearch.SearchSlot do
         v -> v.id
       end
 
+    result_type = Keyword.get(opts, :result_type)
+    result_title = Keyword.get(opts, :result_title)
+
     SearchSlotRepo.transaction(fn ->
       query = from s in __MODULE__, where: s.query == ^search_query, select: s
       search_slot = SearchSlotRepo.replica(search_query).one(query)
@@ -177,7 +187,9 @@ defmodule YtSearch.SearchSlot do
             slots_json: slots_json,
             keepalive: keepalive,
             type: :fetched,
-            nextpage_slot_id: nextpage_slot_id
+            nextpage_slot_id: nextpage_slot_id,
+            result_type: result_type,
+            result_title: result_title
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_used()
@@ -193,6 +205,8 @@ defmodule YtSearch.SearchSlot do
               used_at: params.used_at,
               keepalive: params.keepalive,
               nextpage_slot_id: params.nextpage_slot_id,
+              result_type: params.result_type,
+              result_title: params.result_title,
               type: :fetched
             ]
           ]
@@ -204,6 +218,8 @@ defmodule YtSearch.SearchSlot do
             slots_json: slots_json,
             keepalive: keepalive,
             nextpage_slot_id: nextpage_slot_id,
+            result_type: result_type,
+            result_title: result_title,
             type: :fetched
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
