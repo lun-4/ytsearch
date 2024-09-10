@@ -71,7 +71,9 @@ defmodule YtSearch.SearchSlot do
     |> Jason.decode!()
   end
 
-  def fetched_slots_from_search(search_slot) do
+  def fetched_slots_from_search(search_slot, opts \\ []) do
+    follow_inner_channel? = Keyword.get(opts, :follow_inner_channel, false)
+
     search_slot
     |> get_slots
     |> Enum.map(fn %{"type" => slot_type, "youtube_id" => youtube_id} = maybe_slot ->
@@ -82,10 +84,20 @@ defmodule YtSearch.SearchSlot do
         t when t in ["video", "short", "livestream"] ->
           channel_slot_id = maybe_slot["channel_slot"]
 
-          [
-            Slot.fetch_by_youtube_id(youtube_id),
-            ChannelSlot.fetch(channel_slot_id)
-          ]
+          if follow_inner_channel? do
+            if channel_slot_id == nil do
+              raise "no channel slot in #{inspect(maybe_slot)}"
+            end
+
+            [
+              Slot.fetch_by_youtube_id(youtube_id),
+              ChannelSlot.fetch(channel_slot_id)
+            ]
+          else
+            [
+              Slot.fetch_by_youtube_id(youtube_id)
+            ]
+          end
 
         "playlist" ->
           [

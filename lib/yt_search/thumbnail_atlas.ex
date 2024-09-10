@@ -28,7 +28,7 @@ defmodule YtSearch.Thumbnail.Atlas do
 
   def do_assemble(search_slot) do
     search_slot
-    |> SearchSlot.fetched_slots_from_search()
+    |> SearchSlot.fetched_slots_from_search(follow_inner_channel: false)
     |> internal_assemble()
   end
 
