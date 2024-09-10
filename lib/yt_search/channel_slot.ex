@@ -18,6 +18,14 @@ defmodule YtSearch.ChannelSlot do
   end
 
   @spec fetch(Integer.t()) :: Slot.t() | nil
+  def fetch(slot_id) when is_bitstring(slot_id) do
+    slot_id = slot_id |> Integer.parse() |> then(fn {x, ""} -> x end)
+    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+
+    ChannelSlotRepo.replica(slot_id).one(query)
+    |> SlotUtilities.strict_ttl()
+  end
+
   def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 

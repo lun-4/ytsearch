@@ -80,13 +80,22 @@ defmodule YtSearch.SearchSlot do
       # are going to be obliterated any time now
       case slot_type do
         t when t in ["video", "short", "livestream"] ->
-          Slot.fetch_by_youtube_id(youtube_id)
+          channel_slot_id = maybe_slot["channel_slot"]
+
+          [
+            Slot.fetch_by_youtube_id(youtube_id),
+            ChannelSlot.fetch(channel_slot_id)
+          ]
 
         "playlist" ->
-          PlaylistSlot.fetch_by_youtube_id(youtube_id)
+          [
+            PlaylistSlot.fetch_by_youtube_id(youtube_id)
+          ]
 
         "channel" ->
-          ChannelSlot.fetch_by_youtube_id(youtube_id)
+          [
+            ChannelSlot.fetch_by_youtube_id(youtube_id)
+          ]
 
         nil ->
           Logger.warning("invalid type from #{inspect(maybe_slot)}")
@@ -96,6 +105,7 @@ defmodule YtSearch.SearchSlot do
           raise "invalid type for search slot entry: #{inspect(slot_type)}"
       end
     end)
+    |> List.flatten()
   end
 
   def changeset(%__MODULE__{} = slot, params) do

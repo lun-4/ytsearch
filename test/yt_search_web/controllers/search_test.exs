@@ -1,6 +1,7 @@
 defmodule YtSearchWeb.SearchTest do
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Test.Data
+  alias YtSearch.{Slot, ChannelSlot, PlaylistSlot}
 
   setup do
     Tesla.Mock.mock_global(fn
@@ -153,6 +154,7 @@ defmodule YtSearchWeb.SearchTest do
 
   @piped_search_output File.read!("test/support/piped_outputs/urban_rescue_ranch_search.json")
   @miku_search_output File.read!("test/support/piped_outputs/hatsune_miku_search.json")
+  @notitg_search_output File.read!("test/support/piped_outputs/notitg_search.json")
   @piped_channel_output File.read!(
                           "test/support/piped_outputs/the_urban_rescue_ranch_channel.json"
                         )
@@ -544,5 +546,90 @@ defmodule YtSearchWeb.SearchTest do
 
     nextpage_slot = resp_json["nextpage_slot_id"]
     assert nextpage_slot == nil
+  end
+
+  defp fetch_slot_expirations(results),
+    do:
+      results
+      |> Enum.map(fn result ->
+        IO.inspect(result)
+
+        case result["type"] do
+          "video" ->
+            slot = Slot.fetch_by_id(result["slot_id"])
+            child_slot = ChannelSlot.fetch(result["channel_slot"])
+
+            [
+              {:v, slot.id, slot.expires_at},
+              {:c, child_slot.id, child_slot.expires_at}
+            ]
+
+          "channel" ->
+            slot = ChannelSlot.fetch(result["slot_id"])
+
+            [
+              {:c, slot.id, slot.expires_at}
+            ]
+
+          "playlist" ->
+            slot = PlaylistSlot.fetch(result["slot_id"])
+
+            [
+              {:p, slot.id, slot.expires_at}
+            ]
+        end
+      end)
+      |> List.flatten()
+
+  test "it refreshes the child slots on new search", %{conn: conn, ets_table: table} do
+    mock(fn
+      %{method: :get, url: "example.org" <> _suffix} ->
+        calls = :ets.update_counter(table, :notitg_search, 1, {:notitg_search, 0})
+
+        case calls do
+          1 -> json(Jason.decode!(@notitg_search_output))
+          2 -> raise "requested search more than once, should've cached it"
+        end
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+
+    rjson_before = json_response(conn, 200)
+
+    expirations_before =
+      rjson_before["search_results"]
+      |> fetch_slot_expirations
+
+    Process.sleep(1000)
+
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+
+    rjson_after = json_response(conn, 200)
+
+    expirations_after =
+      rjson_after["search_results"]
+      |> fetch_slot_expirations
+
+    assert not Enum.empty?(expirations_before)
+
+    Enum.with_index(expirations_before)
+    |> Enum.map(fn {{before_type, before_id, before_expires_at}, index} ->
+      {after_type, after_id, after_expires_at} = expirations_after |> Enum.at(index)
+      IO.puts(before_id)
+      IO.puts(before_type)
+      IO.puts(after_id)
+      IO.puts(after_type)
+      assert before_id == after_id
+      assert before_type == after_type
+      IO.inspect(before_expires_at)
+      IO.inspect(after_expires_at)
+      assert before_expires_at != after_expires_at
+    end)
   end
 end
