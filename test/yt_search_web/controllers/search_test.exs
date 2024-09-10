@@ -552,8 +552,6 @@ defmodule YtSearchWeb.SearchTest do
     do:
       results
       |> Enum.map(fn result ->
-        IO.inspect(result)
-
         case result["type"] do
           "video" ->
             slot = Slot.fetch_by_id(result["slot_id"])
@@ -621,14 +619,8 @@ defmodule YtSearchWeb.SearchTest do
     Enum.with_index(expirations_before)
     |> Enum.map(fn {{before_type, before_id, before_expires_at}, index} ->
       {after_type, after_id, after_expires_at} = expirations_after |> Enum.at(index)
-      IO.puts(before_id)
-      IO.puts(before_type)
-      IO.puts(after_id)
-      IO.puts(after_type)
       assert before_id == after_id
       assert before_type == after_type
-      IO.inspect(before_expires_at)
-      IO.inspect(after_expires_at)
       assert before_expires_at != after_expires_at
     end)
   end
