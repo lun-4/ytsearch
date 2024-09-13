@@ -35,6 +35,9 @@ defmodule YtSearch.SearchSlot do
   end
 
   @spec fetch(Integer.t()) :: SearchSlot.t() | nil
+  @spec fetch(String.t()) :: SearchSlot.t() | nil
+  def fetch(s) when is_bitstring(s), do: fetch(String.to_integer(s))
+
   def fetch(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
@@ -67,12 +70,19 @@ defmodule YtSearch.SearchSlot do
   end
 
   def get_slots(search_slot) do
-    search_slot.slots_json
-    |> Jason.decode!()
+    case search_slot.type do
+      :fetched ->
+        search_slot.slots_json
+        |> Jason.decode!()
+
+      :unfetched ->
+        []
+    end
   end
 
   def fetched_slots_from_search(search_slot, opts \\ []) do
     follow_inner_channel? = Keyword.get(opts, :follow_inner_channel, false)
+    follow_nextpage? = Keyword.get(opts, :follow_nextpage, false)
 
     search_slot
     |> get_slots
@@ -118,6 +128,32 @@ defmodule YtSearch.SearchSlot do
       end
     end)
     |> List.flatten()
+    |> then(fn slots ->
+      if follow_nextpage? do
+        case search_slot.nextpage_slot_id do
+          nil ->
+            slots
+
+          v ->
+            nextpage_slot = fetch(v)
+            slots ++ [nextpage_slot] ++ fetched_slots_from_search(nextpage_slot, opts)
+        end
+      else
+        slots
+      end
+    end)
+  end
+
+  def fetch_all_nextpages(parent_slot), do: fetch_all_nextpages(parent_slot, [])
+
+  def fetch_all_nextpages(parent_slot, current) do
+    case parent_slot.nextpage_slot_id do
+      nil ->
+        current
+
+      v ->
+        current ++ [fetch(v)]
+    end
   end
 
   def changeset(%__MODULE__{} = slot, params) do

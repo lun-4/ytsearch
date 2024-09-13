@@ -1,4 +1,5 @@
 defmodule YtSearchWeb.SearchTest do
+  alias YtSearch.SearchSlot
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Test.Data
   alias YtSearch.{Slot, ChannelSlot, PlaylistSlot}
@@ -548,14 +549,28 @@ defmodule YtSearchWeb.SearchTest do
     assert nextpage_slot == nil
   end
 
-  defp fetch_slot_expirations(results),
+  defp fetch_slot_expirations(%YtSearch.SearchSlot{} = result) do
+    case result.type do
+      :fetched ->
+        fetch_slot_expirations(%{
+          "slot_id" => "#{result.id}",
+          "search_results" => SearchSlot.get_slots(result),
+          "nextpage_slot_id" => result.nextpage_slot_id
+        })
+
+      :unfetched ->
+        []
+    end
+  end
+
+  defp fetch_slot_expirations(result),
     do:
-      results
-      |> Enum.map(fn result ->
-        case result["type"] do
+      result["search_results"]
+      |> Enum.map(fn item ->
+        case item["type"] do
           "video" ->
-            slot = Slot.fetch_by_id(result["slot_id"])
-            child_slot = ChannelSlot.fetch(result["channel_slot"])
+            slot = Slot.fetch_by_id(item["slot_id"])
+            child_slot = ChannelSlot.fetch(item["channel_slot"])
 
             [
               {:v, slot.id, slot.expires_at},
@@ -563,14 +578,14 @@ defmodule YtSearchWeb.SearchTest do
             ]
 
           "channel" ->
-            slot = ChannelSlot.fetch(result["slot_id"])
+            slot = ChannelSlot.fetch(item["slot_id"])
 
             [
               {:c, slot.id, slot.expires_at}
             ]
 
           "playlist" ->
-            slot = PlaylistSlot.fetch(result["slot_id"])
+            slot = PlaylistSlot.fetch(item["slot_id"])
 
             [
               {:p, slot.id, slot.expires_at}
@@ -578,16 +593,52 @@ defmodule YtSearchWeb.SearchTest do
         end
       end)
       |> List.flatten()
+      |> then(fn list ->
+        search_slot = YtSearch.SearchSlot.fetch(result["slot_id"])
+        assert search_slot != nil
 
+        case search_slot.nextpage_slot_id do
+          nil ->
+            list
+
+          nextpage_id ->
+            nextpage_slot = YtSearch.SearchSlot.fetch(nextpage_id)
+            assert nextpage_slot != nil
+
+            list ++
+              [{:s, nextpage_id, nextpage_slot.expires_at}] ++
+              fetch_slot_expirations(nextpage_slot)
+        end
+      end)
+
+  @tag debug: true
   test "it refreshes the child slots on new search", %{conn: conn, ets_table: table} do
     mock(fn
-      %{method: :get, url: "example.org" <> _suffix} ->
+      %{method: :get, url: "example.org/search" <> _suffix} ->
         calls = :ets.update_counter(table, :notitg_search, 1, {:notitg_search, 0})
 
         case calls do
           1 -> json(Jason.decode!(@notitg_search_output))
           2 -> raise "requested search more than once, should've cached it"
         end
+
+      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
+        calls = :ets.update_counter(table, :nextpage_child_test, 1, {:nextpage_child_test, 0})
+
+        json(
+          case calls do
+            1 ->
+              Jason.decode!(@miku_search_output)
+
+            2 ->
+              %{
+                items: [],
+                nextpage: "null",
+                suggestion: "",
+                corrected: false
+              }
+          end
+        )
     end)
 
     conn =
@@ -597,11 +648,34 @@ defmodule YtSearchWeb.SearchTest do
 
     rjson_before = json_response(conn, 200)
 
-    expirations_before =
-      rjson_before["search_results"]
+    expirations_prenextpage_before =
+      rjson_before
       |> fetch_slot_expirations
 
+    # search the nextpage only once so we can validate *everything* was refreshed
+
+    nextpage_slot_id = rjson_before["nextpage_slot_id"]
+
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+
+    _ = json_response(conn, 200)
+
+    nextpage_slot = SearchSlot.fetch(nextpage_slot_id)
+    assert nextpage_slot.type == :fetched
+
+    expirations_before =
+      rjson_before
+      |> fetch_slot_expirations
+
+    # nextpage should have at least 10 more
+    assert length(expirations_before) > length(expirations_prenextpage_before) + 10
+
     Process.sleep(1000)
+
+    # trigger a refresh by searching the same query
 
     conn =
       build_conn()
@@ -611,7 +685,7 @@ defmodule YtSearchWeb.SearchTest do
     rjson_after = json_response(conn, 200)
 
     expirations_after =
-      rjson_after["search_results"]
+      rjson_after
       |> fetch_slot_expirations
 
     assert not Enum.empty?(expirations_before)

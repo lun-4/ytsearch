@@ -100,7 +100,10 @@ defmodule YtSearchWeb.SearchController do
 
         child_slots =
           data
-          |> SearchSlot.fetched_slots_from_search(follow_inner_channel: true)
+          |> SearchSlot.fetched_slots_from_search(
+            follow_inner_channel: true,
+            follow_nextpage: true
+          )
 
         valid_slots =
           child_slots
