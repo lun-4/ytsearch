@@ -12,10 +12,20 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
         help: "Amount of used slots for a given type",
         labels: [:type]
       )
+
+      Gauge.declare(
+        name: :yts_slot_utilization_rate,
+        help: "Utilization rate of slots for a given type",
+        labels: [:type]
+      )
     end
 
     def set(module, value) do
       Gauge.set([name: :yts_slot_usage, labels: [module]], value)
+    end
+
+    def set_rate(module, value) do
+      Gauge.set([name: :yts_slot_utilization_rate, labels: [module]], value)
     end
   end
 
@@ -48,6 +58,8 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
     |> Enum.each(fn {key, value} ->
       gauge_key = key |> to_string |> String.split(".") |> Enum.at(-1)
       Gauge.set(gauge_key, value)
+      utilization_rate = (value / key.slot_spec().max_ids * 100) |> trunc
+      Gauge.set_rate(gauge_key, utilization_rate)
     end)
 
     counts
