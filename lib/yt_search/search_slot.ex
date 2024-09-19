@@ -139,8 +139,15 @@ defmodule YtSearch.SearchSlot do
             slots
 
           v ->
-            nextpage_slot = fetch(v)
-            slots ++ [nextpage_slot] ++ fetched_slots_from_search(nextpage_slot, opts)
+            maybe_nextpage_slot = fetch(v)
+
+            case maybe_nextpage_slot do
+              nil ->
+                slots
+
+              nextpage_slot ->
+                slots ++ [nextpage_slot] ++ fetched_slots_from_search(nextpage_slot, opts)
+            end
         end
       else
         slots
