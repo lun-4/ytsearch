@@ -71,7 +71,7 @@ defmodule YtSearch.SearchSlot do
 
   def get_slots(search_slot) do
     case search_slot.type do
-      :fetched ->
+      v when v in [nil, :fetched] ->
         search_slot.slots_json
         |> Jason.decode!()
 
