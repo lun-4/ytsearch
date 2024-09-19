@@ -175,7 +175,7 @@ defmodule YtSearch.SearchSlot do
       :result_title,
       :type
     ])
-    |> validate_required([:expires_at, :used_at, :type])
+    |> validate_required([:expires_at, :used_at])
     |> validate_not_nil([:query, :slots_json])
   end
 
