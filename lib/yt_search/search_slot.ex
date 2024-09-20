@@ -242,10 +242,10 @@ defmodule YtSearch.SearchSlot do
     result_type = Keyword.get(opts, :result_type)
     result_title = Keyword.get(opts, :result_title)
 
-    SearchSlotRepo.transaction(fn ->
-      query = from s in __MODULE__, where: s.query == ^search_query, select: s
-      search_slot = SearchSlotRepo.replica(search_query).one(query)
+    query = from s in __MODULE__, where: s.query == ^search_query, select: s
+    search_slot = SearchSlotRepo.replica(search_query).one(query)
 
+    SearchSlotRepo.transaction(fn ->
       if search_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
@@ -348,14 +348,14 @@ defmodule YtSearch.SearchSlot do
       }
       |> Jason.encode!()
 
+    query =
+      from s in __MODULE__,
+        where: not is_nil(s.nextpage_data) and s.nextpage_data == ^nextpage_packed,
+        select: s
+
+    search_slot = SearchSlotRepo.replica(nextpage_packed).one(query)
+
     SearchSlotRepo.transaction(fn ->
-      query =
-        from s in __MODULE__,
-          where: not is_nil(s.nextpage_data) and s.nextpage_data == ^nextpage_packed,
-          select: s
-
-      search_slot = SearchSlotRepo.replica(nextpage_packed).one(query)
-
       if search_slot == nil do
         {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
