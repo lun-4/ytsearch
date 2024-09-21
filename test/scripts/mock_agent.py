@@ -37,6 +37,9 @@ def check_response(resp, expected_status: int):
     return True
 
 
+SIMULATION_PARAM_SEARCH_PROBABILITY = 50
+
+
 @dataclass
 class Agent:
     ctx: Context
@@ -48,7 +51,9 @@ class Agent:
 
     async def tick(self, current_tick):
         choice = random.randint(1, 100)
-        if choice < 3:
+        if (
+            choice <= SIMULATION_PARAM_SEARCH_PROBABILITY
+        ):  # every tick, for every agent, X% of the time they'll do a search
             search = await self.search()
             if search:
                 return random.choice(search)
