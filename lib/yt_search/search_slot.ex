@@ -21,6 +21,7 @@ defmodule YtSearch.SearchSlot do
     field(:used_at, :naive_datetime)
     field(:keepalive, :boolean)
     field(:nextpage_data, :string)
+    field(:nextpage_data_hash, :string)
     field(:type, Ecto.Enum, values: [:fetched, :unfetched])
     field(:nextpage_slot_id, :integer)
     field(:result_type, Ecto.Enum, values: [:text, :video, :playlist, :channel])
@@ -350,10 +351,13 @@ defmodule YtSearch.SearchSlot do
       }
       |> Jason.encode!()
 
+    nextpage_packed_hash = :erlang.phash2(nextpage_packed) |> to_string |> :base64.encode()
+
     SearchSlotRepo.transaction(fn ->
       query =
         from s in __MODULE__,
-          where: not is_nil(s.nextpage_data) and s.nextpage_data == ^nextpage_packed,
+          where:
+            not is_nil(s.nextpage_data_hash) and s.nextpage_data_hash == ^nextpage_packed_hash,
           select: s
 
       search_slot = SearchSlotRepo.replica(nextpage_packed).one(query)
@@ -367,6 +371,7 @@ defmodule YtSearch.SearchSlot do
             slots_json: "",
             query: internal_id_for(%__MODULE__{id: new_id}),
             nextpage_data: nextpage_packed,
+            nextpage_data_hash: nextpage_packed_hash,
             type: :unfetched,
             keepalive: false
           }
@@ -382,6 +387,7 @@ defmodule YtSearch.SearchSlot do
               query: params.query,
               slots_json: params.slots_json,
               nextpage_data: params.nextpage_data,
+              nextpage_data_hash: params.nextpage_data_hash,
               type: params.type,
               expires_at: params.expires_at,
               used_at: params.used_at,
@@ -396,6 +402,7 @@ defmodule YtSearch.SearchSlot do
             query: internal_id_for(%__MODULE__{id: search_slot.id}),
             slots_json: "",
             nextpage_data: nextpage_packed,
+            nextpage_data_hash: nextpage_packed_hash,
             type: :unfetched,
             keepalive: false
           }
