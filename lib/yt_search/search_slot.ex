@@ -184,6 +184,7 @@ defmodule YtSearch.SearchSlot do
     ])
     |> validate_required([:expires_at, :used_at])
     |> validate_not_nil([:query, :slots_json])
+    |> unique_constraint(:query)
   end
 
   defp validate_not_nil(changeset, fields) do
