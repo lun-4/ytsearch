@@ -290,7 +290,8 @@ defmodule YtSearch.SearchSlot do
             nextpage_slot_id: nextpage_slot_id,
             result_type: result_type,
             result_title: result_title,
-            type: :fetched
+            type: :fetched,
+            nextpage_data: ""
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_opts(opts)
