@@ -101,7 +101,7 @@ class Agent:
             f'{yts_url}/a/5/sl/{video["slot_id"]}',
             headers={"user-agent": "UnityWebRequest"},
         )
-        check_response(resp, 200)
+        check_response(resp, 302)
 
 
 @dataclass
