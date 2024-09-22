@@ -37,7 +37,7 @@ def check_response(resp, expected_status: int):
     return True
 
 
-SIMULATION_PARAM_SEARCH_PROBABILITY = 50
+SIMULATION_PARAM_SEARCH_PROBABILITY = 10
 
 
 @dataclass
