@@ -3,6 +3,8 @@ defmodule YtSearchWeb.SearchTest do
   use YtSearchWeb.ConnCase, async: false
   alias YtSearch.Test.Data
   alias YtSearch.{Slot, ChannelSlot, PlaylistSlot}
+  alias YtSearch.Data.SearchSlotRepo
+  import Ecto.Query
 
   setup do
     Tesla.Mock.mock_global(fn
@@ -611,7 +613,6 @@ defmodule YtSearchWeb.SearchTest do
         end
       end)
 
-  @tag debug: true
   test "it refreshes the child slots on new search", %{conn: conn, ets_table: table} do
     mock(fn
       %{method: :get, url: "example.org/search" <> _suffix} ->
@@ -697,5 +698,100 @@ defmodule YtSearchWeb.SearchTest do
       assert before_type == after_type
       assert before_expires_at != after_expires_at
     end)
+  end
+
+  def assert_all_slots_make_sense,
+    do:
+      from(s in SearchSlot, select: s)
+      |> SearchSlotRepo.all()
+      |> Enum.each(fn s ->
+        case s.type do
+          :fetched ->
+            assert not String.starts_with?(s.slots_json, "ytsearchslot://")
+
+          :unfetched ->
+            assert s.query == "ytsearchslot://#{s.id}"
+        end
+      end)
+
+  @tag debug: true
+  test "it does not 'corrupt' a search slot", %{conn: conn, ets_table: table} do
+    mock(fn
+      %{method: :get, url: "example.org/search" <> _suffix} ->
+        calls = :ets.update_counter(table, :notitg_search, 1, {:notitg_search, 0})
+
+        case calls do
+          _ ->
+            json(Jason.decode!(@notitg_search_output))
+            # 2 -> raise "requested search more than once, should've cached it"
+        end
+
+      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
+        calls = :ets.update_counter(table, :nextpage_child_test, 1, {:nextpage_child_test, 0})
+
+        json(
+          case calls do
+            1 ->
+              Jason.decode!(@miku_search_output)
+
+            2 ->
+              %{
+                items: [],
+                nextpage: "null",
+                suggestion: "",
+                corrected: false
+              }
+          end
+        )
+    end)
+
+    from(s in SearchSlot, select: s)
+    |> SearchSlotRepo.all()
+    |> Enum.each(fn s ->
+      s
+      |> SearchSlot.changeset(%{
+        slots_json: "",
+        query: "ytsearchslot://#{s.id}",
+        expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(30),
+        keepalive: false,
+        nextpage_data: "asdasflkajdf",
+        nextpage_data_hash: "awooga",
+        type: :unfetched,
+        nextpage_slot_id: nil,
+        result_type: nil,
+        result_title: nil
+      })
+      |> SearchSlotRepo.update!()
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+
+    rjson = json_response(conn, 200)
+    slot = rjson["slot_id"] |> SearchSlot.fetch()
+    assert slot.type == :fetched
+
+    assert_all_slots_make_sense()
+
+    # force-expire the search slot, try again
+    slot
+    |> SearchSlot.changeset(%{
+      query: "awooga",
+      expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(-300_00)
+    })
+    |> SearchSlotRepo.update!()
+
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+
+    rjson = json_response(conn, 200)
+    slot = rjson["slot_id"] |> SearchSlot.fetch()
+    assert slot.type == :fetched
+
+    assert_all_slots_make_sense()
   end
 end
