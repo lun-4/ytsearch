@@ -83,7 +83,7 @@ class Agent:
             do_repeat = repetition_choice <= SIMULATION_PARAM_SEARCH_REPETITION_TRIGGER
 
             query = None
-            if do_repeat:
+            if do_repeat and self.old_queries:
                 query = random.choice(self.old_queries)
             search = await self.search(query=query)
 
