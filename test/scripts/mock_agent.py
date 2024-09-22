@@ -8,7 +8,7 @@ import logging
 import time
 import asyncio
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +38,20 @@ def check_response(resp, expected_status: int):
 
 
 SIMULATION_PARAM_SEARCH_PROBABILITY = 10
+SIMULATION_PARAM_SEARCH_REPETITION_TRIGGER = 40
+SIMULATION_PARAM_REAL_TIME_SECOND_SEARCH_OLDNESS = (
+    20 * 60
+) + 1  # 20 minutes search slot ttl
+
+
+def percentage():
+    return random.randint(1, 100)
+
+
+@dataclass
+class SearchResult:
+    query: str
+    results: list
 
 
 @dataclass
@@ -47,34 +61,54 @@ class Agent:
     name: str
     seed: int
     is_quest: bool
+    queries: List[Tuple[int, str]]
     self_tick: int = 0
 
+    @property
+    def old_queries(self):
+        now = int(time.time())
+        return [
+            q
+            for q in self.queries
+            if (now - q[0]) > SIMULATION_PARAM_REAL_TIME_SECOND_SEARCH_OLDNESS
+        ]
+
     async def tick(self, current_tick):
-        choice = random.randint(1, 100)
+        search = None
+        choice = percentage()
         if (
             choice <= SIMULATION_PARAM_SEARCH_PROBABILITY
         ):  # every tick, for every agent, X% of the time they'll do a search
-            search = await self.search()
-            if search:
-                return random.choice(search)
+            repetition_choice = percentage()
+            do_repeat = repetition_choice <= SIMULATION_PARAM_SEARCH_REPETITION_TRIGGER
+
+            query = None
+            if do_repeat:
+                query = random.choice(self.old_queries)
+            search = await self.search(query=query)
+
         if self.self_tick % 10 == 0:
             # heartbeat with the server every 10 ticks
             await self.heartbeat()
         self.self_tick += 1
+        if search and search.results:
+            self.queries.append((int(time.time()), search.query))
+            return random.choice(search.results)
 
     async def heartbeat(self):
         await self.ctx.client.get(f"{yts_url}/api/v5/hello/stress_test-{self.seed}")
 
-    async def search(self):
+    async def search(self, query: Optional[str] = None) -> SearchResult:
         log.info("instance %d: searching...", self.instance_id)
-        if random.randint(0, 100) < 30:
-            # 10% of the time ,search for single url
-            log.info("instance %d searching for single url", self.instance_id)
-            search_term = f"https://youtube.com/watch?v={random_string(11)}"
-        else:
-            search_term = random_string()
+        if query is None:
+            if random.randint(0, 100) < 30:
+                # 10% of the time ,search for single url
+                log.info("instance %d searching for single url", self.instance_id)
+                query = f"https://youtube.com/watch?v={random_string(11)}"
+            else:
+                query = random_string()
         resp = await self.ctx.client.get(
-            f"{yts_url}/api/v5/search?q={search_term}",
+            f"{yts_url}/api/v5/search?q={query}",
             headers={"user-agent": "UnityWebRequest"},
         )
         if check_response(resp, 200):
@@ -82,11 +116,11 @@ class Agent:
             atlas_id = rjson["slot_id"]
             resp = await self.ctx.client.get(f"{yts_url}/a/5/at/{atlas_id}")
             if check_response(resp, 200):
-                return rjson["search_results"]
+                return SearchResult(query, rjson["search_results"])
             else:
-                return []
+                return SearchResult(query, [])
         else:
-            return []
+            return SearchResult(query, [])
 
     async def watch(self, video):
         if self.is_quest:
@@ -127,6 +161,7 @@ class Instance:
             # 80 / 20 split between quest and non quest
             is_quest=random.uniform(0, 1) < 0.8,
             seed=self.seed,
+            queries=[],
         )
         self.agents.append(agent)
         log.info("instance %d, add agent", self.id)
@@ -164,9 +199,9 @@ class Instance:
         results = []
         if not self.watching_video:
             if not self.video_queue:
-                results = await self.agents[0].search()
-                if results:
-                    await self.watch(random.choice(results), current_tick)
+                search = await self.agents[0].search()
+                if search.results:
+                    await self.watch(random.choice(search.results), current_tick)
             else:
                 # we finished playing a video, and we have queue entry. play it
                 new_video_on_queue = self.video_queue.pop(0)
