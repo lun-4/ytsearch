@@ -261,7 +261,9 @@ defmodule YtSearch.SearchSlot do
             type: :fetched,
             nextpage_slot_id: nextpage_slot_id,
             result_type: result_type,
-            result_title: result_title
+            result_title: result_title,
+            nextpage_data: nil,
+            nextpage_data_hash: nil
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_used()
@@ -279,7 +281,9 @@ defmodule YtSearch.SearchSlot do
               nextpage_slot_id: params.nextpage_slot_id,
               result_type: params.result_type,
               result_title: params.result_title,
-              type: :fetched
+              type: params.type,
+              nextpage_data: params.nextpage_data,
+              nextpage_data_hash: params.nextpage_data_hash
             ]
           ]
         )
@@ -293,7 +297,8 @@ defmodule YtSearch.SearchSlot do
             result_type: result_type,
             result_title: result_title,
             type: :fetched,
-            nextpage_data: ""
+            nextpage_data: nil,
+            nextpage_data_hash: nil
           }
           |> SlotUtilities.put_simple_expiration(__MODULE__)
           |> SlotUtilities.put_opts(opts)
