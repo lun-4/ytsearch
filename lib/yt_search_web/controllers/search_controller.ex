@@ -234,7 +234,7 @@ defmodule YtSearchWeb.SearchController do
            }}
         end
 
-      search_slot ->
+      %YtSearch.SearchSlot{} = search_slot ->
         {:ok,
          %{
            result_type: search_slot.result_type,
