@@ -239,7 +239,7 @@ defmodule YtSearch.SearchSlot do
     raise("tripped assertion! got #{inspect(val)}, should be true! msg=#{msg}")
   end
 
-  defp validate_slot_type_fields!(slot) do
+  def validate_slot_type_fields!(slot) do
     case slot.type do
       :fetched ->
         micro_assert!(

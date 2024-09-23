@@ -207,6 +207,8 @@ defmodule YtSearchWeb.SearchController do
         end
 
       %YtSearch.SearchSlot{type: :unfetched} = unfetched_slot ->
+        YtSearch.SearchSlot.validate_slot_type_fields!(unfetched_slot)
+
         with {:ok, %{results: _, nextpage: _} = ytdlp_data} <-
                Youtube.nextpage_fetch(unfetched_slot) do
           results =
