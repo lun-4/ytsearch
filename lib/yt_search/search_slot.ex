@@ -178,6 +178,7 @@ defmodule YtSearch.SearchSlot do
       :used_at,
       :keepalive,
       :nextpage_data,
+      :nextpage_data_hash,
       :nextpage_slot_id,
       :result_type,
       :result_title,
