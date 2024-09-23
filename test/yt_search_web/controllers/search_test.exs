@@ -708,11 +708,13 @@ defmodule YtSearchWeb.SearchTest do
         case s.type do
           :fetched ->
             assert String.starts_with?(s.query, "ytsearch://")
-            assert s.nextpage_data_hash == ""
+            assert s.nextpage_data_hash == nil
+            assert s.nextpage_data == nil
 
           :unfetched ->
             assert s.query == "ytsearchslot://#{s.id}"
-            assert s.nextpage_data_hash != nil
+            assert String.length(s.nextpage_data_hash) > 0
+            assert String.length(s.nextpage_data) > 0
         end
       end)
 
@@ -756,8 +758,8 @@ defmodule YtSearchWeb.SearchTest do
         query: "ytsearchslot://#{s.id}",
         expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(30),
         keepalive: false,
-        nextpage_data: "asdasflkajdf",
-        nextpage_data_hash: "awooga",
+        nextpage_data: "EXAMPLE NEXTPAGE DATA EXAMPLE NEXTPAGE DATA",
+        nextpage_data_hash: "EXAMPLE HASH EXAMPLE HASH",
         type: :unfetched,
         nextpage_slot_id: nil,
         result_type: nil,
@@ -765,6 +767,8 @@ defmodule YtSearchWeb.SearchTest do
       })
       |> SearchSlotRepo.update!()
     end)
+
+    assert_all_slots_make_sense()
 
     conn =
       conn
@@ -784,14 +788,16 @@ defmodule YtSearchWeb.SearchTest do
     })
     |> SearchSlotRepo.update!()
 
+    # we should be reusing the previous slot
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/a/5/s?q=urban+rescue+ranch")
 
     rjson = json_response(conn, 200)
-    slot = rjson["slot_id"] |> SearchSlot.fetch()
-    assert slot.type == :fetched
+    slot_after = rjson["slot_id"] |> SearchSlot.fetch()
+    assert slot.id == slot_after.id
+    assert slot_after.type == :fetched
 
     assert_all_slots_make_sense()
   end
