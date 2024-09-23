@@ -232,6 +232,40 @@ defmodule YtSearch.SearchSlot do
     {slot, nextpage_slot}
   end
 
+  defp micro_assert!(v), do: micro_assert!(v, "<no msg>")
+  defp micro_assert!(true, _), do: nil
+
+  defp micro_assert!(val, msg) do
+    raise("tripped assertion! got #{inspect(val)}, should be true! msg=#{msg}")
+  end
+
+  defp validate_slot_type_fields!(slot) do
+    case slot.type do
+      :fetched ->
+        micro_assert!(
+          String.starts_with?(slot.query, "ytsearch://") or
+            String.starts_with?(slot.query, "ytchannel://") or
+            String.starts_with?(slot.query, "ytplaylist://") or
+            slot.query == "ytsearchslot://#{slot.id}",
+          "#{slot.type}, #{slot.id}, #{slot.query}"
+        )
+
+        micro_assert!(slot.nextpage_data_hash == nil)
+        micro_assert!(slot.nextpage_data == nil)
+        slot
+
+      :unfetched ->
+        micro_assert!(
+          slot.query == "ytsearchslot://#{slot.id}",
+          "#{slot.type}, #{slot.id}, #{slot.query}"
+        )
+
+        micro_assert!(String.length(slot.nextpage_data_hash) > 0)
+        micro_assert!(String.length(slot.nextpage_data) > 0)
+        slot
+    end
+  end
+
   @spec from_slots_json(String.t(), String.t(), Keyword.t()) :: SearchSlot.t()
   defp from_slots_json(slots_json, search_query, opts) do
     keepalive = Keyword.get(opts, :keepalive, false)
@@ -287,6 +321,7 @@ defmodule YtSearch.SearchSlot do
             ]
           ]
         )
+        |> validate_slot_type_fields!
       else
         search_slot
         |> changeset(
@@ -305,9 +340,11 @@ defmodule YtSearch.SearchSlot do
           |> SlotUtilities.put_used()
         )
         |> SearchSlotRepo.update!()
+        |> validate_slot_type_fields!
       end
     end)
     |> then(fn {:ok, slot} -> slot end)
+    |> validate_slot_type_fields!
   end
 
   def unpack_nextpage(slot),
@@ -401,6 +438,7 @@ defmodule YtSearch.SearchSlot do
             ]
           ]
         )
+        |> validate_slot_type_fields!
       else
         search_slot
         |> changeset(
@@ -416,9 +454,11 @@ defmodule YtSearch.SearchSlot do
           |> SlotUtilities.put_used()
         )
         |> SearchSlotRepo.update!()
+        |> validate_slot_type_fields!
       end
     end)
     |> then(fn {:ok, slot} -> slot end)
+    |> validate_slot_type_fields!
   end
 
   def urls, do: 0
