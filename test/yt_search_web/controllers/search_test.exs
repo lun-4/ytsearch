@@ -707,10 +707,12 @@ defmodule YtSearchWeb.SearchTest do
       |> Enum.each(fn s ->
         case s.type do
           :fetched ->
-            assert not String.starts_with?(s.slots_json, "ytsearchslot://")
+            assert String.starts_with?(s.query, "ytsearch://")
+            assert s.nextpage_data_hash == ""
 
           :unfetched ->
             assert s.query == "ytsearchslot://#{s.id}"
+            assert s.nextpage_data_hash != nil
         end
       end)
 
@@ -778,7 +780,6 @@ defmodule YtSearchWeb.SearchTest do
     # force-expire the search slot, try again
     slot
     |> SearchSlot.changeset(%{
-      query: "awooga",
       expires_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(-300_00)
     })
     |> SearchSlotRepo.update!()
