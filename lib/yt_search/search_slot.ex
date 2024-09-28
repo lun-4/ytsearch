@@ -155,7 +155,7 @@ defmodule YtSearch.SearchSlot do
                 slots
 
               nextpage_slot ->
-                Logger.info("LUNA: at #{search_slot.id}, going to #{nextpage_slot_id}")
+                Logger.info("LUNA: at #{search_slot.id}, going to #{nextpage_slot.id}")
 
                 results =
                   if is_luna? do
