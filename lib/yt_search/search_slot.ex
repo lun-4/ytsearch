@@ -90,6 +90,10 @@ defmodule YtSearch.SearchSlot do
     follow_nextpage? = Keyword.get(opts, :follow_nextpage, false)
     is_luna? = Keyword.get(opts, :luna, false)
 
+    Logger.info(
+      "LUNA: exec #{search_slot.id} q=#{inspect(search_slot.query)} t=#{inspect(search_slot.type)} nph=#{inspect(search_slot.nextpage_data_hash)}"
+    )
+
     search_slot
     |> get_slots
     |> Enum.map(fn %{"type" => slot_type, "youtube_id" => youtube_id} = maybe_slot ->
