@@ -158,9 +158,14 @@ defmodule YtSearch.SearchSlot do
                 Logger.info("LUNA: at #{search_slot.id}, going to #{nextpage_slot_id}")
 
                 results =
-                  slots ++
-                    [nextpage_slot] ++
-                    fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
+                  if is_luna? do
+                    # only follow once when in luna mode
+                    slots ++ [nextpage_slot]
+                  else
+                    slots ++
+                      [nextpage_slot] ++
+                      fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
+                  end
 
                 Logger.info("LUNA: finished for #{search_slot.id}. results #{length(results)}")
                 results
