@@ -440,6 +440,7 @@ defmodule YtSearch.SearchSlot do
             query: internal_id_for(%__MODULE__{id: new_id}),
             nextpage_data: nextpage_packed,
             nextpage_data_hash: nextpage_packed_hash,
+            nextpage_slot_id: nil,
             type: :unfetched,
             keepalive: false
           }
@@ -456,6 +457,7 @@ defmodule YtSearch.SearchSlot do
               slots_json: params.slots_json,
               nextpage_data: params.nextpage_data,
               nextpage_data_hash: params.nextpage_data_hash,
+              nextpage_slot_id: params.nextpage_slot_id,
               type: params.type,
               expires_at: params.expires_at,
               used_at: params.used_at,
@@ -472,6 +474,7 @@ defmodule YtSearch.SearchSlot do
             slots_json: "",
             nextpage_data: nextpage_packed,
             nextpage_data_hash: nextpage_packed_hash,
+            nextpage_slot_id: nil,
             type: :unfetched,
             keepalive: false
           }
