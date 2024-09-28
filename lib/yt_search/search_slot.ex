@@ -88,6 +88,7 @@ defmodule YtSearch.SearchSlot do
   def fetched_slots_from_search(search_slot, opts \\ []) do
     follow_inner_channel? = Keyword.get(opts, :follow_inner_channel, false)
     follow_nextpage? = Keyword.get(opts, :follow_nextpage, false)
+    is_luna? = Keyword.get(opts, :luna, false)
 
     search_slot
     |> get_slots
@@ -134,6 +135,13 @@ defmodule YtSearch.SearchSlot do
     end)
     |> List.flatten()
     |> then(fn slots ->
+      if is_luna? do
+        Logger.info("LUNA: found #{length(slots)} slots for #{search_slot.id}")
+      end
+
+      slots
+    end)
+    |> then(fn slots ->
       if follow_nextpage? do
         case search_slot.nextpage_slot_id do
           nil ->
@@ -147,7 +155,15 @@ defmodule YtSearch.SearchSlot do
                 slots
 
               nextpage_slot ->
-                slots ++ [nextpage_slot] ++ fetched_slots_from_search(nextpage_slot, opts)
+                Logger.info("LUNA: at #{search_slot.id}, going to #{nextpage_slot_id}")
+
+                results =
+                  slots ++
+                    [nextpage_slot] ++
+                    fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
+
+                Logger.info("LUNA: finished for #{search_slot.id}. results #{length(results)}")
+                results
             end
         end
       else
