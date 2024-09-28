@@ -288,7 +288,7 @@ defmodule YtSearch.SearchSlot do
 
         micro_assert!(String.length(slot.nextpage_data_hash) > 0)
         micro_assert!(String.length(slot.nextpage_data) > 0)
-        # micro_assert!(slot.nextpage_slot_id == nil)
+        micro_assert!(slot.nextpage_slot_id == nil)
         slot
     end
   end
