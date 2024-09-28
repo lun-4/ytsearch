@@ -147,7 +147,13 @@ defmodule YtSearch.SearchSlot do
     end)
     |> then(fn slots ->
       if follow_nextpage? do
-        case search_slot.nextpage_slot_id do
+        nextpage_slot_id =
+          case search_slot.type do
+            :fetched -> search_slot.nextpage_slot_id
+            :unfetched -> nil
+          end
+
+        case nextpage_slot_id do
           nil ->
             slots
 
@@ -162,14 +168,9 @@ defmodule YtSearch.SearchSlot do
                 Logger.info("LUNA: at #{search_slot.id}, going to #{nextpage_slot.id}")
 
                 results =
-                  if is_luna? do
-                    # only follow once when in luna mode
-                    slots ++ [nextpage_slot]
-                  else
-                    slots ++
-                      [nextpage_slot] ++
-                      fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
-                  end
+                  slots ++
+                    [nextpage_slot] ++
+                    fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
 
                 Logger.info("LUNA: finished for #{search_slot.id}. results #{length(results)}")
                 results
@@ -287,6 +288,7 @@ defmodule YtSearch.SearchSlot do
 
         micro_assert!(String.length(slot.nextpage_data_hash) > 0)
         micro_assert!(String.length(slot.nextpage_data) > 0)
+        # micro_assert!(slot.nextpage_slot_id == nil)
         slot
     end
   end
