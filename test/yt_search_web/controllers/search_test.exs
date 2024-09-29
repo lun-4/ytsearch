@@ -718,7 +718,6 @@ defmodule YtSearchWeb.SearchTest do
         end
       end)
 
-  @tag debug: true
   test "it does not 'corrupt' a search slot", %{conn: conn, ets_table: table} do
     mock(fn
       %{method: :get, url: "example.org/search" <> _suffix} ->

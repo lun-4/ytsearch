@@ -35,11 +35,11 @@ defmodule YtSearch.SearchSlot do
     }
   end
 
-  @spec fetch(Integer.t()) :: SearchSlot.t() | nil
-  @spec fetch(String.t()) :: SearchSlot.t() | nil
+  @spec fetch(Integer.t()) :: t() | nil
+  @spec fetch(String.t()) :: t() | nil
   def fetch(s) when is_bitstring(s), do: fetch(String.to_integer(s))
 
-  def fetch(slot_id) do
+  def fetch(slot_id) when is_integer(slot_id) do
     query = from s in __MODULE__, where: s.id == ^slot_id, select: s
 
     SearchSlotRepo.replica(slot_id).one(query)
