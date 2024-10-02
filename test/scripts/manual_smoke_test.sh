@@ -3,7 +3,7 @@
 set -eux
 
 HOST=$1
-search_param=${SEARCH:-"urban+rescue+ranch"}
+search_param=${2:-"urban+rescue+ranch"}
 
 hello_results=$(curl -A 'UnityWebRequest' -v "http://$HOST/api/v5/hello/smoke_test")
 printf "%s" "$hello_results"
