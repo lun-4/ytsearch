@@ -700,6 +700,65 @@ defmodule YtSearchWeb.SearchTest do
     end)
   end
 
+  @tag debug: true
+  test "empty search slot is valid", %{conn: conn, ets_table: table} do
+    mock(fn
+      %{method: :get, url: "example.org/search" <> _suffix} ->
+        calls = :ets.update_counter(table, :notitg_search, 1, {:notitg_search, 0})
+
+        case calls do
+          1 -> json(Jason.decode!(@notitg_search_output))
+          2 -> raise "requested search more than once, should've cached it"
+        end
+
+      %{method: :get, url: "example.org/nextpage/search" <> _whatever} ->
+        calls = :ets.update_counter(table, :nextpage_child_test, 1, {:nextpage_child_test, 0})
+
+        json(
+          case calls do
+            1 ->
+              %{
+                items: [],
+                nextpage: "null",
+                suggestion: "",
+                corrected: false
+              }
+          end
+        )
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+
+    rjson_root = json_response(conn, 200)
+
+    nextpage_slot_id = rjson_root["nextpage_slot_id"]
+
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+
+    _ = json_response(conn, 200)
+
+    nextpage_slot = SearchSlot.fetch(nextpage_slot_id)
+    assert nextpage_slot.type == :fetched
+
+    # fetching again should just work (the search slot is empty, it should be still valid)
+    # prevents regression
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+
+    _ = json_response(conn, 200)
+
+    nextpage_slot = SearchSlot.fetch(nextpage_slot_id)
+    assert nextpage_slot.type == :fetched
+  end
+
   def assert_all_slots_make_sense,
     do:
       from(s in SearchSlot, select: s)
