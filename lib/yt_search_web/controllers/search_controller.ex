@@ -117,7 +117,7 @@ defmodule YtSearchWeb.SearchController do
               false
 
             Enum.empty?(valid_slots) ->
-              false
+              true
 
             true ->
               valid_slots
