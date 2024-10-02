@@ -234,13 +234,20 @@ defmodule YtSearchWeb.SearchController do
         end
 
       %YtSearch.SearchSlot{} = search_slot ->
+        nextpage_search_slot_id = search_slot.nextpage_slot_id
+
         {:ok,
          %{
            result_type: search_slot.result_type,
            result_title: search_slot.result_title,
            search_results: search_slot |> SearchSlot.get_slots(),
            slot_id: "#{search_slot.id}",
-           nextpage_slot_id: "#{search_slot.nextpage_slot_id}"
+           nextpage_slot_id:
+             if nextpage_search_slot_id != nil do
+               "#{nextpage_search_slot_id}"
+             else
+               nil
+             end
          }}
     end
   end
