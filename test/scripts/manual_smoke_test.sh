@@ -50,6 +50,13 @@ check_slot "$trending_tab_slot_id"
 
 sleep 4
 result=$(curl -A 'UnityWebRequest' -v -G "http://$HOST/a/5/s" --data-urlencode "q=$search_param")
+search_slot_id=$(echo "$result" | jq -r '.slot_id' | head -n 1)
+atlas_status_code=$(curl -w '%{http_code}' -o /dev/null -v -G "http://$HOST/a/5/at/$search_slot_id")
+if [ "$atlas_status_code" != "200" ]; then
+  echo "expected 200 from atlas, got $atlas_status_code"
+  exit 1
+fi
+
 first_video_slot_id=$(echo "$result" | jq -r '.search_results[] | select(.type == "video") | .slot_id' | head -n 1)
 echo "got slot $first_video_slot_id"
 
