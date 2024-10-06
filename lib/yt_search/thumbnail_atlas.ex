@@ -46,10 +46,14 @@ defmodule YtSearch.Thumbnail.Atlas do
               slot.youtube_id
               |> Thumbnail.fetch()
 
-            {
-              thumb.id |> Thumbnail.path_for(),
-              thumb |> Thumbnail.stat()
-            }
+            if thumb != nil do
+              {
+                thumb.id |> Thumbnail.path_for(),
+                thumb |> Thumbnail.stat()
+              }
+            else
+              nil
+            end
           end)
         else
           nil
