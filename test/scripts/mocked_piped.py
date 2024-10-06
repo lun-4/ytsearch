@@ -67,7 +67,7 @@ def random_stream():
 def search_route():
     return {
         "items": [random_stream() for _ in range(20)],
-        "nextpage": "",
+        "nextpage": random_string(),
         "suggestion": None,
         "corrected": False,
     }
@@ -81,7 +81,7 @@ def channel_route(channel_id):
         "avatarUrl": random_string(),
         "bannerUrl": random_string(),
         "description": random_string(),
-        "nextpage": None,
+        "nextpage": random_string(),
         "subscriberCount": random_int(),
         "tabs": [],
         "relatedStreams": [random_stream() for _ in range(10)],
@@ -96,7 +96,7 @@ def playlist_route(playlist_id):
         "thumbnailUrl": thumbnail_for(playlist_id),
         "description": random_string(),
         "bannerUrl": "",
-        "nextpage": "",
+        "nextpage": random_string(),
         "uploader": random_string(),
         "uploaderUrl": channel_for(channel_id),
         "uploaderAvatar": random_string(),

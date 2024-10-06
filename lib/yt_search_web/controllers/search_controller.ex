@@ -34,14 +34,24 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  @type entity_type :: :channel | :short | :video
+  def search_by_id(conn, %{"id" => id}) do
+    case UserAgent.for(conn) do
+      :unity ->
+        do_search_by_slot(conn, id)
+
+      _ ->
+        conn
+        |> put_status(400)
+        |> json(%{error: true, message: "only unity should request this route"})
+    end
+  end
 
   def do_search(conn, search_query) do
     escaped_query =
       search_query
       |> String.trim()
 
-    case search_text(escaped_query) do
+    case search(escaped_query) do
       {:ok, response} ->
         conn
         |> put_status(200)
@@ -66,6 +76,10 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
+  def do_search_by_slot(conn, id) do
+    fetch_youtube_entity(conn, YtSearch.SearchSlot, id)
+  end
+
   defp fetch_by_query_and_valid(url) do
     maybe_playlist_id =
       case Youtube.parse_url(url) do
@@ -77,13 +91,19 @@ defmodule YtSearchWeb.SearchController do
       nil ->
         nil
 
+      %{type: :unfetched} = data ->
+        data
+
       data ->
         # we want to have a search slot that contains valid slots within
         # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
 
         child_slots =
           data
-          |> SearchSlot.fetched_slots_from_search()
+          |> SearchSlot.fetched_slots_from_search(
+            follow_inner_channel: true,
+            follow_nextpage: true
+          )
 
         valid_slots =
           child_slots
@@ -97,7 +117,7 @@ defmodule YtSearchWeb.SearchController do
               false
 
             Enum.empty?(valid_slots) ->
-              false
+              true
 
             true ->
               valid_slots
@@ -142,20 +162,32 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  def search_text(text) do
-    case fetch_by_query_and_valid(text) do
+  def search(entity) do
+    case fetch_by_query_and_valid(entity) do
       nil ->
-        case Youtube.videos_for(text) do
-          {:ok, ytdlp_data} ->
+        case Youtube.fetch(entity) do
+          {:ok, %{results: _, nextpage: _} = ytdlp_data} ->
             results =
               ytdlp_data
-              |> Playlist.from_piped_data()
+              |> Playlist.from_piped_data(nextpage?: true)
 
-            search_slot =
+            {search_slot, nextpage_search_slot} =
               results
-              |> SearchSlot.from_playlist(text)
+              |> SearchSlot.from_playlist(entity, nextpage?: true)
 
-            {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+            {:ok,
+             %{
+               result_type: search_slot.result_type,
+               result_title: search_slot.result_title,
+               search_results: results.results,
+               slot_id: "#{search_slot.id}",
+               nextpage_slot_id:
+                 if nextpage_search_slot != nil do
+                   "#{nextpage_search_slot.id}"
+                 else
+                   nil
+                 end
+             }}
 
           {:error, :overloaded_ytdlp_seats} ->
             {:error, :overloaded_ytdlp_seats}
@@ -173,9 +205,50 @@ defmodule YtSearchWeb.SearchController do
             {:input_error, err}
         end
 
-      search_slot ->
+      %YtSearch.SearchSlot{type: :unfetched} = unfetched_slot ->
+        YtSearch.SearchSlot.validate_slot_type_fields!(unfetched_slot)
+
+        with {:ok, %{results: _, nextpage: _} = ytdlp_data} <-
+               Youtube.nextpage_fetch(unfetched_slot) do
+          results =
+            ytdlp_data
+            |> Playlist.from_piped_data(nextpage?: true)
+
+          {search_slot, nextpage_search_slot} =
+            results
+            |> SearchSlot.from_unfetched_slot(unfetched_slot)
+
+          {:ok,
+           %{
+             result_type: search_slot.result_type,
+             result_title: search_slot.result_title,
+             search_results: results.results,
+             slot_id: "#{search_slot.id}",
+             nextpage_slot_id:
+               if nextpage_search_slot != nil do
+                 "#{nextpage_search_slot.id}"
+               else
+                 nil
+               end
+           }}
+        end
+
+      %YtSearch.SearchSlot{} = search_slot ->
+        nextpage_search_slot_id = search_slot.nextpage_slot_id
+
         {:ok,
-         %{search_results: search_slot |> SearchSlot.get_slots(), slot_id: "#{search_slot.id}"}}
+         %{
+           result_type: search_slot.result_type,
+           result_title: search_slot.result_title,
+           search_results: search_slot |> SearchSlot.get_slots(),
+           slot_id: "#{search_slot.id}",
+           nextpage_slot_id:
+             if nextpage_search_slot_id != nil do
+               "#{nextpage_search_slot_id}"
+             else
+               nil
+             end
+         }}
     end
   end
 
@@ -191,7 +264,7 @@ defmodule YtSearchWeb.SearchController do
 
       slot ->
         case slot
-             |> search_text() do
+             |> search() do
           {:ok, resp} ->
             slot |> SlotUtilities.mark_used()
 

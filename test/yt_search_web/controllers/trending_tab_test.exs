@@ -63,7 +63,7 @@ defmodule YtSearchWeb.TrendingTabTest do
 
       search_slot_id = resp_json["trending_tab"]["slot_id"]
 
-      _ = SearchSlot.fetch_by_id(search_slot_id)
+      _ = SearchSlot.fetch(search_slot_id)
 
       slot
       |> Ecto.Changeset.change(
@@ -74,7 +74,7 @@ defmodule YtSearchWeb.TrendingTabTest do
       )
       |> SlotRepo.update!()
 
-      search_slot_after = SearchSlot.fetch_by_id(search_slot_id)
+      search_slot_after = SearchSlot.fetch(search_slot_id)
       assert search_slot_after != nil
 
       slot_after = Slot.fetch_by_id(slot_id)

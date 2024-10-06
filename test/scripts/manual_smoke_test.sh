@@ -3,7 +3,7 @@
 set -eux
 
 HOST=$1
-search_param=${SEARCH:-"urban+rescue+ranch"}
+search_param=${2:-"urban+rescue+ranch"}
 
 hello_results=$(curl -A 'UnityWebRequest' -v "http://$HOST/api/v5/hello/smoke_test")
 printf "%s" "$hello_results"
@@ -54,4 +54,16 @@ first_video_slot_id=$(echo "$result" | jq -r '.search_results[] | select(.type =
 echo "got slot $first_video_slot_id"
 
 check_slot "$first_video_slot_id"
+
+nextpage_slot_id=$(echo "$result" | jq -r '.nextpage_slot_id')
+nextpage_result=$(curl -A 'UnityWebRequest' -v -G "http://$HOST/a/5/r/$nextpage_slot_id")
+
+nextpage_video_slot_id=$(echo "$nextpage_result" | jq -r '.search_results[] | select(.type == "video") | .slot_id' | head -n 1)
+echo "got video slot from nextpage $nextpage_video_slot_id"
+if [ "$first_video_slot_id" = "$nextpage_video_slot_id" ]; then
+  echo "expected first_video_slot_id and nextpage_video_slot_id to be different, but they aren't"
+  exit 1
+fi
+check_slot "$nextpage_video_slot_id"
+
 echo "pass!"

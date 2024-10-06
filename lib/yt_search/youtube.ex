@@ -145,6 +145,7 @@ defmodule YtSearch.Youtube do
   ]
 
   def videos_for(text) when is_bitstring(text) do
+    raise "do not use"
     captures = Regex.run(@youtube_url_regex, text)
 
     if captures != nil do
@@ -169,6 +170,101 @@ defmodule YtSearch.Youtube do
           {:error, :overloaded_ytdlp_seats}
       end
     end
+  end
+
+  def fetch(text) when is_bitstring(text) do
+    captures = Regex.run(@youtube_url_regex, text)
+
+    if captures != nil do
+      [_full, host, url_path] = captures
+
+      youtube_entity(host, url_path)
+      |> resolve_youtube_entity
+    else
+      case Ratelimit.for_text_search() do
+        :allow ->
+          do_a_search(
+            :search,
+            &Piped.search/2,
+            text,
+            fn x -> x["items"] end,
+            fn x -> x["nextpage"] end,
+            fn _ ->
+              %{
+                type: :text,
+                title: text
+              }
+            end,
+            result_limit()
+          )
+
+        :deny ->
+          {:error, :overloaded_ytdlp_seats}
+      end
+    end
+  end
+
+  def fetch(%ChannelSlot{youtube_id: channel_id}) do
+    do_a_search(
+      :channel,
+      &Piped.channel/2,
+      channel_id,
+      fn x -> x["relatedStreams"] end,
+      fn x -> x["nextpage"] end,
+      fn x ->
+        %{
+          type: :channel,
+          title: x["name"]
+        }
+      end,
+      channel_result_limit()
+    )
+  end
+
+  def fetch(%PlaylistSlot{youtube_id: playlist_id}) do
+    do_a_search(
+      :playlist,
+      &Piped.playlists/2,
+      playlist_id,
+      fn x -> x["relatedStreams"] end,
+      fn x -> x["nextpage"] end,
+      fn x ->
+        %{
+          type: :playlist,
+          title: x["name"]
+        }
+      end,
+      playlist_result_limit()
+    )
+  end
+
+  def nextpage_fetch(%YtSearch.SearchSlot{type: :unfetched, nextpage_data: nextpage_data}) do
+    do_a_search(
+      :search,
+      fn url, data ->
+        %{"v" => 1, "t" => t, "q" => q, "n" => n} =
+          data
+          |> Jason.decode!()
+
+        case t do
+          "s" ->
+            Piped.nextpage_search(url, q, n)
+
+          "c" ->
+            Piped.nextpage_channel(url, q, n)
+
+          "p" ->
+            Piped.nextpage_playlists(url, q, n)
+        end
+      end,
+      nextpage_data,
+      fn x -> x["items"] || x["relatedStreams"] end,
+      fn x -> x["nextpage"] end,
+      fn _ ->
+        %{type: nil, title: nil}
+      end,
+      result_limit()
+    )
   end
 
   def parse_url(text) when is_bitstring(text) do
@@ -266,12 +362,12 @@ defmodule YtSearch.Youtube do
           end
         )
 
-      {:ok, [video_result]}
+      {:ok, %{results: [video_result], type: :video, title: video_result["title"], nextpage: nil}}
     end
   end
 
   defp resolve_youtube_entity({:playlist, playlist_id}) do
-    videos_for(%PlaylistSlot{youtube_id: playlist_id})
+    fetch(%PlaylistSlot{youtube_id: playlist_id})
   end
 
   defp resolve_youtube_entity(err) do
@@ -487,7 +583,50 @@ defmodule YtSearch.Youtube do
     end
   end
 
-  defp piped_call(call_type, func, id, opts \\ []) do
+  defp do_a_search(
+         tag,
+         func,
+         id,
+         result_list_extractor_fn,
+         nextpage_extractor_fn,
+         extra_fields_fn,
+         conf
+       ) do
+    limit = conf.max_result_count
+
+    with {:ok, results} <- piped_call(tag, func, id, ignore_keys: ["nextpage"]) do
+      result_list =
+        results
+        |> result_list_extractor_fn.()
+        |> Enum.take(limit)
+
+      nextpage =
+        results
+        |> nextpage_extractor_fn.()
+        |> then(fn
+          # search results return nextpage as null string instead of null entity
+          # channels and playlists return json entity tho
+          # good code
+          "null" -> nil
+          v -> v
+        end)
+
+      {:ok,
+       %{
+         results: result_list,
+         nextpage: nextpage
+       }
+       |> Map.merge(
+         if extra_fields_fn != nil do
+           extra_fields_fn.(results)
+         else
+           %{}
+         end
+       )}
+    end
+  end
+
+  defp piped_call(call_type, func, id, opts) do
     CallCounter.inc(call_type)
 
     start_ts = System.monotonic_time(:millisecond)

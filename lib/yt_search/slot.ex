@@ -46,7 +46,7 @@ defmodule YtSearch.Slot do
   def slot_spec() do
     %{
       # this number must be synced with the world build
-      max_ids: 100_000,
+      max_ids: 150_000,
 
       # 20 minutes so that we can reuse search slots
       ttl: 20 * 60

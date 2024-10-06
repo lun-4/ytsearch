@@ -51,21 +51,16 @@ defmodule YtSearch.SlotUtilities do
   end
 
   def refresh_expiration(%module{} = slot, opts \\ []) do
-    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
-         -min_time_between_refreshes() do
-      Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
+    Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
 
-      slot
-      |> module.changeset(
-        %{}
-        |> put_simple_expiration(module)
-        |> put_opts(opts)
-        |> put_used()
-      )
-      |> repo(module).update!()
-    else
-      slot
-    end
+    slot
+    |> module.changeset(
+      %{}
+      |> put_simple_expiration(module)
+      |> put_opts(opts)
+      |> put_used()
+    )
+    |> repo(module).update!()
   end
 
   def generate_unix_timestamp do
