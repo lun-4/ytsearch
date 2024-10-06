@@ -138,8 +138,7 @@ defmodule YtSearch.Youtube.Thumbnail do
           |> File.stream!(),
           # use lossless png as an exchange in storage vs unecessary CPU time
           suffix: ".png",
-          compression: 1,
-          effort: 1
+          compression: 1
         )
 
         {:ok, Thumbnail.insert(youtube_id, content_type, opts)}
