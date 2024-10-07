@@ -79,6 +79,20 @@ defmodule YtSearch.Youtube.Thumbnail do
     end
   end
 
+  defp target_dimensions(x, y) do
+    tx = x / 1.77777777777
+
+    if tx < y do
+      sf = y / 128
+      new_x = tx / sf
+      {new_x |> round, 128}
+    else
+      sf = tx / 128
+      new_y = y / sf
+      {128, new_y |> round}
+    end
+  end
+
   defp really_do_download_thumbnail(youtube_id, url, opts) do
     Logger.debug("thumbnail requesting #{url}")
 
@@ -118,6 +132,13 @@ defmodule YtSearch.Youtube.Thumbnail do
       else
         input_image = Image.from_binary!(body)
 
+        {image_width, image_height} = {
+          input_image |> Image.width(),
+          input_image |> Image.height()
+        }
+
+        {target_width, target_height} = target_dimensions(image_width, image_height)
+
         input_image
         |> Image.add_alpha(:transparent)
         |> then(fn
@@ -130,8 +151,8 @@ defmodule YtSearch.Youtube.Thumbnail do
           {:error, err} ->
             raise err
         end)
-        |> Image.thumbnail!(256, height: 144)
-        |> Image.embed!(256, 144, background_transparency: 0, x: :center, y: :center)
+        |> Image.thumbnail!(target_width, height: target_height, resize: :force)
+        |> Image.embed!(128, 128, background_transparency: 0, x: :center, y: :center)
         |> Image.write!(
           youtube_id
           |> Thumbnail.path_for()
