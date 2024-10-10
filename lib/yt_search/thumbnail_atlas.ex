@@ -42,35 +42,45 @@ defmodule YtSearch.Thumbnail.Atlas do
 
         if slot != nil do
           Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
-            slot.youtube_id
-            |> Thumbnail.fetch()
-            |> Thumbnail.blob()
+            thumb =
+              slot.youtube_id
+              |> Thumbnail.fetch()
+
+            if thumb != nil do
+              {
+                thumb.id |> Thumbnail.path_for(),
+                thumb |> Thumbnail.stat()
+              }
+            else
+              nil
+            end
           end)
         else
           nil
         end
       end)
-      |> Enum.map(fn maybe_thumbnail ->
-        case maybe_thumbnail do
-          nil ->
-            @invalid_thumbnail_path
+      |> Enum.map(fn
+        nil ->
+          @invalid_thumbnail_path
 
-          "" ->
-            @invalid_thumbnail_path
+        # file doesn't exist (enoent)
+        {_, nil} ->
+          @invalid_thumbnail_path
 
-          data ->
-            temporary_path = Temp.path!()
-            File.write!(temporary_path, data)
-            temporary_path
-        end
+        {path, stat} ->
+          case stat.size do
+            0 ->
+              @invalid_thumbnail_path
+
+            _ ->
+              path
+          end
       end)
 
     atlas_image_path = Temp.path!() <> ".png"
 
     # elixir-mogrify does not support append mode or whatever, use montage directly instead
     # https://superuser.com/questions/290656/vertically-stack-multiple-images-using-imagemagick
-
-    used_paths = thumbnail_paths ++ [atlas_image_path]
 
     args =
       thumbnail_paths ++
@@ -94,20 +104,16 @@ defmodule YtSearch.Thumbnail.Atlas do
 
     0 = exit_code
 
+    # read first since we have to delete the atlas later
     result = {:ok, "image/png", File.read!(atlas_image_path)}
 
-    # clean everything up afterwards
-    used_paths
-    |> Enum.filter(fn path -> path != @invalid_thumbnail_path end)
-    |> Enum.each(fn path ->
-      case File.rm(path) do
-        :ok ->
-          nil
+    case File.rm(atlas_image_path) do
+      :ok ->
+        nil
 
-        error ->
-          Logger.error("failed to delete #{path}: #{inspect(error)}, ignoring")
-      end
-    end)
+      error ->
+        Logger.error("failed to delete atlas #{atlas_image_path}: #{inspect(error)}, ignoring")
+    end
 
     result
   end

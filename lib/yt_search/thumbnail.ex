@@ -38,6 +38,13 @@ defmodule YtSearch.Thumbnail do
     end
   end
 
+  def stat(%__MODULE__{} = thumb) do
+    case File.stat(path_for(thumb.id)) do
+      {:ok, data} -> data
+      {:error, :enoent} -> nil
+    end
+  end
+
   def changeset(%__MODULE__{} = slot, params) do
     slot
     |> cast(params, [:id, :mime_type, :expires_at, :used_at, :keepalive])
