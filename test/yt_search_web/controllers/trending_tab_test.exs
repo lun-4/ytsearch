@@ -7,6 +7,7 @@ defmodule YtSearchWeb.TrendingTabTest do
   alias YtSearch.ChannelSlot
 
   @test_output File.read!("test/support/piped_outputs/trending_tab.json")
+  @test_output_2 File.read!("test/support/piped_outputs/trending_tab_2.json")
 
   setup do
     YtSearch.Test.Data.default_global_mock()
@@ -14,17 +15,32 @@ defmodule YtSearchWeb.TrendingTabTest do
     # prevent a /hello done by another test from interfering with this one
     # (especially important as cachex does not have a sandbox mode akin to ecto sql)
     Cachex.del(:tabs, "trending")
-    :ok
+
+    ets = :ets.new(:mock_call_counter_trending_test, [:public])
+    %{ets_table: ets}
   end
 
   1..3
   |> Enum.each(fn num ->
-    test "trending tab works #{num}", %{conn: conn} do
+    test "trending tab works #{num}", %{conn: conn, ets_table: table} do
       Tesla.Mock.mock(fn
         %{method: :get, url: "example.org/trending", query: [region: "US"]} ->
+          calls =
+            :ets.update_counter(
+              table,
+              :trending_tab_test_counter,
+              1,
+              {:trending_tab_test_counter, 0}
+            )
+
           Tesla.Mock.json(
-            @test_output
-            |> Jason.decode!()
+            case calls do
+              1 ->
+                Jason.decode!(@test_output)
+
+              2 ->
+                Jason.decode!(@test_output_2)
+            end
           )
       end)
 
@@ -92,6 +108,19 @@ defmodule YtSearchWeb.TrendingTabTest do
       results2 = resp_json["trending_tab"]["search_results"]
       assert results2 |> Enum.at(0) == results |> Enum.at(0)
       assert results2 |> Enum.at(3) == results |> Enum.at(3)
+
+      search_slot_after_rereq = SearchSlot.fetch(resp_json["trending_tab"]["slot_id"])
+      assert search_slot_after_rereq != nil
+
+      # every slot should be keepalive
+      search_slot_after_rereq
+      |> SearchSlot.fetched_slots_from_search(
+        follow_inner_channel: true,
+        follow_nextpage: true
+      )
+      |> Enum.each(fn slot ->
+        assert slot.keepalive
+      end)
     end
   end)
 end
