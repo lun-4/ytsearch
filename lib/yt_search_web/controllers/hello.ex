@@ -81,6 +81,16 @@ defmodule YtSearchWeb.HelloController do
     Mutex.under(SearchMutex, url, fn ->
       case Cachex.get(:tabs, "trending") do
         {:ok, nil} ->
+          # we need to transition the old slots from the previous iteration of the trending tab
+          # into an unkeepalived state so that we don't keep them in the pool forever.
+
+          # to do that we need to have
+          # - the old set of slots (A)
+          # - the new set of slots (B)
+          #
+          # and remove keepalive from slots that are in C = A-B
+          # (slots that are in A but not in B)
+
           old_keepalived_slots = keepalived_slots()
           unkeepalive_thumbnails(old_keepalived_slots)
           {:ok, data} = upstream_trending_tab()
@@ -100,18 +110,27 @@ defmodule YtSearchWeb.HelloController do
           |> Enum.map(fn slot ->
             %module{} = slot
 
+            # to calculate if a given slot from A is in B we need to check
+            # the video slot (and the channel slot the video slot refers to!)
             any_match? =
               data.search_results
               |> Enum.map(fn
-                %{type: :channel, slot_id: slot_id_str} ->
-                  module == YtSearch.ChannelSlot and slot_id_str == "#{slot.id}"
+                %{
+                  type: video_type,
+                  slot_id: slot_id_str,
+                  channel_slot: channel_slot_id
+                }
+                when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) and
+                       is_bitstring(channel_slot_id) ->
+                  # either match on the video slot id, or match on the inner channel slot id
+                  (module == YtSearch.Slot and slot_id_str == "#{slot.id}") or
+                    (module == YtSearch.ChannelSlot and channel_slot_id == "#{slot.id}")
 
-                %{type: video_type, slot_id: slot_id_str}
-                when video_type in [:video, :livestream, :short] ->
-                  module == YtSearch.Slot and slot_id_str == "#{slot.id}"
-
-                %{type: :playlist, slot_id: slot_id_str} ->
-                  module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}"
+                # i forgot if playlists exist in the trending tab
+                %{type: :playlist, slot_id: slot_id_str, youtube_id: youtube_id}
+                when is_bitstring(slot_id_str) ->
+                  module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}" and
+                    youtube_id == slot.youtube_id
               end)
               |> Enum.filter(fn match? -> match? end)
               |> Enum.at(0)
@@ -125,7 +144,7 @@ defmodule YtSearchWeb.HelloController do
 
             if not any_match? do
               slot
-              |> Ecto.Changeset.change(%{keepalive: false})
+              |> module.changeset(%{keepalive: false})
               |> SlotUtilities.repo(module).update()
             else
               {:ok, nil}
