@@ -26,6 +26,19 @@ defmodule YtSearch.Application do
       end)
     end)
     |> Enum.reduce(fn x, acc -> x ++ acc end)
+    |> Enum.map(fn repo ->
+      case Application.fetch_env(:yt_search, repo) do
+        :error ->
+          raise RuntimeError, "Repo #{repo} not configured"
+
+        {:ok, cfg} ->
+          if Access.get(cfg, :database) == nil do
+            raise RuntimeError, "Repo #{repo} not configured. missing database"
+          end
+
+          repo
+      end
+    end)
   end
 
   @impl true
