@@ -55,6 +55,25 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  defmodule ErrorVideoCounter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_error_videos,
+        help: "error video counter",
+        labels: [:code]
+      )
+    end
+
+    def inc(code) do
+      Counter.inc(
+        name: :yts_error_videos,
+        labels: [to_string(code)]
+      )
+    end
+  end
+
   # vrcjson does not support unbalanced braces inside strings
   # this has been reported to vrchat already
   #
