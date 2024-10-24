@@ -176,6 +176,7 @@ defmodule YtSearch.Application do
     YtSearch.Youtube.CallCounter.setup()
     YtSearch.Youtube.Latency.setup()
     YtSearch.Youtube.ErrorVideoCounter.setup()
+    YtSearch.Youtube.UnavailableVideoCounter.setup()
     YtSearch.SlotUtilities.UsageMeter.Gauge.setup()
     YtSearchWeb.HelloController.BuildReporter.setup()
     YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
