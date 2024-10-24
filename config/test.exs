@@ -10,22 +10,26 @@ import Config
   {[
      YtSearch.Data.SlotRepo,
      YtSearch.Data.SlotRepo.Replica1,
-     YtSearch.Data.SlotRepo.Replica2
+     YtSearch.Data.SlotRepo.Replica2,
+     YtSearch.Data.SlotRepo.Replica3
    ], "slots"},
   {[
      YtSearch.Data.ChannelSlotRepo,
      YtSearch.Data.ChannelSlotRepo.Replica1,
-     YtSearch.Data.ChannelSlotRepo.Replica2
+     YtSearch.Data.ChannelSlotRepo.Replica2,
+     YtSearch.Data.ChannelSlotRepo.Replica3
    ], "channel_slots"},
   {[
      YtSearch.Data.PlaylistSlotRepo,
      YtSearch.Data.PlaylistSlotRepo.Replica1,
-     YtSearch.Data.PlaylistSlotRepo.Replica2
+     YtSearch.Data.PlaylistSlotRepo.Replica2,
+     YtSearch.Data.PlaylistSlotRepo.Replica3
    ], "playlist_slots"},
   {[
      YtSearch.Data.SearchSlotRepo,
      YtSearch.Data.SearchSlotRepo.Replica1,
-     YtSearch.Data.SearchSlotRepo.Replica2
+     YtSearch.Data.SearchSlotRepo.Replica2,
+     YtSearch.Data.SearchSlotRepo.Replica3
    ], "search_slots"},
   {[
      YtSearch.Data.ThumbnailRepo,
@@ -37,8 +41,6 @@ import Config
      YtSearch.Data.ChapterRepo,
      YtSearch.Data.ChapterRepo.Replica1,
      YtSearch.Data.ChapterRepo.Replica2,
-     YtSearch.Data.ChapterRepo.Replica3,
-     YtSearch.Data.ChapterRepo.Replica4,
      YtSearch.Data.ChapterRepo.JanitorReplica
    ], "chapters"},
   {
@@ -46,8 +48,6 @@ import Config
       YtSearch.Data.SponsorblockRepo,
       YtSearch.Data.SponsorblockRepo.Replica1,
       YtSearch.Data.SponsorblockRepo.Replica2,
-      YtSearch.Data.SponsorblockRepo.Replica3,
-      YtSearch.Data.SponsorblockRepo.Replica4,
       YtSearch.Data.SponsorblockRepo.JanitorReplica
     ],
     "sponsorblock"

@@ -56,7 +56,8 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.SlotRepo,
       read_replicas: [
         YtSearch.Data.SlotRepo.Replica1,
-        YtSearch.Data.SlotRepo.Replica2
+        YtSearch.Data.SlotRepo.Replica2,
+        YtSearch.Data.SlotRepo.Replica3
       ],
       dedicated_replicas: []
   end
@@ -66,7 +67,8 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.ChannelSlotRepo,
       read_replicas: [
         YtSearch.Data.ChannelSlotRepo.Replica1,
-        YtSearch.Data.ChannelSlotRepo.Replica2
+        YtSearch.Data.ChannelSlotRepo.Replica2,
+        YtSearch.Data.ChannelSlotRepo.Replica3
       ],
       dedicated_replicas: []
   end
@@ -76,7 +78,8 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.PlaylistSlotRepo,
       read_replicas: [
         YtSearch.Data.PlaylistSlotRepo.Replica1,
-        YtSearch.Data.PlaylistSlotRepo.Replica2
+        YtSearch.Data.PlaylistSlotRepo.Replica2,
+        YtSearch.Data.PlaylistSlotRepo.Replica3
       ],
       dedicated_replicas: []
   end
@@ -86,7 +89,8 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.SearchSlotRepo,
       read_replicas: [
         YtSearch.Data.SearchSlotRepo.Replica1,
-        YtSearch.Data.SearchSlotRepo.Replica2
+        YtSearch.Data.SearchSlotRepo.Replica2,
+        YtSearch.Data.SearchSlotRepo.Replica3
       ],
       dedicated_replicas: []
   end
@@ -108,9 +112,7 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.ChapterRepo,
       read_replicas: [
         YtSearch.Data.ChapterRepo.Replica1,
-        YtSearch.Data.ChapterRepo.Replica2,
-        YtSearch.Data.ChapterRepo.Replica3,
-        YtSearch.Data.ChapterRepo.Replica4
+        YtSearch.Data.ChapterRepo.Replica2
       ],
       dedicated_replicas: [
         YtSearch.Data.ChapterRepo.JanitorReplica
@@ -122,9 +124,7 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.SponsorblockRepo,
       read_replicas: [
         YtSearch.Data.SponsorblockRepo.Replica1,
-        YtSearch.Data.SponsorblockRepo.Replica2,
-        YtSearch.Data.SponsorblockRepo.Replica3,
-        YtSearch.Data.SponsorblockRepo.Replica4
+        YtSearch.Data.SponsorblockRepo.Replica2
       ],
       dedicated_replicas: [
         YtSearch.Data.SponsorblockRepo.JanitorReplica

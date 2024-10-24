@@ -54,7 +54,8 @@ if config_env() == :prod do
   for repo <- [
         YtSearch.Data.SlotRepo,
         YtSearch.Data.SlotRepo.Replica1,
-        YtSearch.Data.SlotRepo.Replica2
+        YtSearch.Data.SlotRepo.Replica2,
+        YtSearch.Data.SlotRepo.Replica3
       ] do
     config :yt_search, repo, database: slots_database_path
   end
@@ -69,7 +70,8 @@ if config_env() == :prod do
   for repo <- [
         YtSearch.Data.ChannelSlotRepo,
         YtSearch.Data.ChannelSlotRepo.Replica1,
-        YtSearch.Data.ChannelSlotRepo.Replica2
+        YtSearch.Data.ChannelSlotRepo.Replica2,
+        YtSearch.Data.ChannelSlotRepo.Replica3
       ] do
     config :yt_search, repo, database: channel_slots_database_path
   end
@@ -84,7 +86,8 @@ if config_env() == :prod do
   for repo <- [
         YtSearch.Data.PlaylistSlotRepo,
         YtSearch.Data.PlaylistSlotRepo.Replica1,
-        YtSearch.Data.PlaylistSlotRepo.Replica2
+        YtSearch.Data.PlaylistSlotRepo.Replica2,
+        YtSearch.Data.PlaylistSlotRepo.Replica3
       ] do
     config :yt_search, repo, database: playlist_slots_database_path
   end
@@ -99,7 +102,8 @@ if config_env() == :prod do
   for repo <- [
         YtSearch.Data.SearchSlotRepo,
         YtSearch.Data.SearchSlotRepo.Replica1,
-        YtSearch.Data.SearchSlotRepo.Replica2
+        YtSearch.Data.SearchSlotRepo.Replica2,
+        YtSearch.Data.SearchSlotRepo.Replica3
       ] do
     config :yt_search, repo, database: search_slots_database_path
   end
@@ -131,8 +135,6 @@ if config_env() == :prod do
         YtSearch.Data.ChapterRepo,
         YtSearch.Data.ChapterRepo.Replica1,
         YtSearch.Data.ChapterRepo.Replica2,
-        YtSearch.Data.ChapterRepo.Replica3,
-        YtSearch.Data.ChapterRepo.Replica4,
         YtSearch.Data.ChapterRepo.JanitorReplica
       ] do
     config :yt_search, repo, database: chapters_database_path
@@ -149,8 +151,6 @@ if config_env() == :prod do
         YtSearch.Data.SponsorblockRepo,
         YtSearch.Data.SponsorblockRepo.Replica1,
         YtSearch.Data.SponsorblockRepo.Replica2,
-        YtSearch.Data.SponsorblockRepo.Replica3,
-        YtSearch.Data.SponsorblockRepo.Replica4,
         YtSearch.Data.SponsorblockRepo.JanitorReplica
       ] do
     config :yt_search, repo, database: sponsorblock_database_path
