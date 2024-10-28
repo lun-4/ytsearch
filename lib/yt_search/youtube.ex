@@ -55,6 +55,44 @@ defmodule YtSearch.Youtube do
     end
   end
 
+  defmodule ErrorVideoCounter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_error_videos,
+        help: "error video counter",
+        labels: [:code]
+      )
+    end
+
+    def inc(code) do
+      Counter.inc(
+        name: :yts_error_videos,
+        labels: [to_string(code)]
+      )
+    end
+  end
+
+  defmodule UnavailableVideoCounter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_unavailable_video,
+        help: "unavailable video counter",
+        labels: [:code]
+      )
+    end
+
+    def inc(code) do
+      Counter.inc(
+        name: :yts_unavailable_video,
+        labels: [to_string(code)]
+      )
+    end
+  end
+
   # vrcjson does not support unbalanced braces inside strings
   # this has been reported to vrchat already
   #
@@ -667,6 +705,7 @@ defmodule YtSearch.Youtube do
         cond do
           String.contains?(message, "Video unavailable") ->
             Logger.warning("this is an unavailable youtube id")
+            UnavailableVideoCounter.inc(:unavailable)
             {:error, :video_unavailable}
 
           String.contains?(
@@ -674,58 +713,73 @@ defmodule YtSearch.Youtube do
             "This video is no longer available because the YouTube account associated"
           ) ->
             Logger.warning("video dead because channel dead")
+            UnavailableVideoCounter.inc(:dead_channel)
             {:error, :video_unavailable}
 
           String.contains?(message, "This channel does not exist") ->
             Logger.warning("this is a non existing channel")
+            UnavailableVideoCounter.inc(:non_existent_channel)
             {:error, :channel_not_found}
 
           String.contains?(message, "This video is only available to Music Premium members") ->
             Logger.warning("This video is only available to Music Premium members")
+            UnavailableVideoCounter.inc(:music_premium)
             {:error, :video_unavailable}
 
           String.contains?(message, "Premieres in") ->
             Logger.warning("it's a premiere! #{message}")
+            UnavailableVideoCounter.inc(:future_premiere)
             {:error, :video_unavailable}
 
           String.contains?(message, "Premiere will begin shortly") ->
             Logger.warning("it's a premiere! #{message}")
+            UnavailableVideoCounter.inc(:is_premiere)
             {:error, :video_unavailable}
 
           String.contains?(message, "This video is a paid video") ->
+            UnavailableVideoCounter.inc(:paid)
             {:error, :video_unavailable}
 
           String.contains?(message, "This live event will begin in") ->
             Logger.warning("it's a premiere livestream! #{message}")
+            UnavailableVideoCounter.inc(:future_premiere_livestream)
             {:error, :video_unavailable}
 
           String.contains?(message, "This live stream recording is not available") ->
+            UnavailableVideoCounter.inc(:unavailable_livestream_recording)
             {:error, :video_unavailable}
 
           String.contains?(message, "This age-restricted video cannot be watched") ->
             Logger.warning("this video is age restricted!")
+            UnavailableVideoCounter.inc(:age_restricted)
             {:error, :video_unavailable}
 
           String.contains?(message, "who has blocked it on copyright grounds") ->
             Logger.warning("this video is DMCA'd! #{message}")
+            UnavailableVideoCounter.inc(:dmca)
             {:error, :video_unavailable}
 
           String.contains?(message, "Could not get any stream.") ->
+            UnavailableVideoCounter.inc(:no_stream)
             {:error, :video_unavailable}
 
           String.contains?(message, "This video is private.") ->
+            UnavailableVideoCounter.inc(:private_video)
             {:error, :video_unavailable}
 
           String.contains?(message, "geo restriction checker") ->
+            UnavailableVideoCounter.inc(:geo_restriction_checker)
             {:error, :video_unavailable}
 
           String.contains?(message, "We're processing this video. Check back later.") ->
+            UnavailableVideoCounter.inc(:in_processing)
             {:error, :video_unavailable}
 
           String.contains?(
             message,
             "This video has been removed for violating YouTube's policy on nudity or sexual content"
           ) ->
+            UnavailableVideoCounter.inc(:nsfw)
             {:error, :video_unavailable}
 
           String.contains?(message, "This channel is not available") ->

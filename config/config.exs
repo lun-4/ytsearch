@@ -106,7 +106,9 @@ for repo <- repos do
     pool_size: 1,
     auto_vacuum: :incremental,
     telemetry_prefix: [:yt_search, :repo],
-    telemetry_event: [YtSearch.Repo.Instrumenter]
+    telemetry_event: [YtSearch.Repo.Instrumenter],
+    queue_target: 500,
+    queue_interval: 2000
 end
 
 config :prometheus, YtSearch.Repo.Instrumenter,

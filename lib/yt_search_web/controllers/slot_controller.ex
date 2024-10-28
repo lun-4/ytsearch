@@ -104,6 +104,8 @@ defmodule YtSearchWeb.SlotController do
       conn
       |> put_resp_header("yts-failure-code", error_code)
 
+    YtSearch.Youtube.ErrorVideoCounter.inc(error_code)
+
     # let ops override error videos so actual file sending is offloaded
     external_url =
       case System.fetch_env("YTS_ERROR_VIDEO_URL_#{error_code}") do
