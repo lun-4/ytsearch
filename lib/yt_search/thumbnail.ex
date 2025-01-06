@@ -115,7 +115,7 @@ defmodule YtSearch.Thumbnail do
           end)
 
           # let other ops run for a while
-          :timer.sleep(1000)
+          :timer.sleep(750)
           count
         end)
         |> Enum.sum()

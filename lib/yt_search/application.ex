@@ -100,7 +100,7 @@ defmodule YtSearch.Application do
     [
       [YtSearch.Subtitle.Cleaner, [every: 8 * 60, jitter: -60..60]],
       [YtSearch.Mp4Link.Janitor, [every: 20 * 60, jitter: (-2 * 60)..(5 * 60)]],
-      [YtSearch.Thumbnail.Janitor, [every: 3 * 60, jitter: (-2 * 60)..(2 * 60)]],
+      [YtSearch.Thumbnail.Janitor, [every: 2 * 60, jitter: 60..(1 * 60)]],
       [YtSearch.Repo.Janitor, [every: 60, jitter: -30..30]],
       [YtSearch.Chapters.Cleaner, [every: 1 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]],
       [YtSearch.AudioConfig.Cleaner, [every: 30 * 60, jitter: -60..60]]
