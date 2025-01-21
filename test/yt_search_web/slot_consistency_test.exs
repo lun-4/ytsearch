@@ -222,7 +222,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
         conn =
           Phoenix.ConnTest.build_conn()
           |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/api/v5/s/#{slot.id}")
+          |> get(~p"/api/v6/s/#{slot.id}")
 
         if :rand.uniform(100) < 30 do
           from(s in Subtitle,

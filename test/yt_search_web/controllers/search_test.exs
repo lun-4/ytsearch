@@ -176,7 +176,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+      |> get(~p"/api/v6/search?search=urban+rescue+ranch")
 
     resp_json = json_response(conn, 200)
     verify_search_results(resp_json)
@@ -185,7 +185,7 @@ defmodule YtSearchWeb.SearchTest do
 
     conn =
       conn
-      |> get("/api/v5/s/#{second_slot_id}")
+      |> get("/api/v6/s/#{second_slot_id}")
 
     assert get_resp_header(conn, "location") == ["https://youtube.com/watch?v=ClEcGfH1250"]
 
@@ -353,7 +353,7 @@ defmodule YtSearchWeb.SearchTest do
       conn =
         conn
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v5/search?search=whatever")
+        |> get(~p"/api/v6/search?search=whatever")
 
       rjson = json_response(conn, 200)
       first_result = rjson["search_results"] |> Enum.at(0)
@@ -375,7 +375,7 @@ defmodule YtSearchWeb.SearchTest do
       conn =
         build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/api/v5/search?search=whatever")
+        |> get(~p"/api/v6/search?search=whatever")
 
       rjson = json_response(conn, 200)
       first_result = rjson["search_results"] |> Enum.at(0)
@@ -417,7 +417,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+      |> get(~p"/api/v6/search?search=urban+rescue+ranch")
 
     resp_json = json_response(conn, 200)
     # it must NOT call the nextpage handler, yet.
@@ -432,14 +432,14 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search/#{nextpage_slot}")
+      |> get(~p"/api/v6/search/#{nextpage_slot}")
 
     resp_json = json_response(conn, 200)
 
     conn2 =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search/#{nextpage_slot}")
+      |> get(~p"/api/v6/search/#{nextpage_slot}")
 
     resp_json2 = json_response(conn2, 200)
     assert :ets.lookup(table, :nextpage) == [nextpage: 1]
@@ -453,7 +453,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search/#{nextpage_slot}")
+      |> get(~p"/api/v6/search/#{nextpage_slot}")
 
     resp_json = json_response(conn, 200)
     assert :ets.lookup(table, :nextpage) == [nextpage: 2]
@@ -491,7 +491,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/api/v5/search?search=urban+rescue+ranch")
+      |> get(~p"/api/v6/search?search=urban+rescue+ranch")
 
     resp_json = json_response(conn, 200)
     # it must NOT call the channel nextpage handler, yet.

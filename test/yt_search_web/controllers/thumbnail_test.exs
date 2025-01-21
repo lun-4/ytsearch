@@ -84,7 +84,7 @@ defmodule YtSearchWeb.ThumbnailTest do
 
     conn =
       conn
-      |> get(~p"/api/v5/tn/#{slot.id}")
+      |> get(~p"/api/v6/tn/#{slot.id}")
 
     assert conn.status == 200
   end

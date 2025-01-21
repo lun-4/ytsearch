@@ -129,7 +129,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       conn
-      |> get(~p"/api/v5/sr/#{slot.id}")
+      |> get(~p"/api/v6/sr/#{slot.id}")
 
     assert conn.status == 302
 
@@ -467,7 +467,7 @@ defmodule YtSearchWeb.SlotTest do
     |> Enum.map(fn _ ->
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
-        |> get(~p"/api/v5/sr/#{slot.id}")
+        |> get(~p"/api/v6/sr/#{slot.id}")
       end)
     end)
     |> Enum.map(fn task ->
