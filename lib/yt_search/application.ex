@@ -43,6 +43,8 @@ defmodule YtSearch.Application do
 
   @impl true
   def start(_type, _args) do
+    :erlang.system_flag(:microstate_accounting, true)
+
     File.mkdir_p!("thumbnails")
 
     children_before_repos =
