@@ -17,6 +17,18 @@ defmodule YtSearch.Constants do
     end)
   end
 
+  def fetch! do
+    {:ok, v} = Application.fetch_env(:yt_search, __MODULE__)
+    v
+  end
+
+  def merge_and_apply(new_constants) do
+    fetch!()
+    |> Keyword.merge(new_constants)
+    |> IO.inspect(label: "merged constants")
+    |> apply
+  end
+
   def apply(new_constants) do
     cron_callback(YtSearch.Application.janitor_specs(), new_constants[:enable_periodic_janitors])
 
