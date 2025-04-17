@@ -143,14 +143,15 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
 
     YtSearch.Slot.fetch_by_id(666)
     |> Ecto.Changeset.change(%{
-      expires_at: ~N[2025-01-01 00:00:00],
-      used_at: ~N[2020-01-01 00:00:00]
+      # even greater past
+      expires_at: future |> NaiveDateTime.add(100_000, :day),
+      used_at: past |> NaiveDateTime.add(-100_000, :minute)
     })
     |> YtSearch.Data.SlotRepo.update!()
 
     slot = YtSearch.Slot.fetch_by_id(666)
     assert slot != nil
-    # it should force-expire 666 due to used_at being set in the future
+    # it should force-expire 666 due to used_at being set in the very far past
     YtSearch.SlotUtilities.generate_id_v3(YtSearch.Slot)
     slot = YtSearch.Slot.fetch_by_id(666)
     assert slot == nil

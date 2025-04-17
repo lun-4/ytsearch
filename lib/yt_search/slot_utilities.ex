@@ -142,6 +142,10 @@ defmodule YtSearch.SlotUtilities do
     end)
     |> enum_fn.(fn {_slot, delta} -> delta end)
     |> then(fn {_slot, delta} ->
+      Logger.debug(
+        "register_worst_by_field #{inspect(target)} #{inspect(module)} #{inspect(delta)}"
+      )
+
       RecycledSlotAge.register_delta(target, module, delta)
     end)
   end
@@ -157,6 +161,8 @@ defmodule YtSearch.SlotUtilities do
     |> repo(module).replica().all()
     |> then(fn
       [] ->
+        Logger.debug("no expired slots, force expiring...")
+
         from(s in module,
           select: s,
           where: not s.keepalive,
@@ -197,6 +203,8 @@ defmodule YtSearch.SlotUtilities do
               slot.id
             end)
 
+          Logger.debug("force expiring #{inspect(slot_ids)}")
+
           from(s in module,
             update: [set: [expires_at: ^~N[2020-01-01 00:00:00]]],
             where: s.id in ^slot_ids
@@ -212,10 +220,12 @@ defmodule YtSearch.SlotUtilities do
             raise "there are no N-oldest-used slots. this is an incorrect state"
 
           id ->
+            Logger.debug("received force-expired slot #{id}")
             {:ok, id}
         end)
 
       [expired_slot | _] ->
+        Logger.debug("received expired slot #{expired_slot.id}")
         {:ok, expired_slot.id}
     end)
   end
