@@ -66,7 +66,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/sr/#{slot.id}")
+      |> get(~p"/a/6/sr/#{slot.id}")
 
     resp_json = json_response(conn, 200)
     assert resp_json["subtitle_data"] == nil
@@ -80,7 +80,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       Task.async(fn ->
         Phoenix.ConnTest.build_conn()
         |> put_req_header("user-agent", "UnityWebRequest")
-        |> get(~p"/a/5/sr/#{slot.id}")
+        |> get(~p"/a/6/sr/#{slot.id}")
       end)
     end)
     |> Enum.map(fn task ->
@@ -93,7 +93,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
     resp_json =
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/sr/#{slot.id}")
+      |> get(~p"/a/6/sr/#{slot.id}")
       |> json_response(200)
 
     assert resp_json["subtitle_data"] == nil
@@ -105,7 +105,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   } do
     conn =
       conn
-      |> get(~p"/a/5/sr/#{slot.id}")
+      |> get(~p"/a/6/sr/#{slot.id}")
 
     assert response_content_type(conn, :mp4)
     assert response(conn, 200) != nil
@@ -119,7 +119,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
        } do
     conn =
       conn
-      |> get(~p"/a/5/sr/#{slot.id}")
+      |> get(~p"/a/6/sr/#{slot.id}")
 
     assert response_content_type(conn, :mp4)
     assert response(conn, 200) != nil
@@ -129,7 +129,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   test "it 404s on unavailable channels", %{conn: conn, unavailable_channel_slot: channel_slot} do
     conn =
       conn
-      |> get(~p"/a/5/c/#{channel_slot.id}")
+      |> get(~p"/a/6/c/#{channel_slot.id}")
 
     assert json_response(conn, 404)["detail"] == "channel unavailable"
   end
@@ -137,7 +137,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
   test "it 404s on non-existing channels", %{conn: conn, notfound_channel_slot: channel_slot} do
     conn =
       conn
-      |> get(~p"/a/5/c/#{channel_slot.id}")
+      |> get(~p"/a/6/c/#{channel_slot.id}")
 
     assert json_response(conn, 404)["detail"] == "channel not found"
   end
@@ -149,7 +149,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
        } do
     conn =
       conn
-      |> get(~p"/a/5/sr/#{slot.id}")
+      |> get(~p"/a/6/sr/#{slot.id}")
 
     assert response_content_type(conn, :mp4)
     assert response(conn, 200) != nil

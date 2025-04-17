@@ -111,7 +111,7 @@ defmodule YtSearchWeb.SlotConsistencyTest do
 
         conn =
           Phoenix.ConnTest.build_conn()
-          |> get(~p"/a/5/sr/#{slot.id}")
+          |> get(~p"/a/6/sr/#{slot.id}")
 
         if :rand.uniform(100) < 30 do
           from(s in Mp4Link,

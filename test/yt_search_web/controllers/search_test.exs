@@ -195,7 +195,7 @@ defmodule YtSearchWeb.SearchTest do
 
     conn =
       conn
-      |> get("/a/5/c/#{first_slot_id}")
+      |> get("/a/6/c/#{first_slot_id}")
 
     verify_channel_results(json_response(conn, 200))
   end
@@ -209,7 +209,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     assert verify_search_results(json_response(conn, 200))
   end
@@ -217,7 +217,7 @@ defmodule YtSearchWeb.SearchTest do
   test "fails on non-UnityWebRequest", %{conn: conn} do
     conn =
       conn
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     rjson = json_response(conn, 400)
     assert rjson["error"]
@@ -247,7 +247,7 @@ defmodule YtSearchWeb.SearchTest do
         Task.async(fn ->
           Phoenix.ConnTest.build_conn()
           |> put_req_header("user-agent", "UnityWebRequest")
-          |> get(~p"/a/5/s?q=amongus_test")
+          |> get(~p"/a/6/s?q=amongus_test")
         end)
       end)
       |> Enum.map(fn task ->
@@ -270,7 +270,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=amongus_test")
+      |> get(~p"/a/6/s?q=amongus_test")
 
     resp_json = json_response(conn, 200)
     verify_search_results(resp_json)
@@ -287,7 +287,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=whatever")
+      |> get(~p"/a/6/s?q=whatever")
 
     rjson = json_response(conn, 200)
 
@@ -309,7 +309,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=whatever")
+      |> get(~p"/a/6/s?q=whatever")
 
     rjson = json_response(conn, 200)
 
@@ -331,7 +331,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=amongus_test%233")
+      |> get(~p"/a/6/s?q=amongus_test%233")
 
     json_response(conn, 200)
   end
@@ -507,7 +507,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/c/#{channel_slot}")
+      |> get(~p"/a/6/c/#{channel_slot}")
 
     resp_json = json_response(conn, 200)
     assert :ets.lookup(table, :nextpage) == []
@@ -520,14 +520,14 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot}")
+      |> get(~p"/a/6/r/#{nextpage_slot}")
 
     resp_json = json_response(conn, 200)
 
     conn2 =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot}")
+      |> get(~p"/a/6/r/#{nextpage_slot}")
 
     resp_json2 = json_response(conn2, 200)
     assert :ets.lookup(table, :channel_nextpage) == [channel_nextpage: 1]
@@ -541,7 +541,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot}")
+      |> get(~p"/a/6/r/#{nextpage_slot}")
 
     resp_json = json_response(conn, 200)
     assert :ets.lookup(table, :channel_nextpage) == [channel_nextpage: 2]
@@ -645,7 +645,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     rjson_before = json_response(conn, 200)
 
@@ -660,7 +660,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+      |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     _ = json_response(conn, 200)
 
@@ -681,7 +681,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     rjson_after = json_response(conn, 200)
 
@@ -730,7 +730,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     rjson_root = json_response(conn, 200)
 
@@ -739,7 +739,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+      |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     _ = json_response(conn, 200)
 
@@ -751,7 +751,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+      |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     _ = json_response(conn, 200)
 
@@ -831,7 +831,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     rjson = json_response(conn, 200)
     slot = rjson["slot_id"] |> SearchSlot.fetch()
@@ -850,7 +850,7 @@ defmodule YtSearchWeb.SearchTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=urban+rescue+ranch")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
 
     rjson = json_response(conn, 200)
     slot_after = rjson["slot_id"] |> SearchSlot.fetch()

@@ -63,7 +63,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
     |> Enum.map(fn case ->
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=#{case}")
+      |> get(~p"/a/6/s?q=#{case}")
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)
@@ -85,7 +85,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
     |> Enum.map(fn case ->
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=#{case}")
+      |> get(~p"/a/6/s?q=#{case}")
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)
@@ -113,7 +113,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
     |> Enum.map(fn case ->
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=#{case}")
+      |> get(~p"/a/6/s?q=#{case}")
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)
@@ -130,7 +130,7 @@ defmodule YtSearchWeb.SearchWithURLTest do
     |> Enum.map(fn case ->
       Phoenix.ConnTest.build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=#{case}")
+      |> get(~p"/a/6/s?q=#{case}")
     end)
     |> Enum.map(fn conn ->
       resp_json = json_response(conn, 200)

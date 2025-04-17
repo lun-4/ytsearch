@@ -26,7 +26,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=anything")
+      |> get(~p"/a/6/s?q=anything")
 
     rjson = json_response(conn, 200)
     first_result = rjson["search_results"] |> Enum.at(0)
@@ -38,7 +38,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
 
     conn =
       conn
-      |> get(~p"/a/5/p/#{first_result_slot_id}")
+      |> get(~p"/a/6/p/#{first_result_slot_id}")
 
     rjson = json_response(conn, 200)
     first_result = rjson["search_results"] |> Enum.at(0)
@@ -49,7 +49,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
   test "it 404s on unknown playlist ids", %{conn: conn} do
     conn =
       conn
-      |> get(~p"/a/5/p/18247")
+      |> get(~p"/a/6/p/18247")
 
     assert conn.status == 404
   end
@@ -90,7 +90,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     conn =
       conn
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/s?q=anything")
+      |> get(~p"/a/6/s?q=anything")
 
     rjson = json_response(conn, 200)
     first_result = rjson["search_results"] |> Enum.at(0)
@@ -101,7 +101,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/p/#{playlist_slot_id}")
+      |> get(~p"/a/6/p/#{playlist_slot_id}")
 
     rjson = json_response(conn, 200)
     assert :ets.lookup(table, :playlist_nextpage) == []
@@ -113,14 +113,14 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+      |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     rjson = json_response(conn, 200)
 
     conn2 =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+      |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     rjson2 = json_response(conn2, 200)
     assert rjson |> Map.delete("__x_request_id") == rjson2 |> Map.delete("__x_request_id")
@@ -134,7 +134,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     conn =
       build_conn()
       |> put_req_header("user-agent", "UnityWebRequest")
-      |> get(~p"/a/5/r/#{nextpage_slot_id}")
+      |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     rjson = json_response(conn, 200)
     assert :ets.lookup(table, :playlist_nextpage) == [playlist_nextpage: 2]
