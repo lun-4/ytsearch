@@ -114,6 +114,15 @@ defmodule YtSearchWeb.SlotTest do
     # as i still hold a pid of the link, i can fetch it again and it should give the old url
     {:ok, link} = YtSearch.MetadataExtractor.Worker.mp4_link(extractor)
     assert link.mp4_link == @expected_run1_url
+
+    # browsers can get the youtube link instead of the mp5.com link
+    conn =
+      build_conn()
+      |> put_req_header("user-agent", "stagefright/1.2 (Linux;Android 12)")
+      |> put_req_header("accept-encoding", "deflate")
+      |> get(~p"/a/6/sr/#{slot.id}")
+
+    assert get_resp_header(conn, "location") == ["https://mp5.com"]
   end
 
   test "it always spits out mp4 redirect for /sr/", %{conn: conn} do
@@ -488,13 +497,15 @@ defmodule YtSearchWeb.SlotTest do
       )
 
     # assert its still on db
-    from_db = LinkRepo.one!(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    from_db =
+      LinkRepo.one!(from(s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s))
+
     assert from_db.youtube_id == link.youtube_id
     assert NaiveDateTime.diff(from_db.inserted_at, NaiveDateTime.utc_now()) >= 0
 
     YtSearch.Mp4Link.Janitor.tick()
 
-    from_db = LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    from_db = LinkRepo.one(from(s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s))
     assert from_db.youtube_id == link.youtube_id
 
     # update then check
@@ -508,7 +519,7 @@ defmodule YtSearchWeb.SlotTest do
     |> LinkRepo.update!()
 
     YtSearch.Mp4Link.Janitor.tick()
-    from_db = LinkRepo.one(from s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s)
+    from_db = LinkRepo.one(from(s in Mp4Link, where: s.youtube_id == ^link.youtube_id, select: s))
     assert from_db == nil
   end
 
@@ -527,7 +538,7 @@ defmodule YtSearchWeb.SlotTest do
     assert Slot.fetch_by_id(slot.id) == nil
 
     # assert its still on db
-    from_db = SlotRepo.one!(from s in Slot, where: s.id == ^slot.id, select: s)
+    from_db = SlotRepo.one!(from(s in Slot, where: s.id == ^slot.id, select: s))
     assert from_db.id == slot.id
   end
 

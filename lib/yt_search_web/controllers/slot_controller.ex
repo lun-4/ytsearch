@@ -183,9 +183,13 @@ defmodule YtSearchWeb.SlotController do
         redirect_to(conn, nil)
 
       slot ->
-        case UserAgent.for(conn) do
+        case UserAgent.on(conn) do
           :unity ->
             do_slot_metadata(conn, slot)
+
+          :browser ->
+            conn
+            |> redirect(external: slot |> Slot.youtube_url())
 
           _ ->
             case YtSearch.Slot.type(slot) do

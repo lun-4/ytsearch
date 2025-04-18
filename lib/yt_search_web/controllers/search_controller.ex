@@ -11,7 +11,7 @@ defmodule YtSearchWeb.SearchController do
   alias YtSearchWeb.UserAgent
 
   def search_by_text(conn, _params) do
-    case UserAgent.for(conn) do
+    case UserAgent.on(conn) do
       :unity ->
         case conn.query_params["search"] || conn.query_params["q"] do
           nil ->
@@ -35,7 +35,7 @@ defmodule YtSearchWeb.SearchController do
   end
 
   def search_by_id(conn, %{"id" => id}) do
-    case UserAgent.for(conn) do
+    case UserAgent.on(conn) do
       :unity ->
         do_search_by_slot(conn, id)
 
