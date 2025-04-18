@@ -22,9 +22,8 @@ defmodule YtSearchWeb.UserAgent do
       String.contains?(agent, "UnityWebRequest") ->
         :unity
 
-      # VRC stringloader has "deflate, gzip", but "br" (brotli) is usually made for browser
-      # and "zstd" is too new
-      String.contains?(accept_encoding, "br") or String.contains?(accept_encoding, "zstd") ->
+      # TODO find out a reliable way to distinct yt-dlp and browsers (i dont think ill be able to figure that one out)
+      String.contains?(accept_encoding, "1231231231231231") ->
         :browser
 
       true ->

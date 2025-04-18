@@ -187,10 +187,6 @@ defmodule YtSearchWeb.SlotController do
           :unity ->
             do_slot_metadata(conn, slot)
 
-          :browser ->
-            conn
-            |> redirect(external: slot |> Slot.youtube_url())
-
           _ ->
             case YtSearch.Slot.type(slot) do
               :video ->
