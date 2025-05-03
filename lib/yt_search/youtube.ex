@@ -29,12 +29,24 @@ defmodule YtSearch.Youtube do
         help: "responses from upstream youtube",
         labels: [:type, :status_code]
       )
+
+      Counter.declare(
+        name: :yts_ytdlp_search_results,
+        help: "amount of results"
+      )
     end
 
     def inc(type) do
       Counter.inc(
         name: :yts_ytdlp_call_count,
         labels: [to_string(type)]
+      )
+    end
+
+    def search_results(results) do
+      Counter.inc(
+        [name: :yts_ytdlp_search_results],
+        length(results)
       )
     end
 
@@ -619,6 +631,14 @@ defmodule YtSearch.Youtube do
             v
         end
     end
+    |> then(fn
+      {:ok, results} ->
+        CallCounter.search_results(results)
+        {:ok, results}
+
+      v ->
+        v
+    end)
   end
 
   defp do_a_search(
