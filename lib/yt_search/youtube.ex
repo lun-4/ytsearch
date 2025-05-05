@@ -682,6 +682,14 @@ defmodule YtSearch.Youtube do
          end
        )}
     end
+    |> then(fn
+      {:ok, %{results: results}} = v ->
+        CallCounter.search_results(results)
+        v
+
+      v ->
+        v
+    end)
   end
 
   defp piped_call(call_type, func, id, opts) do
