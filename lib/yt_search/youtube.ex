@@ -34,6 +34,11 @@ defmodule YtSearch.Youtube do
         name: :yts_ytdlp_search_results,
         help: "amount of results"
       )
+
+      Counter.declare(
+        name: :yts_ytdlp_search_requests,
+        help: "amount of requests (for amount of results)"
+      )
     end
 
     def inc(type) do
@@ -44,6 +49,11 @@ defmodule YtSearch.Youtube do
     end
 
     def search_results(results) do
+      Counter.inc(
+        [name: :yts_ytdlp_search_requests],
+        1
+      )
+
       Counter.inc(
         [name: :yts_ytdlp_search_results],
         length(results)
