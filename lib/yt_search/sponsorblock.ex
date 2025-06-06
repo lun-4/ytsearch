@@ -3,8 +3,8 @@ defmodule YtSearch.Sponsorblock do
 
   use Tesla
 
-  plug Tesla.Middleware.Headers, [{"accept", "application/json"}]
-  plug Tesla.Middleware.JSON
+  plug(Tesla.Middleware.Headers, [{"accept", "application/json"}])
+  plug(Tesla.Middleware.JSON)
 
   def categories() do
     [
@@ -25,7 +25,8 @@ defmodule YtSearch.Sponsorblock do
 
   def skip_segments(api_url, youtube_id) do
     get(
-      "#{api_url}/api/skipSegments?videoID=#{youtube_id}&categories=#{encoded_categories()}",
+      "#{api_url}/api/skipSegments",
+      query: [videoID: youtube_id, categories: encoded_categories()],
       opts: [adapter: [recv_timeout: 3000]]
     )
   end
