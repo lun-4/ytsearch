@@ -238,10 +238,9 @@ defmodule YtSearchWeb.SlotTest do
     slot = insert_slot()
 
     mock_global(fn
-      %{method: :get, url: "sb.example.org/api/skipSegments?" <> query} = env ->
-        query_args = query |> URI.decode_query()
-        youtube_id = query_args |> Map.get("videoID")
-        categories = query_args |> Map.get("categories") |> Jason.decode!() |> MapSet.new()
+      %{method: :get, url: "sb.example.org/api/skipSegments", query: query_args} = env ->
+        youtube_id = query_args |> Keyword.get(:videoID)
+        categories = query_args |> Keyword.get(:categories) |> Jason.decode!() |> MapSet.new()
 
         correct_categories? =
           MapSet.difference(
