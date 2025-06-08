@@ -44,8 +44,13 @@ defmodule YtSearchWeb.VideoUnavailableTest do
       %{method: :get, url: "example.org/streams/#{@upcoming_livestream_id}"} ->
         json(Jason.decode!(@upcoming_livestream_json), status: 500)
 
-      %{method: :get, url: "sb.example.org/api/skipSegments?videoID=#{@no_subtitles_id}" <> _rest} ->
-        json([])
+      %{method: :get, url: "sb.example.org/api/skipSegments", query: query_args} = env ->
+        youtube_id = query_args |> Keyword.get(:videoID)
+        if youtube_id == @no_subtitles_id do
+          json([])
+        else
+          env
+        end
     end)
 
     %{

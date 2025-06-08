@@ -173,8 +173,8 @@ defmodule YtSearchWeb.SlotConsistencyTest do
           env
         end
 
-      %{method: :get, url: "sb.example.org/api/skipSegments?videoID=" <> rest} = env ->
-        youtube_id = rest |> String.split("&") |> Enum.at(0)
+      %{method: :get, url: "sb.example.org/api/skipSegments", query: query_args} = env ->
+        youtube_id = query_args |> Keyword.get(:videoID)
 
         if youtube_id == slot.youtube_id do
           json([
