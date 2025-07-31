@@ -200,6 +200,21 @@ defmodule YtSearchWeb.SlotController do
     end
   end
 
+  def fetch_redirect_yt(conn, %{"slot_id" => slot_id_query}) do
+    {slot_id, _} = slot_id_query |> Integer.parse()
+
+    case Slot.fetch_by_id(slot_id) do
+      nil ->
+        Logger.warning("unavailable (not found)")
+        redirect_to(conn, nil)
+
+      slot ->
+        # always redirect
+        conn
+        |> redirect(external: slot |> Slot.youtube_url())
+    end
+  end
+
   def fetch_stream_redirect(conn, args) do
     conn
     |> assign(:want_stream, true)

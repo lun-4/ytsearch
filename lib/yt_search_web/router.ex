@@ -16,6 +16,7 @@ defmodule YtSearchWeb.Router do
     get("/p/:playlist_slot_id", SearchController, :fetch_playlist)
     get("/s/:slot_id", SlotController, :fetch_video)
     get("/sr/:slot_id", SlotController, :fetch_redirect)
+    get("/yt/:slot_id", SlotController, :fetch_redirect_yt)
     get("/tn/:slot_id", AtlasController, :fetch_single_thumbnail)
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
