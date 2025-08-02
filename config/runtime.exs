@@ -204,6 +204,20 @@ if config_env() == :prod do
     config :yt_search, repo, database: audio_configs_database_path
   end
 
+  counter_database_path =
+    System.get_env("COUNTER_DATABASE_PATH") ||
+      raise """
+      environment variable COUNTER_DATABASE_PATH is missing.
+      For example: /etc/yt_search/yt_search_counter.db
+      """
+
+  for repo <- [
+        YtSearch.Data.CounterRepo,
+        YtSearch.Data.CounterRepo.Replica1
+      ] do
+    config :yt_search, repo, database: counter_database_path
+  end
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want
