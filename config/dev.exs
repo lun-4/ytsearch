@@ -74,6 +74,13 @@ import Config
       YtSearch.Data.AudioConfigRepo.JanitorReplica
     ],
     "audio_configs"
+  },
+  {
+    [
+      YtSearch.Data.CounterRepo,
+      YtSearch.Data.CounterRepo.Replica1
+    ],
+    "counter"
   }
 ]
 |> Enum.each(fn {repos, name} ->

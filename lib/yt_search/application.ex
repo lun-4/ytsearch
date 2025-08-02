@@ -81,6 +81,7 @@ defmodule YtSearch.Application do
           start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
         },
         {Cachex, name: :tabs},
+        YtSearch.CounterServer,
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
