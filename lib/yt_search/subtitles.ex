@@ -14,25 +14,48 @@ defmodule YtSearch.Subtitle do
     field(:youtube_id, :string, primary_key: true, autogenerate: false)
     field(:language, :string, primary_key: true)
     field(:subtitle_data, :string)
+    field(:cta, :map)
     timestamps()
   end
 
-  @spec fetch(String.t()) :: [Subtitle.t()]
+  @spec fetch(String.t()) :: [t()]
   def fetch(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
     SubtitleRepo.replica().all(query)
   end
 
-  @spec insert(String.t(), String.t(), String.t() | nil) :: Subtitle.t()
-  def insert(youtube_id, language, subtitle_data) do
-    %__MODULE__{youtube_id: youtube_id, language: language, subtitle_data: subtitle_data}
+  @spec insert(String.t(), String.t(), String.t() | nil, map()) :: t()
+  def insert(youtube_id, language, subtitle_data, cta) do
+    %__MODULE__{
+      youtube_id: youtube_id,
+      language: language,
+      subtitle_data: subtitle_data,
+      cta: cta
+    }
     |> SubtitleRepo.insert!(
       on_conflict: [
         set: [
-          subtitle_data: subtitle_data
+          subtitle_data: subtitle_data,
+          cta: cta
         ]
       ]
     )
+  end
+
+  def find_like_and_subscribe(%__MODULE__{subtitle_data: vtt}) do
+    find_like_and_subscribe(vtt)
+  end
+
+  def find_like_and_subscribe(vtt_content) when is_binary(vtt_content) do
+    YtSearch.Subtitle.CTAExtractor.detect_and_merge_engagement_prompts(vtt_content)
+  end
+
+  def parse_timestamp(timestamp) do
+    [hours, minutes, seconds] = String.split(timestamp, ":")
+
+    String.to_integer(hours) * 3600 +
+      String.to_integer(minutes) * 60 +
+      String.to_float(seconds)
   end
 
   defmodule Cleaner do

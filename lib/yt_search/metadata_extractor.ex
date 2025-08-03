@@ -202,7 +202,31 @@ defmodule YtSearch.MetadataExtractor.Worker do
       {:ok,
        subtitles
        |> Enum.map(fn {subtitle, data} ->
-         YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data)
+         cta =
+           YtSearch.Subtitle.find_like_and_subscribe(data)
+           |> Enum.map(fn entity ->
+             [start_ts, end_ts] = entity.timestamp |> String.split(" --> ")
+             start_ts = YtSearch.Subtitle.parse_timestamp(start_ts)
+             end_ts = max(start_ts + 5, YtSearch.Subtitle.parse_timestamp(end_ts))
+
+             %{
+               s: start_ts,
+               e: end_ts,
+               t:
+                 case entity.pattern_type do
+                   :like -> "l"
+                   :like_and_subscribe -> "ls"
+                   :subscribe -> "s"
+                   :bell_notification -> "b"
+                   :general_cta -> "g"
+                 end
+             }
+           end)
+           |> then(fn ctas ->
+             %{v: 1, ctas: ctas}
+           end)
+
+         YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data, cta)
        end)}
     end
   end
@@ -245,7 +269,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   defp process_error(error, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     Logger.error("failed to fetch subtitles: #{inspect(error)}. setting it as not found")
-    YtSearch.Subtitle.insert(youtube_id, "notfound", nil)
+    YtSearch.Subtitle.insert(youtube_id, "notfound", nil, %{v: 1, ctas: []})
     {:ok, []}
   end
 

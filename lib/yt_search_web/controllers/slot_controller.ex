@@ -248,7 +248,7 @@ defmodule YtSearchWeb.SlotController do
         do_audio_config(slot) |> Jason.decode!()
       end)
 
-    subtitle_data = maybe_await(subtitle_task)
+    subtitle = maybe_await(subtitle_task)
     sponsorblock_data = maybe_await(sponsorblock_task)
     chapters_data = maybe_await(chapters_task)
     audio_config = maybe_await(audio_config_task)
@@ -256,10 +256,21 @@ defmodule YtSearchWeb.SlotController do
     conn
     |> json(%{
       duration: slot.video_duration,
-      subtitle_data: subtitle_data,
+      subtitle_data:
+        if subtitle != nil do
+          subtitle.subtitle_data
+        else
+          nil
+        end,
       sponsorblock_segments: sponsorblock_data,
       chapters: chapters_data,
-      audio_config: audio_config
+      audio_config: audio_config,
+      ctas:
+        if subtitle != nil do
+          subtitle.cta["ctas"]
+        else
+          nil
+        end
     })
   end
 
@@ -306,7 +317,7 @@ defmodule YtSearchWeb.SlotController do
     else
       case valid_subtitle_from_list(subtitles) do
         nil -> :no_subtitles_found
-        subtitle -> subtitle.subtitle_data
+        subtitle -> subtitle
       end
     end
   end
@@ -328,7 +339,7 @@ defmodule YtSearchWeb.SlotController do
               if maybe_subtitle == nil do
                 nil
               else
-                maybe_subtitle.subtitle_data
+                maybe_subtitle
               end
             end)
 
