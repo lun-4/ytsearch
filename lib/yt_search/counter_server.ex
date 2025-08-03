@@ -71,8 +71,8 @@ defmodule YtSearch.CounterServer do
   def init(state) do
     Logger.info("CounterServer started")
 
+    send(self(), :snapshot)
     Process.send_after(self(), :flush_to_db, @batch_interval)
-    Process.send_after(self(), :snapshot, @snapshot_interval)
     {:ok, state}
   end
 
