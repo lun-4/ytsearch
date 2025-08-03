@@ -2,19 +2,23 @@ defmodule YtSearch.CounterServer do
   use GenServer
   require Logger
   alias YtSearch.Counter
+  alias YtSearch.BoundedQueue
 
-  # 10 seconds in milliseconds
+  # 10s
   @batch_interval 10_000
+  # 1s
+  @snapshot_interval 1000
+  @max_snapshot_size 600
 
   defstruct [
-    :previous_delta,
-    :pending_delta
+    :pending_delta,
+    :snapshots
   ]
 
   def start_link(_opts) do
     GenServer.start_link(
       __MODULE__,
-      %__MODULE__{previous_delta: 0, pending_delta: 0},
+      %__MODULE__{pending_delta: 0, snapshots: YtSearch.BoundedQueue.new(@max_snapshot_size)},
       name: __MODULE__
     )
   end
@@ -68,6 +72,7 @@ defmodule YtSearch.CounterServer do
     Logger.info("CounterServer started")
 
     Process.send_after(self(), :flush_to_db, @batch_interval)
+    Process.send_after(self(), :snapshot, @snapshot_interval)
     {:ok, state}
   end
 
@@ -88,11 +93,16 @@ defmodule YtSearch.CounterServer do
     current_value = db_value + state.pending_delta
 
     YtSearch.CounterServer.Metrics.set_db(db_value)
+    timestamp = System.os_time(:millisecond) / 1000
 
     {:reply,
      %{
+       time: timestamp,
        counter: current_value,
-       rate: state.previous_delta / 10
+       snapshots:
+         state.snapshots
+         |> BoundedQueue.to_list()
+         |> Enum.map(fn {t, c} -> %{t: t, c: c} end)
      }, state}
   end
 
@@ -106,7 +116,17 @@ defmodule YtSearch.CounterServer do
     end
 
     Process.send_after(self(), :flush_to_db, @batch_interval)
-    {:noreply, %{state | previous_delta: pending_delta, pending_delta: 0}}
+    {:noreply, %{state | pending_delta: 0}}
+  end
+
+  @impl true
+  def handle_info(:snapshot, %__MODULE__{} = state) do
+    db_value = Counter.get_value()
+    current_value = db_value + state.pending_delta
+    timestamp = System.os_time(:millisecond) / 1000
+    snapshot = {timestamp, current_value}
+    Process.send_after(self(), :snapshot, @snapshot_interval)
+    {:noreply, Map.put(state, :snapshots, BoundedQueue.enqueue(state.snapshots, snapshot))}
   end
 
   @impl true
