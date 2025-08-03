@@ -120,13 +120,13 @@ defmodule YtSearch.CounterServer do
   end
 
   @impl true
-  def handle_info(:snapshot, %__MODULE__{} = state) do
+  def handle_info(:snapshot, %__MODULE__{pending_delta: pending_delta} = state) do
     db_value = Counter.get_value()
-    current_value = db_value + state.pending_delta
+    current_value = db_value + pending_delta
     timestamp = System.os_time(:millisecond) / 1000
     snapshot = {timestamp, current_value}
     Process.send_after(self(), :snapshot, @snapshot_interval)
-    {:noreply, Map.put(state, :snapshots, BoundedQueue.enqueue(state.snapshots, snapshot))}
+    {:noreply, %{state | snapshots: BoundedQueue.enqueue(state.snapshots, snapshot)}}
   end
 
   @impl true
