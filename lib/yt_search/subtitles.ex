@@ -14,6 +14,10 @@ defmodule YtSearch.Subtitle do
     field(:youtube_id, :string, primary_key: true, autogenerate: false)
     field(:language, :string, primary_key: true)
     field(:subtitle_data, :string)
+    # NOTE: i chose a map here for ease of use, but it is possible (although unlikely)
+    # that map serialization-deserialization may cause issues later on in terms
+    # of CPU usage. if those happen, then i shall find a better way to store CTAs.
+    # until then, it'd be premature optimization
     field(:cta, :map)
     timestamps()
   end
