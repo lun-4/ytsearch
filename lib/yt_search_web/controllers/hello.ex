@@ -6,13 +6,15 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.SearchSlot
   alias YtSearch.Youtube
   alias YtSearchWeb.Playlist
+  alias YtSearch.CounterServer
 
   def hello(conn, params) do
     __MODULE__.BuildReporter.increment(params["build_number"] || "<unknown>")
     trending_tab = fetch_trending_tab()
+    counter_value = CounterServer.get_value()
 
     conn
-    |> json(%{online: true, trending_tab: trending_tab})
+    |> json(%{online: true, trending_tab: trending_tab, counter_data: counter_value})
   end
 
   def fetch_trending_tab(v \\ nil) do
@@ -98,10 +100,7 @@ defmodule YtSearchWeb.HelloController do
           Cachex.put(
             :tabs,
             "trending",
-            case data do
-              nil -> :nothing
-              v -> v
-            end,
+            data,
             # 2 hours
             ttl: 2 * 60 * 60 * 1000
           )
