@@ -29,6 +29,38 @@ defmodule YtSearch.CounterServer do
     GenServer.call(__MODULE__, :get_value)
   end
 
+  ## prom metrics
+
+  defmodule Metrics do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_global_counter,
+        help: "hehehe number (incremented on request)"
+      )
+
+      Gauge.declare(
+        name: :yts_global_counter_db,
+        help: "hehehe number (from db)"
+      )
+    end
+
+    def increment(value) do
+      Counter.inc(
+        [name: :yts_global_counter],
+        value
+      )
+    end
+
+    def set_db(value) do
+      Gauge.set(
+        [name: :yts_global_counter_db],
+        value
+      )
+    end
+  end
+
   ## GenServer callbacks
 
   @impl true
@@ -44,6 +76,7 @@ defmodule YtSearch.CounterServer do
         {:increment, delta},
         %__MODULE__{pending_delta: pending_delta} = state
       ) do
+    YtSearch.CounterServer.Metrics.increment(delta)
     new_pending_delta = pending_delta + round(delta)
     {:noreply, %{state | pending_delta: new_pending_delta}}
   end
@@ -53,6 +86,8 @@ defmodule YtSearch.CounterServer do
     # Get current value from database and add any pending delta, return as float for JSON
     db_value = Counter.get_value()
     current_value = db_value + state.pending_delta
+
+    YtSearch.CounterServer.Metrics.set_db(db_value)
 
     {:reply,
      %{
@@ -66,7 +101,8 @@ defmodule YtSearch.CounterServer do
     Logger.debug("Flushing counter delta #{pending_delta} to database")
 
     if pending_delta != 0 do
-      Counter.increment(pending_delta)
+      new_counter_entity = Counter.increment(pending_delta)
+      YtSearch.CounterServer.Metrics.set_db(new_counter_entity.value)
     end
 
     Process.send_after(self(), :flush_to_db, @batch_interval)

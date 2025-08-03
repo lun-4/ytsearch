@@ -26,7 +26,7 @@ defmodule YtSearch.Counter do
 
   @spec get_counter() :: t() | nil
   def get_counter() do
-    query = from c in __MODULE__, where: c.id == 1, select: c
+    query = from(c in __MODULE__, where: c.id == 1, select: c)
     CounterRepo.one(query)
   end
 
@@ -44,7 +44,7 @@ defmodule YtSearch.Counter do
         else
           # Update existing counter with bounds 0-1000
           new_value = min(1000, max(0, counter.value + int_delta))
-          
+
           counter
           |> changeset(%{value: new_value})
           |> CounterRepo.update!()

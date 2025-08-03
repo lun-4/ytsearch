@@ -185,6 +185,7 @@ defmodule YtSearch.Application do
     YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
     YtSearch.Repo.FreelistMeter.Gauge.setup()
     YtSearch.SlotUtilities.RecycledSlotAge.setup()
+    YtSearch.CounterServer.Metrics.setup()
 
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()
