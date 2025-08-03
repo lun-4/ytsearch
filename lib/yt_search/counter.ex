@@ -42,8 +42,7 @@ defmodule YtSearch.Counter do
           %__MODULE__{id: 1, value: int_delta}
           |> CounterRepo.insert!()
         else
-          # Update existing counter with bounds 0-1000
-          new_value = min(1000, max(0, counter.value + int_delta))
+          new_value = counter.value + int_delta
 
           counter
           |> changeset(%{value: new_value})
