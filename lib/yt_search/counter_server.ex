@@ -124,9 +124,12 @@ defmodule YtSearch.CounterServer do
     db_value = Counter.get_value()
     current_value = db_value + state.pending_delta
 
+    timestamp = System.os_time(:millisecond) / 1000
+
     new_snapshots =
-      -@max_snapshot_size..-1
-      |> Enum.reduce(state.snapshots, fn fake_t, snapshots ->
+      @max_snapshot_size..1//-1
+      |> Enum.reduce(state.snapshots, fn t_offset, snapshots ->
+        fake_t = timestamp - t_offset
         BoundedQueue.enqueue(snapshots, {fake_t, current_value})
       end)
 
