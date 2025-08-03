@@ -71,7 +71,7 @@ defmodule YtSearch.CounterServer do
   def init(state) do
     Logger.info("CounterServer started")
 
-    send(self(), :snapshot)
+    send(self(), :initial_snapshot)
     Process.send_after(self(), :flush_to_db, @batch_interval)
     {:ok, state}
   end
@@ -117,6 +117,22 @@ defmodule YtSearch.CounterServer do
 
     Process.send_after(self(), :flush_to_db, @batch_interval)
     {:noreply, %{state | pending_delta: 0}}
+  end
+
+  @impl true
+  def handle_info(:initial_snapshot, state) do
+    db_value = Counter.get_value()
+    current_value = db_value + state.pending_delta
+
+    new_snapshots =
+      -@max_snapshot_size..-1
+      |> Enum.reduce(state.snapshots, fn fake_t, snapshots ->
+        BoundedQueue.enqueue(snapshots, {fake_t, current_value})
+      end)
+
+    # then snapshot normally
+    Process.send_after(self(), :snapshot, @snapshot_interval)
+    {:noreply, %{state | snapshots: new_snapshots}}
   end
 
   @impl true
