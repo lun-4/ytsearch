@@ -248,10 +248,10 @@ defmodule YtSearchWeb.SlotController do
         do_audio_config(slot) |> Jason.decode!()
       end)
 
-    subtitle = maybe_await(subtitle_task)
-    sponsorblock_data = maybe_await(sponsorblock_task)
-    chapters_data = maybe_await(chapters_task)
-    audio_config = maybe_await(audio_config_task)
+    subtitle = YtSearch.Youtube.Util.maybe_await(subtitle_task)
+    sponsorblock_data = YtSearch.Youtube.Util.maybe_await(sponsorblock_task)
+    chapters_data = YtSearch.Youtube.Util.maybe_await(chapters_task)
+    audio_config = YtSearch.Youtube.Util.maybe_await(audio_config_task)
 
     conn
     |> json(%{
@@ -272,21 +272,6 @@ defmodule YtSearchWeb.SlotController do
           nil
         end
     })
-  end
-
-  defp maybe_await(task, timeout \\ 5000) do
-    case Task.yield(task, timeout) || Task.shutdown(task) do
-      {:ok, result} ->
-        result
-
-      {:exit, reason} ->
-        Logger.warning("task #{inspect(task)} failed with error: #{inspect(reason)}")
-        nil
-
-      nil ->
-        Logger.warning("task #{inspect(task)} timeouted after #{timeout}ms")
-        nil
-    end
   end
 
   defp valid_subtitle_from_list(subtitles) do
