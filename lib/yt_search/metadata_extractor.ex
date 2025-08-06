@@ -223,6 +223,12 @@ defmodule YtSearch.MetadataExtractor.Worker do
                    end
                }
              end)
+             |> Enum.sort_by(
+               fn entry ->
+                 entry.s
+               end,
+               :asc
+             )
              |> then(fn ctas ->
                %{v: 1, ctas: ctas}
              end)
