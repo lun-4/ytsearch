@@ -45,9 +45,32 @@ defmodule YtSearch.Subtitle.CTAExtractor do
 
   def detect_engagement_prompts(vtt_content) when is_binary(vtt_content) do
     vtt_content
+    |> limit_to_last_2kb()
     |> parse_vtt()
     |> find_engagement_patterns()
     |> Enum.sort_by(& &1.timestamp)
+  end
+
+  @max_bytes 2048
+  defp limit_to_last_2kb(vtt_content) do
+    content_size = byte_size(vtt_content)
+
+    if content_size > @max_bytes do
+      Logger.debug(
+        "Limiting VTT content from #{content_size} bytes to last #{@max_bytes} bytes for performance"
+      )
+
+      # Take last 2KB but ensure we start from a complete subtitle block
+      truncated = String.slice(vtt_content, -@max_bytes, @max_bytes)
+
+      # Find the first complete subtitle block (starts after a double newline)
+      case String.split(truncated, "\n\n", parts: 2) do
+        [_incomplete_block, rest] -> rest
+        [complete_content] -> complete_content
+      end
+    else
+      vtt_content
+    end
   end
 
   defp parse_vtt(vtt_content) do
