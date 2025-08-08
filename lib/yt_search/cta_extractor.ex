@@ -226,8 +226,8 @@ defmodule YtSearch.Subtitle.CTAExtractor do
 
   defp ranges_should_merge?(range1, range2) do
     # Check if ranges overlap or are very close (within 2 seconds)
-    {start1, end1} = parse_timestamp_range(range1.timestamp)
-    {start2, end2} = parse_timestamp_range(range2.timestamp)
+    {_, end1} = parse_timestamp_range(range1.timestamp)
+    {start2, _} = parse_timestamp_range(range2.timestamp)
 
     # Ranges overlap if start2 <= end1 + 2 seconds (allowing small gaps)
     start2 <= end1 + 2.0
