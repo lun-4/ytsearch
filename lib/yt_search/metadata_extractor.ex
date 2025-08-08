@@ -197,6 +197,48 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
+  defmodule TaskLatency do
+    use Prometheus.Metric
+
+    def setup() do
+      Histogram.declare(
+        name: :yts_task_latency,
+        help: "latency of certain things",
+        labels: [:task_name],
+        buckets:
+          [
+            10..100//10,
+            100..1000//100,
+            1000..2000//100,
+            2000..4000//500,
+            4000..10000//1000,
+            10000..20000//1500
+          ]
+          |> Enum.flat_map(&Enum.to_list/1)
+          |> Enum.uniq()
+      )
+    end
+
+    def register(call_type, fun) when is_function(fun) do
+      start_ts = System.monotonic_time(:millisecond)
+      r = fun.()
+      end_ts = System.monotonic_time(:millisecond)
+
+      register(call_type, end_ts - start_ts)
+      r
+    end
+
+    def register(call_type, latency) when is_number(latency) do
+      Histogram.observe(
+        [
+          name: :yts_task_latency,
+          labels: [call_type]
+        ],
+        latency
+      )
+    end
+  end
+
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :subtitles} = _state) do
     with {:ok, subtitles} <- Youtube.extract_subtitles(meta) do
       {:ok,
@@ -204,7 +246,12 @@ defmodule YtSearch.MetadataExtractor.Worker do
        |> Enum.map(fn {subtitle, data} ->
          cta_task =
            Task.async(fn ->
-             YtSearch.Subtitle.find_like_and_subscribe(data)
+             ctas =
+               __MODULE__.TaskLatency.register(:cta, fn ->
+                 YtSearch.Subtitle.find_like_and_subscribe(data)
+               end)
+
+             ctas
              |> then(fn ctas ->
                Logger.debug("got #{length(ctas)} ctas from subtitles")
                ctas
