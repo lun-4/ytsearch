@@ -234,11 +234,12 @@ defmodule YtSearch.MetadataExtractor.Worker do
                :asc
              )
              |> then(fn ctas ->
-               %{v: 1, ctas: ctas}
+               %{v: 1, ctas: ctas} |> Jason.encode!() |> Jason.decode!()
              end)
            end)
 
          cta = YtSearch.Youtube.Util.maybe_await(cta_task, 200)
+         Logger.debug("cta data: #{inspect(cta)}")
          YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data, cta)
        end)}
     end
