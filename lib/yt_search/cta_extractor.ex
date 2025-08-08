@@ -132,19 +132,23 @@ defmodule YtSearch.Subtitle.CTAExtractor do
     @engagement_patterns
     |> Enum.flat_map(fn {pattern_type, patterns} ->
       patterns
-      |> Enum.filter(fn pattern ->
-        Regex.match?(pattern, text)
-      end)
-      |> Enum.map(fn pattern ->
-        # Extract the matched text for better context
-        match = Regex.run(pattern, text, capture: :first) |> List.first()
+      |> Enum.reduce([], fn pattern, acc ->
+        # Run regex once and use result for both matching and capturing
+        case Regex.run(pattern, text, capture: :first) do
+          [match] ->
+            [
+              %{
+                timestamp: timestamp,
+                text: text,
+                pattern: match,
+                pattern_type: pattern_type
+              }
+              | acc
+            ]
 
-        %{
-          timestamp: timestamp,
-          text: text,
-          pattern: match,
-          pattern_type: pattern_type
-        }
+          nil ->
+            acc
+        end
       end)
     end)
   end
