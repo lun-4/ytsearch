@@ -253,6 +253,8 @@ defmodule YtSearchWeb.SlotController do
     chapters_data = YtSearch.Youtube.Util.maybe_await(chapters_task)
     audio_config = YtSearch.Youtube.Util.maybe_await(audio_config_task)
 
+    Logger.debug("got sub: #{inspect(subtitle)}")
+
     conn
     |> json(%{
       duration: slot.video_duration,

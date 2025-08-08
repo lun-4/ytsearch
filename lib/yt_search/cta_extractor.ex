@@ -3,62 +3,46 @@ defmodule YtSearch.Subtitle.CTAExtractor do
   Detects YouTube engagement prompts (like, subscribe, bell notifications) 
   in WebVTT subtitle files and returns their timestamps.
   """
+  require Logger
 
-  # Common engagement patterns to detect
-  @engagement_patterns [
-    # Like patterns
-    ~r/like\s+this\s+video/i,
-    ~r/like\s+the\s+video/i,
-    ~r/give\s+it\s+a\s+like/i,
-    ~r/smash\s+that\s+like/i,
-    ~r/hit\s+the\s+like/i,
-    ~r/don't\s+forget\s+to\s+like/i,
-    ~r/please\s+like/i,
+  # Common engagement patterns organized by type
+  @engagement_patterns %{
+    like: [
+      ~r/like\s+this\s+video/i,
+      ~r/like\s+the\s+video/i,
+      ~r/give\s+it\s+a\s+like/i,
+      ~r/smash\s+that\s+like/i,
+      ~r/hit\s+the\s+like/i,
+      ~r/don't\s+forget\s+to\s+like/i,
+      ~r/please\s+like/i
+    ],
+    subscribe: [
+      ~r/subscribe\s+for\s+more/i,
+      ~r/subscribe\s+if\s+you\s+want/i,
+      ~r/don't\s+forget\s+to\s+subscribe/i,
+      ~r/make\s+sure\s+to\s+subscribe/i,
+      ~r/please\s+subscribe/i,
+      ~r/hit\s+subscribe/i
+    ],
+    like_and_subscribe: [
+      ~r/like\s+and\s+subscribe/i,
+      ~r/like\s+comment\s+subscribe/i,
+      ~r/like\s+share\s+subscribe/i
+    ],
+    bell_notification: [
+      ~r/hit\s+that\s+bell/i,
+      ~r/ring\s+that\s+bell/i,
+      ~r/smash\s+that\s+bell/i,
+      ~r/notification\s+bell/i,
+      ~r/turn\s+on\s+notifications/i
+    ],
+    general_cta: [
+      ~r/support\s+the\s+channel/i,
+      ~r/thanks\s+for\s+watching/i,
+      ~r/see\s+you\s+in\s+the\s+next/i
+    ]
+  }
 
-    # Subscribe patterns
-    ~r/like\s+and\s+subscribe/i,
-    ~r/subscribe\s+for\s+more/i,
-    ~r/subscribe\s+if\s+you\s+want/i,
-    ~r/don't\s+forget\s+to\s+subscribe/i,
-    ~r/make\s+sure\s+to\s+subscribe/i,
-    ~r/please\s+subscribe/i,
-    ~r/hit\s+subscribe/i,
-
-    # Bell/notification patterns
-    ~r/hit\s+that\s+bell/i,
-    ~r/ring\s+that\s+bell/i,
-    ~r/smash\s+that\s+bell/i,
-    ~r/notification\s+bell/i,
-    ~r/turn\s+on\s+notifications/i,
-
-    # General CTA patterns
-    ~r/like\s+comment\s+subscribe/i,
-    ~r/like\s+share\s+subscribe/i,
-    ~r/support\s+the\s+channel/i,
-    ~r/thanks\s+for\s+watching/i,
-    ~r/see\s+you\s+in\s+the\s+next/i
-  ]
-
-  @doc """
-  Detects engagement prompts in a VTT file content and returns timestamps.
-
-  ## Parameters
-  - vtt_content: String containing the WebVTT file content
-
-  ## Returns
-  A list of maps with :timestamp, :text, and :pattern keys
-
-  ## Example
-      iex> vtt_content = File.read!("subtitles.vtt")
-      iex> YtSearch.Subtitle.CTAExtractor.detect_engagement_prompts(vtt_content)
-      [
-        %{
-          timestamp: "00:16:38.000 --> 00:16:39.749",
-          text: "forget to like this video if you loved",
-          pattern: "like this video"
-        }
-      ]
-  """
   def detect_engagement_prompts(vtt_content) when is_binary(vtt_content) do
     vtt_content
     |> parse_vtt()
@@ -66,9 +50,6 @@ defmodule YtSearch.Subtitle.CTAExtractor do
     |> Enum.sort_by(& &1.timestamp)
   end
 
-  @doc """
-  Parses VTT content into a list of subtitle entries.
-  """
   defp parse_vtt(vtt_content) do
     vtt_content
     |> String.split("\n\n")
@@ -126,39 +107,23 @@ defmodule YtSearch.Subtitle.CTAExtractor do
 
   defp check_subtitle_for_patterns(%{timestamp: timestamp, text: text}) do
     @engagement_patterns
-    |> Enum.filter(fn pattern -> Regex.match?(pattern, text) end)
-    |> Enum.map(fn pattern ->
-      # Extract the matched text for better context
-      match = Regex.run(pattern, text, capture: :first) |> List.first()
+    |> Enum.flat_map(fn {pattern_type, patterns} ->
+      patterns
+      |> Enum.filter(fn pattern ->
+        Regex.match?(pattern, text)
+      end)
+      |> Enum.map(fn pattern ->
+        # Extract the matched text for better context
+        match = Regex.run(pattern, text, capture: :first) |> List.first()
 
-      %{
-        timestamp: timestamp,
-        text: text,
-        pattern: match,
-        pattern_type: categorize_pattern(pattern)
-      }
+        %{
+          timestamp: timestamp,
+          text: text,
+          pattern: match,
+          pattern_type: pattern_type
+        }
+      end)
     end)
-  end
-
-  defp categorize_pattern(pattern) do
-    pattern_string = Regex.source(pattern)
-
-    cond do
-      String.contains?(pattern_string, "like") and String.contains?(pattern_string, "subscribe") ->
-        :like_and_subscribe
-
-      String.contains?(pattern_string, "like") ->
-        :like
-
-      String.contains?(pattern_string, "subscribe") ->
-        :subscribe
-
-      String.contains?(pattern_string, "bell") or String.contains?(pattern_string, "notification") ->
-        :bell_notification
-
-      true ->
-        :general_cta
-    end
   end
 
   @doc """

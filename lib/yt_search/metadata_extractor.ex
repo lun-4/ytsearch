@@ -205,6 +205,10 @@ defmodule YtSearch.MetadataExtractor.Worker do
          cta_task =
            Task.async(fn ->
              YtSearch.Subtitle.find_like_and_subscribe(data)
+             |> then(fn ctas ->
+               Logger.debug("got #{length(ctas)} ctas from subtitles")
+               ctas
+             end)
              |> Enum.map(fn entity ->
                [start_ts, end_ts] = entity.timestamp |> String.split(" --> ")
                start_ts = YtSearch.Subtitle.parse_timestamp(start_ts)
