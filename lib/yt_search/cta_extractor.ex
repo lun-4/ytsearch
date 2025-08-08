@@ -44,10 +44,15 @@ defmodule YtSearch.Subtitle.CTAExtractor do
   }
 
   def detect_engagement_prompts(vtt_content) when is_binary(vtt_content) do
-    vtt_content
-    |> limit_to_last_2kb()
-    |> parse_vtt()
-    |> find_engagement_patterns()
+    limited_content = limit_to_last_2kb(vtt_content)
+
+    # Build position map for timestamp lookup
+    position_map = build_position_map(limited_content)
+
+    # Run global regex matching
+    global_matches = find_global_engagement_patterns(limited_content, position_map)
+
+    global_matches
     |> Enum.sort_by(& &1.timestamp)
   end
 
@@ -123,34 +128,73 @@ defmodule YtSearch.Subtitle.CTAExtractor do
     |> String.trim()
   end
 
-  defp find_engagement_patterns(subtitles) do
-    subtitles
-    |> Enum.flat_map(&check_subtitle_for_patterns/1)
+  defp build_position_map(vtt_content) do
+    # Track character positions for each subtitle block
+    vtt_content
+    |> String.split("\n\n")
+    |> Enum.reduce({0, []}, fn block, {current_pos, acc} ->
+      block_size = byte_size(block)
+
+      case parse_subtitle_block(block) do
+        %{timestamp: timestamp, text: text} ->
+          # Find where the actual text content starts within this block
+          text_start = current_pos + (block |> String.split("\n") |> hd() |> byte_size()) + 1
+          text_end = current_pos + block_size
+
+          entry = %{
+            range: text_start..text_end,
+            timestamp: timestamp,
+            original_text: text
+          }
+
+          # +2 for \n\n separator
+          {current_pos + block_size + 2, [entry | acc]}
+
+        nil ->
+          {current_pos + block_size + 2, acc}
+      end
+    end)
+    |> elem(1)
+    |> Enum.reverse()
   end
 
-  defp check_subtitle_for_patterns(%{timestamp: timestamp, text: text}) do
+  defp find_global_engagement_patterns(vtt_content, position_map) do
     @engagement_patterns
     |> Enum.flat_map(fn {pattern_type, patterns} ->
       patterns
-      |> Enum.reduce([], fn pattern, acc ->
-        # Run regex once and use result for both matching and capturing
-        case Regex.run(pattern, text, capture: :first) do
-          [match] ->
-            [
-              %{
-                timestamp: timestamp,
-                text: text,
-                pattern: match,
-                pattern_type: pattern_type
-              }
-              | acc
-            ]
+      |> Enum.flat_map(fn pattern ->
+        Regex.scan(pattern, vtt_content, return: :index)
+        |> Enum.filter_map(
+          fn [{pos, _len}] -> find_timestamp_for_position(pos, position_map) != nil end,
+          fn [{pos, len}] ->
+            match_text = String.slice(vtt_content, pos, len)
 
-          nil ->
-            acc
-        end
+            %{timestamp_info: timestamp_info, original_text: original_text} =
+              find_timestamp_for_position(pos, position_map)
+
+            %{
+              timestamp: timestamp_info,
+              text: original_text,
+              pattern: match_text,
+              pattern_type: pattern_type
+            }
+          end
+        )
       end)
     end)
+  end
+
+  defp find_timestamp_for_position(pos, position_map) do
+    Enum.find(position_map, fn %{range: range} ->
+      pos in range
+    end)
+    |> case do
+      %{timestamp: timestamp, original_text: text} ->
+        %{timestamp_info: timestamp, original_text: text}
+
+      nil ->
+        nil
+    end
   end
 
   @doc """
