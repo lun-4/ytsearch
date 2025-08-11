@@ -11,40 +11,43 @@ defmodule YtSearchWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
 
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest
   # when deploying your static files in production.
-  plug Plug.Static,
+  plug(Plug.Static,
     at: "/",
     from: :yt_search,
     gzip: false,
     only: YtSearchWeb.static_paths()
+  )
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
-    plug Phoenix.CodeReloader
-    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :yt_search
+    plug(Phoenix.CodeReloader)
+    plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :yt_search)
   end
 
-  plug Phoenix.LiveDashboard.RequestLogger,
+  plug(Phoenix.LiveDashboard.RequestLogger,
     param_key: "request_logger",
     cookie_key: "request_logger"
+  )
 
-  plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug(Plug.RequestId)
+  plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
-  plug Plug.Parsers,
+  plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
+  )
 
-  plug Plug.MethodOverride
-  plug Plug.Head
-  plug Plug.Session, @session_options
+  plug(Plug.MethodOverride)
+  plug(Plug.Head)
+  plug(Plug.Session, @session_options)
 
   defmodule Instrumenter do
     use Prometheus.PhoenixInstrumenter
@@ -69,6 +72,7 @@ defmodule YtSearchWeb.Endpoint do
     defp do_call(conn) do
       content_types = get_resp_header(conn, "content-type")
       [x_request_id] = get_resp_header(conn, "x-request-id")
+      server_time = System.system_time(:millisecond) / 1000
 
       with [type] <- content_types,
            "application/json" <> _whatever <- type,
@@ -77,6 +81,7 @@ defmodule YtSearchWeb.Endpoint do
            {:ok, new_body} <-
              body
              |> Map.put("__x_request_id", x_request_id)
+             |> Map.put("__time", server_time)
              |> Jason.encode() do
         conn
         |> resp(conn.status, new_body)
