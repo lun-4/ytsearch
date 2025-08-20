@@ -46,9 +46,20 @@ defmodule YtSearchWeb.Playlist do
         true -> true
       end
     end)
-    |> Enum.map(fn {entity_type, data} ->
+    |> Enum.with_index()
+    |> Enum.map(fn {{entity_type, data}, index} ->
+      thumbnail_limit =
+        Application.get_env(:yt_search, YtSearch.Constants)[:thumbnails_in_search_page]
+
       youtube_id = data["url"] |> youtube_id_from_url
-      thumbnail_metadata = Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data, opts)
+      thumbnail_metadata =
+        if index < thumbnail_limit do
+          Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data, opts)
+        else
+          %YtSearch.Youtube.Thumbnail.ThumbnailMetadata{
+            aspect_ratio: 1.77
+          }
+        end
 
       Logger.debug("processing for ytid #{youtube_id}")
 
