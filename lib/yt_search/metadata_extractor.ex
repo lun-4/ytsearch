@@ -244,49 +244,58 @@ defmodule YtSearch.MetadataExtractor.Worker do
       {:ok,
        subtitles
        |> Enum.map(fn {subtitle, data} ->
-         cta_task =
-           Task.async(fn ->
-             ctas =
-               __MODULE__.TaskLatency.register(:cta, fn ->
-                 YtSearch.Subtitle.find_like_and_subscribe(data)
+         extract_cta? = Application.get_env(:yt_search, YtSearch.Constants)[:extract_cta?]
+
+         cta =
+           if extract_cta? do
+             cta_task =
+               Task.async(fn ->
+                 ctas =
+                   __MODULE__.TaskLatency.register(:cta, fn ->
+                     YtSearch.Subtitle.find_like_and_subscribe(data)
+                   end)
+
+                 ctas
+                 |> then(fn ctas ->
+                   Logger.debug("got #{length(ctas)} ctas from subtitles")
+                   ctas
+                 end)
+                 |> Enum.map(fn entity ->
+                   [start_ts, end_ts] = entity.timestamp |> String.split(" --> ")
+                   start_ts = YtSearch.Subtitle.parse_timestamp(start_ts)
+                   end_ts = max(start_ts + 5, YtSearch.Subtitle.parse_timestamp(end_ts))
+
+                   %{
+                     s: start_ts,
+                     e: end_ts,
+                     t:
+                       case entity.pattern_type do
+                         :like -> "l"
+                         :like_and_subscribe -> "ls"
+                         :subscribe -> "s"
+                         :bell_notification -> "b"
+                         :general_cta -> "g"
+                       end
+                   }
+                 end)
+                 |> Enum.sort_by(
+                   fn entry ->
+                     entry.s
+                   end,
+                   :asc
+                 )
+                 |> then(fn ctas ->
+                   %{v: 1, ctas: ctas} |> Jason.encode!() |> Jason.decode!()
+                 end)
                end)
 
-             ctas
-             |> then(fn ctas ->
-               Logger.debug("got #{length(ctas)} ctas from subtitles")
-               ctas
-             end)
-             |> Enum.map(fn entity ->
-               [start_ts, end_ts] = entity.timestamp |> String.split(" --> ")
-               start_ts = YtSearch.Subtitle.parse_timestamp(start_ts)
-               end_ts = max(start_ts + 5, YtSearch.Subtitle.parse_timestamp(end_ts))
+             cta = YtSearch.Youtube.Util.maybe_await(cta_task, 500)
+             Logger.debug("cta data: #{inspect(cta)}")
+             cta
+           else
+             nil
+           end
 
-               %{
-                 s: start_ts,
-                 e: end_ts,
-                 t:
-                   case entity.pattern_type do
-                     :like -> "l"
-                     :like_and_subscribe -> "ls"
-                     :subscribe -> "s"
-                     :bell_notification -> "b"
-                     :general_cta -> "g"
-                   end
-               }
-             end)
-             |> Enum.sort_by(
-               fn entry ->
-                 entry.s
-               end,
-               :asc
-             )
-             |> then(fn ctas ->
-               %{v: 1, ctas: ctas} |> Jason.encode!() |> Jason.decode!()
-             end)
-           end)
-
-         cta = YtSearch.Youtube.Util.maybe_await(cta_task, 500)
-         Logger.debug("cta data: #{inspect(cta)}")
          YtSearch.Subtitle.insert(youtube_id, subtitle["code"], data, cta)
        end)}
     end
