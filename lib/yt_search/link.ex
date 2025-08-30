@@ -17,6 +17,7 @@ defmodule YtSearch.Mp4Link do
     field(:mp4_link, :string)
     field(:youtube_metadata, :string)
     field(:error_reason, :string)
+    field(:manifest_content, :string)
     timestamps()
   end
 
@@ -39,12 +40,14 @@ defmodule YtSearch.Mp4Link do
     end
   end
 
-  @spec insert(String.t(), String.t(), Integer.t() | nil, String.t()) :: Mp4Link.t()
-  def insert(youtube_id, mp4_link, expires_at, youtube_metadata) do
+  @spec insert(String.t(), String.t(), Integer.t() | nil, String.t(), String.t() | nil) ::
+          Mp4Link.t()
+  def insert(youtube_id, mp4_link, expires_at, youtube_metadata, manifest_content \\ nil) do
     %__MODULE__{
       youtube_id: youtube_id,
       youtube_metadata: youtube_metadata |> Jason.encode!(),
-      mp4_link: mp4_link
+      mp4_link: mp4_link,
+      manifest_content: manifest_content
     }
     |> then(fn value ->
       if expires_at != nil do
@@ -71,7 +74,8 @@ defmodule YtSearch.Mp4Link do
           set:
             [
               youtube_metadata: link.youtube_metadata,
-              mp4_link: link.mp4_link
+              mp4_link: link.mp4_link,
+              manifest_content: link.manifest_content
             ] ++
               if link.inserted_at == nil do
                 []

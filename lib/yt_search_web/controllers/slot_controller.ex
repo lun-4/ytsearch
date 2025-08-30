@@ -147,10 +147,25 @@ defmodule YtSearchWeb.SlotController do
       link.mp4_link == nil ->
         show_error_video(conn, link.error_reason)
 
+      should_serve_manifest?(link) ->
+        # Return HLS manifest content instead of redirecting
+        conn
+        |> put_resp_content_type("application/vnd.apple.mpegurl", "utf-8")
+        |> put_resp_header("cache-control", "no-cache")
+        |> text(link.manifest_content || "")
+
       true ->
         conn
         |> redirect(external: link.mp4_link)
     end
+  end
+
+  defp should_serve_manifest?(link) do
+    prefer_fake_manifests? =
+      Application.get_env(:yt_search, YtSearch.Constants)[:prefer_fake_manifests?] || false
+
+    # Serve manifest if config is enabled AND we have manifest content available
+    prefer_fake_manifests? && link.manifest_content != nil
   end
 
   defp handle_quest_video(conn, slot) do
@@ -257,6 +272,7 @@ defmodule YtSearchWeb.SlotController do
 
     conn
     |> json(%{
+      youtube_id: slot.youtube_id,
       duration: slot.video_duration,
       subtitle_data:
         if subtitle != nil do

@@ -4,6 +4,7 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
   alias YtSearch.Youtube
   alias YtSearch.Chapters
+  alias YtSearch.Sponsorblock.Segments
 
   @valid_types [:subtitles, :mp4_link, :sponsorblock_segments, :chapters]
 
@@ -165,19 +166,9 @@ defmodule YtSearch.MetadataExtractor.Worker do
   end
 
   defp process_metadata(meta, %{youtube_id: youtube_id, type: :mp4_link} = _state) do
-    wanted_video_result = Youtube.extract_valid_streams(meta["videoStreams"])
-
-    #  override with hls
-    wanted_video_result =
-      if meta["livestream"] do
-        %{
-          "url" => meta["hls"]
-        }
-      else
-        wanted_video_result
-      end
-
-    if wanted_video_result != nil do
+    # For livestreams, always use HLS (no need for fake manifests)
+    if meta["livestream"] do
+      wanted_video_result = %{"url" => meta["hls"]}
       url = wanted_video_result["url"]
       uri = url |> URI.parse()
       expiry_timestamp = Youtube.expiry_from_uri(uri)
@@ -192,50 +183,36 @@ defmodule YtSearch.MetadataExtractor.Worker do
 
       {:ok, link}
     else
-      Logger.warning("no valid formats found for #{youtube_id}")
-      {:error, :no_valid_video_formats_found}
-    end
-  end
+      # For non-livestreams, generate both regular stream URL AND manifest content
+      # This allows us to switch between modes instantly at the controller level
+      wanted_video_result = Youtube.extract_valid_streams(meta["videoStreams"])
 
-  defmodule TaskLatency do
-    use Prometheus.Metric
+      if wanted_video_result != nil do
+        url = wanted_video_result["url"]
+        uri = url |> URI.parse()
+        expiry_timestamp = Youtube.expiry_from_uri(uri)
 
-    def setup() do
-      Histogram.declare(
-        name: :yts_task_latency,
-        help: "latency of certain things",
-        labels: [:task_name],
-        buckets:
-          [
-            10..100//10,
-            100..1000//100,
-            1000..2000//100,
-            2000..4000//500,
-            4000..10000//1000,
-            10000..20000//1500
-          ]
-          |> Enum.flat_map(&Enum.to_list/1)
-          |> Enum.uniq()
-      )
-    end
+        # Generate manifest content alongside the regular stream
+        manifest_content =
+          case YtSearch.HlsManifest.generate_manifest(meta) do
+            {:ok, content} -> content
+            {:error, _reason} -> nil
+          end
 
-    def register(call_type, fun) when is_function(fun) do
-      start_ts = System.monotonic_time(:millisecond)
-      r = fun.()
-      end_ts = System.monotonic_time(:millisecond)
+        link =
+          YtSearch.Mp4Link.insert(
+            youtube_id,
+            url |> Youtube.unproxied_piped_url(),
+            expiry_timestamp,
+            wanted_video_result,
+            manifest_content
+          )
 
-      register(call_type, end_ts - start_ts)
-      r
-    end
-
-    def register(call_type, latency) when is_number(latency) do
-      Histogram.observe(
-        [
-          name: :yts_task_latency,
-          labels: [call_type]
-        ],
-        latency
-      )
+        {:ok, link}
+      else
+        Logger.warning("no valid formats found for #{youtube_id}")
+        {:error, :no_valid_video_formats_found}
+      end
     end
   end
 
@@ -307,8 +284,6 @@ defmodule YtSearch.MetadataExtractor.Worker do
     end
   end
 
-  alias YtSearch.Sponsorblock.Segments
-
   defp process_metadata(
          _metadata,
          %{youtube_id: youtube_id, type: :sponsorblock_segments} = _state
@@ -316,6 +291,48 @@ defmodule YtSearch.MetadataExtractor.Worker do
     with {:ok, response} <- Youtube.sponsorblock_segments(youtube_id),
          :ok <- is_actual_list(response) do
       {:ok, Segments.insert(youtube_id, response)}
+    end
+  end
+
+  defmodule TaskLatency do
+    use Prometheus.Metric
+
+    def setup() do
+      Histogram.declare(
+        name: :yts_task_latency,
+        help: "latency of certain things",
+        labels: [:task_name],
+        buckets:
+          [
+            10..100//10,
+            100..1000//100,
+            1000..2000//100,
+            2000..4000//500,
+            4000..10000//1000,
+            10000..20000//1500
+          ]
+          |> Enum.flat_map(&Enum.to_list/1)
+          |> Enum.uniq()
+      )
+    end
+
+    def register(call_type, fun) when is_function(fun) do
+      start_ts = System.monotonic_time(:millisecond)
+      r = fun.()
+      end_ts = System.monotonic_time(:millisecond)
+
+      register(call_type, end_ts - start_ts)
+      r
+    end
+
+    def register(call_type, latency) when is_number(latency) do
+      Histogram.observe(
+        [
+          name: :yts_task_latency,
+          labels: [call_type]
+        ],
+        latency
+      )
     end
   end
 

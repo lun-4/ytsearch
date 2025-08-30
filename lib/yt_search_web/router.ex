@@ -43,7 +43,6 @@ defmodule YtSearchWeb.Router do
     get("/qr2/:slot_id", SlotController, :refresh_with_image_reply)
     get("/sr/:slot_id", SlotController, :fetch_redirect)
     get("/yt/:slot_id", SlotController, :fetch_redirect_yt)
-    # get("/sl/:slot_id/index.m3u8", SlotController, :fetch_stream_redirect)
     get("/aod/retry", AngelOfDeathController, :report_video_retry_error)
     get("/aod/retry:number", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)

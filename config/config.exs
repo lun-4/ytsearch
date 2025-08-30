@@ -156,7 +156,8 @@ config :yt_search, YtSearch.Constants,
   enable_periodic_janitors: true,
   redirect_to_googlevideo?: true,
   extract_cta?: false,
-  thumbnails_in_search_page: 7
+  thumbnails_in_search_page: 7,
+  prefer_fake_manifests?: true
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

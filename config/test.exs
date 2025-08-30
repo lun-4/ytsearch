@@ -131,4 +131,5 @@ config :yt_search, YtSearch.Constants,
   minimum_time_between_refreshes: 60,
   enable_periodic_tasks: true,
   enable_periodic_janitors: true,
-  redirect_to_googlevideo?: true
+  redirect_to_googlevideo?: true,
+  prefer_fake_manifests?: false

@@ -52,6 +52,7 @@ defmodule YtSearchWeb.Playlist do
         Application.get_env(:yt_search, YtSearch.Constants)[:thumbnails_in_search_page]
 
       youtube_id = data["url"] |> youtube_id_from_url
+
       thumbnail_metadata =
         if index < thumbnail_limit do
           Youtube.Thumbnail.fetch_piped_in_background(youtube_id, data, opts)
