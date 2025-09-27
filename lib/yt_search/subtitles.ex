@@ -68,7 +68,6 @@ defmodule YtSearch.Subtitle do
     )
 
     if subtitle_data do
-      File.mkdir_p!("subtitles")
       File.write!(path_for(subtitle_id(subtitle)), subtitle_data)
     end
 
