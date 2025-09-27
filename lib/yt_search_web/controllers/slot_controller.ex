@@ -260,7 +260,7 @@ defmodule YtSearchWeb.SlotController do
       duration: slot.video_duration,
       subtitle_data:
         if subtitle != nil do
-          YtSearch.Subtitle.subtitle_data(subtitle)
+          YtSearch.Subtitle.blob(subtitle)
         else
           nil
         end,

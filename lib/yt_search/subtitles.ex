@@ -40,7 +40,11 @@ defmodule YtSearch.Subtitle do
     end
   end
 
-  def path_for(id) do
+  def path_for(%__MODULE__{} = subtitle) do
+    path_for(subtitle_id(subtitle))
+  end
+
+  def path_for(id) when is_binary(id) do
     "subtitles/#{id}"
   end
 
@@ -48,9 +52,6 @@ defmodule YtSearch.Subtitle do
     "#{youtube_id}_#{language}"
   end
 
-  def subtitle_data(%__MODULE__{} = subtitle) do
-    blob(subtitle)
-  end
 
   @spec insert(String.t(), String.t(), String.t() | nil, map()) :: t()
   def insert(youtube_id, language, subtitle_data, cta) do
@@ -68,14 +69,14 @@ defmodule YtSearch.Subtitle do
     )
 
     if subtitle_data do
-      File.write!(path_for(subtitle_id(subtitle)), subtitle_data)
+      File.write!(path_for(subtitle), subtitle_data)
     end
 
     subtitle
   end
 
   def find_like_and_subscribe(%__MODULE__{} = subtitle) do
-    find_like_and_subscribe(subtitle_data(subtitle))
+    find_like_and_subscribe(blob(subtitle))
   end
 
   def find_like_and_subscribe(vtt_content) when is_binary(vtt_content) do
@@ -134,7 +135,7 @@ defmodule YtSearch.Subtitle do
           chunk
           |> Enum.map(fn subtitle ->
             SubtitleRepo.delete(subtitle)
-            File.rm(Subtitle.path_for(Subtitle.subtitle_id(subtitle)))
+            File.rm(Subtitle.path_for(subtitle))
             1
           end)
           |> then(fn count ->
