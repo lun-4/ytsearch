@@ -13,7 +13,6 @@ defmodule YtSearch.Subtitle do
   schema "subtitles" do
     field(:youtube_id, :string, primary_key: true, autogenerate: false)
     field(:language, :string, primary_key: true)
-    field(:subtitle_data, :string)
     # NOTE: i chose a map here for ease of use, but it is possible (although unlikely)
     # that map serialization-deserialization may cause issues later on in terms
     # of CPU usage. if those happen, then i shall find a better way to store CTAs.
@@ -28,26 +27,56 @@ defmodule YtSearch.Subtitle do
     SubtitleRepo.replica().all(query)
   end
 
+  def blob(nil), do: nil
+
+  def blob(%__MODULE__{} = subtitle) do
+    blob(subtitle_id(subtitle))
+  end
+
+  def blob(id) when is_bitstring(id) do
+    case File.read(path_for(id)) do
+      {:ok, data} -> data
+      {:error, :enoent} -> nil
+    end
+  end
+
+  def path_for(id) do
+    "subtitles/#{id}"
+  end
+
+  def subtitle_id(%__MODULE__{youtube_id: youtube_id, language: language}) do
+    "#{youtube_id}_#{language}"
+  end
+
+  def subtitle_data(%__MODULE__{} = subtitle) do
+    blob(subtitle)
+  end
+
   @spec insert(String.t(), String.t(), String.t() | nil, map()) :: t()
   def insert(youtube_id, language, subtitle_data, cta) do
-    %__MODULE__{
+    subtitle = %__MODULE__{
       youtube_id: youtube_id,
       language: language,
-      subtitle_data: subtitle_data,
       cta: cta
     }
     |> SubtitleRepo.insert!(
       on_conflict: [
         set: [
-          subtitle_data: subtitle_data,
           cta: cta
         ]
       ]
     )
+
+    if subtitle_data do
+      File.mkdir_p!("subtitles")
+      File.write!(path_for(subtitle_id(subtitle)), subtitle_data)
+    end
+
+    subtitle
   end
 
-  def find_like_and_subscribe(%__MODULE__{subtitle_data: vtt}) do
-    find_like_and_subscribe(vtt)
+  def find_like_and_subscribe(%__MODULE__{} = subtitle) do
+    find_like_and_subscribe(subtitle_data(subtitle))
   end
 
   def find_like_and_subscribe(vtt_content) when is_binary(vtt_content) do
@@ -106,6 +135,7 @@ defmodule YtSearch.Subtitle do
           chunk
           |> Enum.map(fn subtitle ->
             SubtitleRepo.delete(subtitle)
+            File.rm(Subtitle.path_for(Subtitle.subtitle_id(subtitle)))
             1
           end)
           |> then(fn count ->
