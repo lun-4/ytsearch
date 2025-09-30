@@ -191,10 +191,12 @@ defmodule YtSearchWeb.SlotTest do
   end
 
   test "subtitles are cleaned when theyre too old", %{slot: slot} do
-    subtitle = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now")
-    _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now")
-    _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now")
-    _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now")
+    subtitle =
+      Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now", %{})
+
+    _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now", %{})
+    _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now", %{})
+    _ = Subtitle.insert(slot.youtube_id, "latin-1", "lorem ipsum listen to jungle now", %{})
 
     from(s in Subtitle, where: s.youtube_id == ^subtitle.youtube_id, select: s)
     |> SubtitleRepo.update_all(
