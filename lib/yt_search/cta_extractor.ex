@@ -78,13 +78,6 @@ defmodule YtSearch.Subtitle.CTAExtractor do
     end
   end
 
-  defp parse_vtt(vtt_content) do
-    vtt_content
-    |> String.split("\n\n")
-    |> Enum.map(&parse_subtitle_block/1)
-    |> Enum.reject(&is_nil/1)
-  end
-
   defp parse_subtitle_block(block) do
     lines = String.split(block, "\n", trim: true)
 
