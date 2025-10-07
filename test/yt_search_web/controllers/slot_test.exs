@@ -206,7 +206,7 @@ defmodule YtSearchWeb.SlotTest do
     )
 
     [fetched | _] = Subtitle.fetch(slot.youtube_id)
-    assert fetched.subtitle_data == subtitle.subtitle_data
+    assert Subtitle.blob(fetched) == Subtitle.blob(subtitle)
     Subtitle.Cleaner.tick()
     # should be empty now
     [] = Subtitle.fetch(slot.youtube_id)

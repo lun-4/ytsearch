@@ -46,6 +46,7 @@ defmodule YtSearch.Application do
     :erlang.system_flag(:microstate_accounting, true)
 
     File.mkdir_p!("thumbnails")
+    File.mkdir_p!("subtitles")
 
     children_before_repos =
       [
