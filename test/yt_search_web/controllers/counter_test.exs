@@ -3,10 +3,6 @@ defmodule YtSearchWeb.CounterTest do
 
   import Tesla.Mock
 
-  alias YtSearch.Counter
-  alias YtSearch.CounterServer
-  alias YtSearch.Data.CounterRepo
-
   setup %{conn: conn} do
     YtSearch.Test.Data.default_global_mock()
     conn = put_req_header(conn, "user-agent", "UnityWebRequest")
