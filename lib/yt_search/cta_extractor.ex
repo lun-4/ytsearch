@@ -157,22 +157,23 @@ defmodule YtSearch.Subtitle.CTAExtractor do
       patterns
       |> Enum.flat_map(fn pattern ->
         Regex.scan(pattern, vtt_content, return: :index)
-        |> Enum.filter_map(
-          fn [{pos, _len}] -> find_timestamp_for_position(pos, position_map) != nil end,
-          fn [{pos, len}] ->
-            match_text = String.slice(vtt_content, pos, len)
+        |> Enum.map(fn [{pos, len}] ->
+          case find_timestamp_for_position(pos, position_map) do
+            %{timestamp_info: timestamp_info, original_text: original_text} ->
+              match_text = String.slice(vtt_content, pos, len)
 
-            %{timestamp_info: timestamp_info, original_text: original_text} =
-              find_timestamp_for_position(pos, position_map)
+              %{
+                timestamp: timestamp_info,
+                text: original_text,
+                pattern: match_text,
+                pattern_type: pattern_type
+              }
 
-            %{
-              timestamp: timestamp_info,
-              text: original_text,
-              pattern: match_text,
-              pattern_type: pattern_type
-            }
+            nil ->
+              nil
           end
-        )
+        end)
+        |> Enum.reject(&is_nil/1)
       end)
     end)
   end
