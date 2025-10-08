@@ -7,9 +7,10 @@ defmodule YtSearchWeb.CounterTest do
   alias YtSearch.CounterServer
   alias YtSearch.Data.CounterRepo
 
-  setup do
+  setup %{conn: conn} do
     YtSearch.Test.Data.default_global_mock()
-    :ok
+    conn = put_req_header(conn, "user-agent", "UnityWebRequest")
+    {:ok, conn: conn}
   end
 
   describe "GET /a/6/co/:delta" do
@@ -40,10 +41,10 @@ defmodule YtSearchWeb.CounterTest do
       initial = json_response(conn1, 200)["counter"]
 
       # Try negative delta
-      conn2 = get(conn1, ~p"/a/6/co/-20")
+      conn2 = get(conn, ~p"/a/6/co/-20")
       _ = json_response(conn2, 400)
 
-      conn3 = get(conn2, ~p"/a/6/co/0")
+      conn3 = get(conn, ~p"/a/6/co/0")
       final = json_response(conn3, 200)["counter"]
 
       # no change to delta
@@ -54,10 +55,10 @@ defmodule YtSearchWeb.CounterTest do
       conn1 = get(conn, ~p"/a/6/co/0")
       initial = json_response(conn1, 200)["counter"]
 
-      conn2 = get(conn1, ~p"/a/6/co/1500")
+      conn2 = get(conn, ~p"/a/6/co/1500")
       _ = json_response(conn2, 400)
 
-      conn3 = get(conn2, ~p"/a/6/co/0")
+      conn3 = get(conn, ~p"/a/6/co/0")
       final = json_response(conn3, 200)["counter"]
 
       # no change to delta
@@ -72,7 +73,7 @@ defmodule YtSearchWeb.CounterTest do
       # Multiple increments
       get(conn, ~p"/a/6/co/10")
       get(conn, ~p"/a/6/co/20")
-      conn_final = get(conn1, ~p"/a/6/co/30")
+      conn_final = get(conn, ~p"/a/6/co/30")
       final = json_response(conn_final, 200)["counter"]
 
       # 0 + 10 + 20 + 30
@@ -83,10 +84,10 @@ defmodule YtSearchWeb.CounterTest do
       conn1 = get(conn, ~p"/a/6/co/0")
       initial = json_response(conn1, 200)["counter"]
 
-      conn2 = get(conn1, ~p"/a/6/co/invalid")
+      conn2 = get(conn, ~p"/a/6/co/invalid")
       _ = json_response(conn2, 400)
 
-      conn3 = get(conn2, ~p"/a/6/co/0")
+      conn3 = get(conn, ~p"/a/6/co/0")
       final = json_response(conn3, 200)["counter"]
 
       assert final - initial == 0.0
@@ -95,14 +96,21 @@ defmodule YtSearchWeb.CounterTest do
 
   describe "hello endpoint integration" do
     test "hello endpoint includes counter value", %{conn: conn} do
+      trending_data = File.read!("test/support/piped_outputs/trending_tab.json")
+
+      mock(fn
+        %{method: :get, url: "example.org/trending" <> _suffix} ->
+          json(Jason.decode!(trending_data))
+      end)
+
       conn1 = get(conn, ~p"/api/v6/hello")
       initial_hello = json_response(conn1, 200)["counter_data"]["counter"]
 
       # Increment counter
-      conn2 = get(conn1, ~p"/a/6/co/25")
+      _conn2 = get(conn, ~p"/a/6/co/25")
 
       # Check hello endpoint shows the increment
-      conn3 = get(conn2, ~p"/api/v6/hello")
+      conn3 = get(conn, ~p"/api/v6/hello")
       final_hello = json_response(conn3, 200)["counter_data"]["counter"]
 
       assert json_response(conn3, 200)["online"] == true
