@@ -34,5 +34,6 @@ release/
 .envrc
 
 thumbnails/
+subtitles/
 *__pycache__/
 .claude/
