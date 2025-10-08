@@ -239,6 +239,9 @@ defmodule YtSearchWeb.SlotTest do
   test "metadata works and are only fetched once", %{ets_table: table} do
     slot = insert_slot()
 
+    # Read the VTT file with CTA patterns
+    vtt_with_ctas = File.read!("test/support/files/subtitle_with_ctas.vtt")
+
     mock_global(fn
       %{method: :get, url: "sb.example.org/api/skipSegments", query: query_args} = env ->
         youtube_id = query_args |> Keyword.get(:videoID)
@@ -331,6 +334,8 @@ defmodule YtSearchWeb.SlotTest do
                   "start" => 100
                 }
               ],
+              # audioConfig data is decided by Piped, not yt_search, so we just
+              # need to validate we return whatever Piped returns
               "audioConfig" => %{"holy" => "shit"}
             })
           else
@@ -351,7 +356,7 @@ defmodule YtSearchWeb.SlotTest do
             %Tesla.Env{status: 200, body: "Among Us"}
 
           youtube_id == slot.youtube_id <> "ORIG" ->
-            %Tesla.Env{status: 200, body: "Among Us ORIGINAL"}
+            %Tesla.Env{status: 200, body: vtt_with_ctas}
 
           true ->
             require Logger
@@ -371,11 +376,40 @@ defmodule YtSearchWeb.SlotTest do
     end)
     |> Enum.map(fn task ->
       resp = Task.await(task)
-      assert resp["subtitle_data"] == "Among Us ORIGINAL"
+      assert resp["subtitle_data"] == vtt_with_ctas
       assert length(resp["sponsorblock_segments"]) == 2
       assert length(resp["chapters"]) == 2
       assert resp["audio_config"]["holy"] == "shit"
       assert resp["duration"] == slot.video_duration
+
+      # Validate CTA detection
+      assert resp["ctas"] != nil
+      ctas = resp["ctas"]
+      assert is_list(ctas)
+      assert length(ctas) > 0
+
+      # Find the "like and subscribe" CTA
+      like_and_subscribe_cta =
+        Enum.find(ctas, fn cta ->
+          cta["t"] == "ls"
+        end)
+
+      assert like_and_subscribe_cta != nil
+      # Should be around 15:30 (930 seconds)
+      assert like_and_subscribe_cta["s"] >= 930
+      assert like_and_subscribe_cta["s"] <= 940
+      assert like_and_subscribe_cta["e"] > like_and_subscribe_cta["s"]
+
+      # Find the bell notification CTA
+      bell_cta =
+        Enum.find(ctas, fn cta ->
+          cta["t"] == "b"
+        end)
+
+      assert bell_cta != nil
+      # Should be around 15:35 (935 seconds)
+      assert bell_cta["s"] >= 935
+      assert bell_cta["s"] <= 945
     end)
   end
 
