@@ -71,8 +71,13 @@ defmodule YtSearch.CounterServer do
   def init(state) do
     Logger.info("CounterServer started")
 
-    send(self(), :initial_snapshot)
-    Process.send_after(self(), :flush_to_db, @batch_interval)
+    # In test mode, don't access database during init
+    # Tests will set up sandbox permissions first
+    if Mix.env() != :test do
+      send(self(), :initial_snapshot)
+      Process.send_after(self(), :flush_to_db, @batch_interval)
+    end
+
     {:ok, state}
   end
 
