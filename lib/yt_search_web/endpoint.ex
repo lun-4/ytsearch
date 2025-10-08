@@ -81,6 +81,7 @@ defmodule YtSearchWeb.Endpoint do
            {:ok, new_body} <-
              body
              |> Map.put("__x_request_id", x_request_id)
+             # used for counter syncing
              |> Map.put("__time", server_time)
              |> Jason.encode() do
         conn
@@ -100,5 +101,5 @@ defmodule YtSearchWeb.Endpoint do
   plug(MetricsExporter)
   plug(JSONRequestIDSetter)
 
-  plug YtSearchWeb.Router
+  plug(YtSearchWeb.Router)
 end
