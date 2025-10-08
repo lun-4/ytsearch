@@ -443,7 +443,8 @@ defmodule YtSearchWeb.SearchTest do
 
     resp_json2 = json_response(conn2, 200)
     assert :ets.lookup(table, :nextpage) == [nextpage: 1]
-    assert resp_json |> Map.delete("__x_request_id") == resp_json2 |> Map.delete("__x_request_id")
+
+    YtSearch.AssertUtil.equal_search_responses(resp_json, resp_json2)
     verify_miku_search_results(resp_json)
 
     nextpage_slot = resp_json["nextpage_slot_id"]
@@ -531,7 +532,7 @@ defmodule YtSearchWeb.SearchTest do
 
     resp_json2 = json_response(conn2, 200)
     assert :ets.lookup(table, :channel_nextpage) == [channel_nextpage: 1]
-    assert resp_json |> Map.delete("__x_request_id") == resp_json2 |> Map.delete("__x_request_id")
+    YtSearch.AssertUtil.equal_search_responses(resp_json, resp_json2)
     verify_tomscott_search_results(resp_json)
 
     nextpage_slot = resp_json["nextpage_slot_id"]

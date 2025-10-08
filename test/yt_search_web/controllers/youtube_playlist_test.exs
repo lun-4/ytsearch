@@ -61,8 +61,6 @@ defmodule YtSearchWeb.PlaylistSlotTest do
     assert first_result["youtube_id"] == @expected_youtube_id
   end
 
-  defp strip_unique_values(m), do: m |> Map.delete("__x_request_id") |> Map.delete("__time")
-
   test "nextpage works on playlists", %{conn: conn, ets_table: table} do
     mock(fn
       %{method: :get, url: "example.org/playlists" <> _} ->
@@ -125,7 +123,7 @@ defmodule YtSearchWeb.PlaylistSlotTest do
       |> get(~p"/a/6/r/#{nextpage_slot_id}")
 
     rjson2 = json_response(conn2, 200)
-    assert rjson |> strip_unique_values() == rjson2 |> strip_unique_values()
+    YtSearch.AssertUtil.equal_search_responses(rjson, rjson2)
 
     assert :ets.lookup(table, :playlist_nextpage) == [playlist_nextpage: 1]
     assert_playlist_result(rjson)

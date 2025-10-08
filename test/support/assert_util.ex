@@ -29,4 +29,11 @@ defmodule YtSearch.AssertUtil do
     assert width > 0
     assert height > 0
   end
+
+  def strip_unique_values(m), do: m |> Map.delete("__x_request_id") |> Map.delete("__time")
+
+  def equal_search_responses(rjson1, rjson2) do
+    assert rjson1 |> strip_unique_values() ==
+             rjson2 |> strip_unique_values()
+  end
 end
