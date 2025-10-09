@@ -75,7 +75,9 @@ defmodule YtSearch.Youtube.Thumbnail do
       # the db entry would be currently missing)
       {:ok, Thumbnail.insert(youtube_id, "image/webp", opts)}
     else
-      really_do_download_thumbnail(youtube_id, url, opts)
+      YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail, fn ->
+        really_do_download_thumbnail(youtube_id, url, opts)
+      end)
     end
   end
 
