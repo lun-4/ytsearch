@@ -69,7 +69,8 @@ defmodule YtSearch.MixProject do
       {:hackney, "~> 1.18"},
       {:recon, "~> 2.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_machina, "~> 2.4", only: :test}
+      {:ex_machina, "~> 2.4", only: :test},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 

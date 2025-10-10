@@ -52,21 +52,21 @@ defmodule YtSearch.Subtitle do
     "#{youtube_id}_#{language}"
   end
 
-
   @spec insert(String.t(), String.t(), String.t() | nil, map()) :: t()
   def insert(youtube_id, language, subtitle_data, cta) do
-    subtitle = %__MODULE__{
-      youtube_id: youtube_id,
-      language: language,
-      cta: cta
-    }
-    |> SubtitleRepo.insert!(
-      on_conflict: [
-        set: [
-          cta: cta
+    subtitle =
+      %__MODULE__{
+        youtube_id: youtube_id,
+        language: language,
+        cta: cta
+      }
+      |> SubtitleRepo.insert!(
+        on_conflict: [
+          set: [
+            cta: cta
+          ]
         ]
-      ]
-    )
+      )
 
     if subtitle_data do
       File.write!(path_for(subtitle), subtitle_data)

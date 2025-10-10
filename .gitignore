@@ -37,3 +37,4 @@ thumbnails/
 subtitles/
 *__pycache__/
 .claude/
+cta5/cta_http_server
