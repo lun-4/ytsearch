@@ -82,13 +82,16 @@ defmodule YtSearchWeb.Playlist do
         raise "nil url"
 
       String.starts_with?(url, "/watch") ->
-        url |> String.split("=") |> Enum.at(1)
+        %URI{query: query} = URI.parse(url)
+        URI.decode_query(query || "")["v"]
 
       String.starts_with?(url, "/channel") ->
-        url |> String.split("/") |> Enum.at(2)
+        %URI{path: path} = URI.parse(url)
+        path |> String.split("/") |> Enum.at(2)
 
       String.starts_with?(url, "/playlist") ->
-        url |> String.split("=") |> Enum.at(1)
+        %URI{query: query} = URI.parse(url)
+        URI.decode_query(query || "")["list"]
 
       true ->
         raise "unsupported url: #{url}"
