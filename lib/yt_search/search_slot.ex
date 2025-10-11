@@ -40,7 +40,7 @@ defmodule YtSearch.SearchSlot do
   def fetch(s) when is_bitstring(s), do: fetch(String.to_integer(s))
 
   def fetch(slot_id) when is_integer(slot_id) do
-    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    query = from(s in __MODULE__, where: s.id == ^slot_id, select: s)
 
     SearchSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -64,7 +64,7 @@ defmodule YtSearch.SearchSlot do
 
   def fetch_by_query(query) do
     internal_id = query |> internal_id_for
-    query = from s in __MODULE__, where: s.query == ^internal_id, select: s
+    query = from(s in __MODULE__, where: s.query == ^internal_id, select: s)
 
     SearchSlotRepo.replica(internal_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -104,11 +104,9 @@ defmodule YtSearch.SearchSlot do
         t when t in ["video", "short", "livestream"] ->
           channel_slot_id = maybe_slot["channel_slot"]
 
-          if follow_inner_channel? do
-            if channel_slot_id == nil do
-              raise "no channel slot in #{inspect(maybe_slot)}"
-            end
-
+          # channel_slot is always optional on videos especially because
+          # of collab videos. don't assume channel_slot inside slots_json is not nil
+          if follow_inner_channel? and channel_slot_id != nil do
             [
               Slot.fetch_by_youtube_id(youtube_id),
               ChannelSlot.fetch(channel_slot_id)
@@ -307,7 +305,7 @@ defmodule YtSearch.SearchSlot do
     result_title = Keyword.get(opts, :result_title)
 
     SearchSlotRepo.transaction(fn ->
-      query = from s in __MODULE__, where: s.query == ^search_query, select: s
+      query = from(s in __MODULE__, where: s.query == ^search_query, select: s)
       search_slot = SearchSlotRepo.replica(search_query).one(query)
 
       if search_slot == nil do
@@ -425,10 +423,11 @@ defmodule YtSearch.SearchSlot do
 
     SearchSlotRepo.transaction(fn ->
       query =
-        from s in __MODULE__,
+        from(s in __MODULE__,
           where:
             not is_nil(s.nextpage_data_hash) and s.nextpage_data_hash == ^nextpage_packed_hash,
           select: s
+        )
 
       search_slot = SearchSlotRepo.replica(nextpage_packed).one(query)
 
