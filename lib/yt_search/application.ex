@@ -188,6 +188,7 @@ defmodule YtSearch.Application do
     YtSearch.SlotUtilities.RecycledSlotAge.setup()
     YtSearch.CounterServer.Metrics.setup()
     YtSearch.MetadataExtractor.Worker.TaskLatency.setup()
+    YtSearch.Thumbnail.Atlas.InvalidRatio.setup()
 
     # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
     # YtSearchWeb.Endpoint.Instrumenter.setup()

@@ -4,6 +4,29 @@ defmodule YtSearch.Thumbnail.Atlas do
   alias YtSearch.Thumbnail
   alias YtSearch.SearchSlot
 
+  defmodule InvalidRatio do
+    use Prometheus.Metric
+
+    def setup() do
+      Histogram.declare(
+        name: :yts_thumbnail_atlas_invalid_ratio,
+        help: "Ratio of invalid thumbnails in atlas requests (0-1 range)",
+        buckets: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+      )
+    end
+
+    def observe(invalid_count, total_count) when total_count > 0 do
+      ratio = invalid_count / total_count
+
+      Histogram.observe(
+        [name: :yts_thumbnail_atlas_invalid_ratio],
+        ratio
+      )
+    end
+
+    def observe(_invalid_count, 0), do: :ok
+  end
+
   @spec assemble(String.t()) ::
           {:ok, String.t(), binary()} | {:error, :unknown_search_slot}
   def assemble(search_slot_id) do
@@ -76,6 +99,11 @@ defmodule YtSearch.Thumbnail.Atlas do
               path
           end
       end)
+
+    # Track invalid thumbnail ratio metric
+    total_count = length(thumbnail_paths)
+    invalid_count = Enum.count(thumbnail_paths, fn path -> path == @invalid_thumbnail_path end)
+    InvalidRatio.observe(invalid_count, total_count)
 
     atlas_image_path = Temp.path!() <> ".png"
 
