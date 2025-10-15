@@ -4,6 +4,32 @@ defmodule YtSearch.Youtube.Thumbnail do
   alias YtSearch.SlotUtilities
   alias YtSearch.Thumbnail
 
+  defmodule TaskCounter do
+    use Prometheus.Metric
+
+    def setup() do
+      Counter.declare(
+        name: :yts_thumbnail_task_results,
+        help: "Thumbnail task results",
+        labels: [:status]
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_total,
+        help: "Thumbnail tasks"
+      )
+    end
+
+    def inc(status) do
+      Counter.inc(name: :yts_thumbnail_task_total)
+
+      Counter.inc(
+        name: :yts_thumbnail_task_results,
+        labels: [to_string(status)]
+      )
+    end
+  end
+
   defmodule ThumbnailMetadata do
     @derive Jason.Encoder
     defstruct [:aspect_ratio]
@@ -73,10 +99,19 @@ defmodule YtSearch.Youtube.Thumbnail do
     if filesize_for(youtube_id) > 0 do
       # if it already exists, insert the metadata entry (as to be in this function,
       # the db entry would be currently missing)
+      TaskCounter.inc(:cache_skip)
       {:ok, Thumbnail.insert(youtube_id, "image/webp", opts)}
     else
       YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail, fn ->
-        really_do_download_thumbnail(youtube_id, url, opts)
+        result = really_do_download_thumbnail(youtube_id, url, opts)
+
+        case result do
+          {:ok, _} -> TaskCounter.inc(:success)
+          {:error, {:http_response, status, _, _}} -> TaskCounter.inc("error_http_#{status}")
+          {:error, _} -> TaskCounter.inc(:error_other)
+        end
+
+        result
       end)
     end
   end
