@@ -88,16 +88,17 @@ defmodule YtSearch.Thumbnail.Atlas do
                 thumb |> Thumbnail.stat()
               }
             else
+              InvalidRatio.inc_error(:missing_thumbnail)
               nil
             end
           end)
         else
+          InvalidRatio.inc_error(:missing_slot)
           nil
         end
       end)
       |> Enum.map(fn
         nil ->
-          InvalidRatio.inc_error(:missing_thumbnail)
           @invalid_thumbnail_path
 
         # file doesn't exist (enoent)
