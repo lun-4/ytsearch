@@ -13,6 +13,12 @@ defmodule YtSearch.Thumbnail.Atlas do
         help: "Ratio of invalid thumbnails in atlas requests (0-1 range)",
         buckets: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
       )
+
+      Counter.declare(
+        name: :yts_thumbnail_atlas_errors,
+        help: "Invalid thumbnails in atlas assembly",
+        labels: [:reason]
+      )
     end
 
     def observe(invalid_count, total_count) when total_count > 0 do
@@ -25,6 +31,13 @@ defmodule YtSearch.Thumbnail.Atlas do
     end
 
     def observe(_invalid_count, 0), do: :ok
+
+    def inc_error(reason) do
+      Counter.inc(
+        name: :yts_thumbnail_atlas_errors,
+        labels: [to_string(reason)]
+      )
+    end
   end
 
   @spec assemble(String.t()) ::
@@ -84,15 +97,18 @@ defmodule YtSearch.Thumbnail.Atlas do
       end)
       |> Enum.map(fn
         nil ->
+          InvalidRatio.inc_error(:missing_thumbnail)
           @invalid_thumbnail_path
 
         # file doesn't exist (enoent)
         {_, nil} ->
+          InvalidRatio.inc_error(:file_not_found)
           @invalid_thumbnail_path
 
         {path, stat} ->
           case stat.size do
             0 ->
+              InvalidRatio.inc_error(:zero_size)
               @invalid_thumbnail_path
 
             _ ->
