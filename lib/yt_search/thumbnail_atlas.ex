@@ -88,7 +88,14 @@ defmodule YtSearch.Thumbnail.Atlas do
                 thumb |> Thumbnail.stat()
               }
             else
-              InvalidRatio.inc_error(:missing_thumbnail)
+              maybe_blob = Thumbnail.blob(slot.youtube_id)
+
+              if maybe_blob != nil do
+                InvalidRatio.inc_error(:missing_thumbnail_yet_fs_exists)
+              else
+                InvalidRatio.inc_error(:missing_thumbnail)
+              end
+
               nil
             end
           end)
