@@ -48,6 +48,9 @@ defmodule YtSearch.Application do
     File.mkdir_p!("thumbnails")
     File.mkdir_p!("subtitles")
 
+    # ETS table to track thumbnail download tasks
+    :ets.new(:thumbnail_tasks, [:set, :public, :named_table, read_concurrency: true])
+
     children_before_repos =
       [
         # Start the Telemetry supervisor

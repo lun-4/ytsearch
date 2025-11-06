@@ -37,13 +37,22 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   def fetch_piped_in_background(youtube_id, data, opts) do
     if data["thumbnail"] != nil do
-      Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
-        maybe_download_thumbnail(
-          youtube_id,
-          data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
-          opts
-        )
-      end)
+      task =
+        Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
+          try do
+            maybe_download_thumbnail(
+              youtube_id,
+              data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
+              opts
+            )
+          after
+            # Clean up task ref when done
+            :ets.delete(:thumbnail_tasks, youtube_id)
+          end
+        end)
+
+      # Store task ref so atlas can await it
+      :ets.insert(:thumbnail_tasks, {youtube_id, task})
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
       # UPGRADE: aspect_ratio is not used on /a/2

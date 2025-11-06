@@ -77,6 +77,24 @@ defmodule YtSearch.Thumbnail.Atlas do
         # them all before assembling atlas
 
         if slot != nil do
+          # First, check if there's a pending download task
+          case :ets.lookup(:thumbnail_tasks, slot.youtube_id) do
+            [{_id, task}] ->
+              # Task is running or queued, wait for it with timeout
+              case Task.yield(task, 10_000) || Task.shutdown(task) do
+                {:ok, _result} ->
+                  :ok
+
+                nil ->
+                  Logger.warning("Thumbnail task timeout for #{slot.youtube_id}")
+              end
+
+            [] ->
+              # No task, proceed normally
+              :ok
+          end
+
+          # Now acquire mutex and fetch as before
           Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
             thumb =
               slot.youtube_id
