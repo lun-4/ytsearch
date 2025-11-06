@@ -51,8 +51,8 @@ defmodule YtSearch.Youtube.Thumbnail do
           end
         end)
 
-      # Store task ref so atlas can await it
-      :ets.insert(:thumbnail_tasks, {youtube_id, task})
+      # Store task PID so atlas can await it (store PID not Task struct to allow cross-process monitoring)
+      :ets.insert(:thumbnail_tasks, {youtube_id, task.pid})
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
       # UPGRADE: aspect_ratio is not used on /a/2

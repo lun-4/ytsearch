@@ -79,17 +79,22 @@ defmodule YtSearch.Thumbnail.Atlas do
         if slot != nil do
           # First, check if there's a pending download task
           case :ets.lookup(:thumbnail_tasks, slot.youtube_id) do
-            [{_id, task}] ->
+            [{_id, pid}] when is_pid(pid) ->
               # Task is running or queued, wait for it with timeout
-              case Task.yield(task, 10_000) || Task.shutdown(task) do
-                {:ok, _result} ->
-                  :ok
+              if Process.alive?(pid) do
+                ref = Process.monitor(pid)
 
-                nil ->
-                  Logger.warning("Thumbnail task timeout for #{slot.youtube_id}")
+                receive do
+                  {:DOWN, ^ref, :process, ^pid, _reason} ->
+                    :ok
+                after
+                  10_000 ->
+                    Process.demonitor(ref, [:flush])
+                    Logger.warning("Thumbnail task timeout for #{slot.youtube_id}")
+                end
               end
 
-            [] ->
+            _ ->
               # No task, proceed normally
               :ok
           end
