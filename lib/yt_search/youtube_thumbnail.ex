@@ -112,15 +112,22 @@ defmodule YtSearch.Youtube.Thumbnail do
       {:ok, Thumbnail.insert(youtube_id, "image/webp", opts)}
     else
       YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail, fn ->
-        result = really_do_download_thumbnail(youtube_id, url, opts)
+        try do
+          result = really_do_download_thumbnail(youtube_id, url, opts)
 
-        case result do
-          {:ok, _} -> TaskCounter.inc(:success)
-          {:error, {:http_response, status, _, _}} -> TaskCounter.inc("error_http_#{status}")
-          {:error, _} -> TaskCounter.inc(:error_other)
+          case result do
+            {:ok, _} -> TaskCounter.inc(:success)
+            {:error, {:http_response, status, _, _}} -> TaskCounter.inc("error_http_#{status}")
+            {:error, _} -> TaskCounter.inc(:error_other)
+          end
+
+          result
+        rescue
+          e ->
+            Logger.error(Exception.format(:error, e, __STACKTRACE__))
+            TaskCounter.inc(:exception)
+            reraise e, __STACKTRACE__
         end
-
-        result
       end)
     end
   end
