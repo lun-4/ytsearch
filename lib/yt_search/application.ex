@@ -88,6 +88,7 @@ defmodule YtSearch.Application do
         YtSearch.CounterServer,
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
+        YtSearch.Youtube.Thumbnail.Monitor,
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
         {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}

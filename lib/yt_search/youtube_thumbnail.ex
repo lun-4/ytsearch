@@ -59,6 +59,12 @@ defmodule YtSearch.Youtube.Thumbnail do
         name: :yts_thumbnail_task_inner_inner_downloads,
         help: "Thumbnail task inner inner downloads"
       )
+
+      Counter.declare(
+        name: :yts_thumb_mon,
+        help: "Thumbnail task monitor exit reasons",
+        labels: [:reason]
+      )
     end
 
     def inc(status) do
@@ -104,11 +110,52 @@ defmodule YtSearch.Youtube.Thumbnail do
     def inc_inner_inner_download() do
       Counter.inc(name: :yts_thumbnail_task_inner_inner_downloads)
     end
+
+    def inc_monitor(reason) do
+      Counter.inc(
+        name: :yts_thumb_mon,
+        labels: [to_string(reason)]
+      )
+    end
   end
 
   defmodule ThumbnailMetadata do
     @derive Jason.Encoder
     defstruct [:aspect_ratio]
+  end
+
+  defmodule Monitor do
+    use GenServer
+
+    def start_link(_opts) do
+      GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+    end
+
+    @doc """
+    Add a PID to be monitored. When the process exits, its exit reason
+    will be recorded via TaskCounter.inc/1
+    """
+    def add(pid) when is_pid(pid) do
+      GenServer.cast(__MODULE__, {:monitor, pid})
+    end
+
+    @impl true
+    def init(_) do
+      {:ok, %{}}
+    end
+
+    @impl true
+    def handle_cast({:monitor, pid}, state) do
+      ref = Process.monitor(pid)
+      {:noreply, Map.put(state, ref, pid)}
+    end
+
+    @impl true
+    def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+      # Record the exit reason to TaskCounter
+      TaskCounter.inc_monitor(reason)
+      {:noreply, Map.delete(state, ref)}
+    end
   end
 
   def fetch_piped_in_background(youtube_id, data, opts) do
@@ -136,6 +183,9 @@ defmodule YtSearch.Youtube.Thumbnail do
 
       # Store task PID so atlas can await it (store PID not Task struct to allow cross-process monitoring)
       :ets.insert(:thumbnail_tasks, {youtube_id, task.pid})
+
+      # Monitor the task to track exit reasons
+      Monitor.add(task.pid)
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
       # UPGRADE: aspect_ratio is not used on /a/2
