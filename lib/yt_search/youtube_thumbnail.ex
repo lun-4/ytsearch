@@ -229,18 +229,25 @@ defmodule YtSearch.Youtube.Thumbnail do
     start_ts = System.monotonic_time(:millisecond)
 
     Mutex.under(ThumbnailMutex, id, fn ->
-      end_ts = System.monotonic_time(:millisecond)
-      latency = end_ts - start_ts
-      YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_mutex, latency)
+      try do
+        end_ts = System.monotonic_time(:millisecond)
+        latency = end_ts - start_ts
+        YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_mutex, latency)
 
-      TaskCounter.inc_inner_download()
-      # refetch to prevent double fetch
-      case Thumbnail.fetch(id) do
-        nil ->
-          do_download_thumbnail(id, url, opts)
+        TaskCounter.inc_inner_download()
+        # refetch to prevent double fetch
+        case Thumbnail.fetch(id) do
+          nil ->
+            do_download_thumbnail(id, url, opts)
 
-        thumb ->
-          thumb
+          thumb ->
+            thumb
+        end
+      rescue
+        e ->
+          Logger.error(Exception.format(:error, e, __STACKTRACE__))
+          TaskCounter.inc(:predownload_exception)
+          reraise e, __STACKTRACE__
       end
     end)
   end
