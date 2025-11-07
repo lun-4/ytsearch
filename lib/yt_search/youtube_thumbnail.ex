@@ -166,6 +166,8 @@ defmodule YtSearch.Youtube.Thumbnail do
 
       task =
         Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
+          :ets.insert(:thumbnail_tasks, {youtube_id, self()})
+
           TaskCounter.inc_exec()
 
           try do
@@ -180,9 +182,6 @@ defmodule YtSearch.Youtube.Thumbnail do
             :ets.delete(:thumbnail_tasks, youtube_id)
           end
         end)
-
-      # Store task PID so atlas can await it (store PID not Task struct to allow cross-process monitoring)
-      :ets.insert(:thumbnail_tasks, {youtube_id, task.pid})
 
       # Monitor the task to track exit reasons
       Monitor.add(task.pid)
