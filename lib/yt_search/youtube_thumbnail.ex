@@ -15,6 +15,12 @@ defmodule YtSearch.Youtube.Thumbnail do
       )
 
       Counter.declare(
+        name: :yts_atlas_count,
+        help: "atlas stuff",
+        labels: [:status]
+      )
+
+      Counter.declare(
         name: :yts_thumbnail_task_total,
         help: "Thumbnail tasks"
       )
@@ -60,6 +66,13 @@ defmodule YtSearch.Youtube.Thumbnail do
 
       Counter.inc(
         name: :yts_thumbnail_task_results,
+        labels: [to_string(status)]
+      )
+    end
+
+    def inc_atlas(status) do
+      Counter.inc(
+        name: :yts_atlas_count,
         labels: [to_string(status)]
       )
     end

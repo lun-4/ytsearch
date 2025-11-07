@@ -69,6 +69,8 @@ defmodule YtSearch.Thumbnail.Atlas do
   end
 
   defp internal_assemble(slots) do
+    YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:assemble)
+
     thumbnail_paths =
       slots
       |> Enum.map(fn slot ->
@@ -78,17 +80,22 @@ defmodule YtSearch.Thumbnail.Atlas do
 
         if slot != nil do
           # First, check if there's a pending download task
+          YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_check)
+
           case :ets.lookup(:thumbnail_tasks, slot.youtube_id) do
             [{_id, pid}] when is_pid(pid) ->
               # Task is running or queued, wait for it with timeout
               if Process.alive?(pid) do
+                YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_alive)
                 ref = Process.monitor(pid)
 
                 receive do
                   {:DOWN, ^ref, :process, ^pid, _reason} ->
+                    YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_monitored)
                     :ok
                 after
                   10_000 ->
+                    YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_timeout)
                     Process.demonitor(ref, [:flush])
                     Logger.warning("Thumbnail task timeout for #{slot.youtube_id}")
                 end
@@ -96,6 +103,7 @@ defmodule YtSearch.Thumbnail.Atlas do
 
             _ ->
               # No task, proceed normally
+              YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_none)
               :ok
           end
 
