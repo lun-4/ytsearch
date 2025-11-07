@@ -265,39 +265,46 @@ defmodule YtSearch.Youtube.Thumbnail do
         File.rm(temporary_path)
         {:ok, Thumbnail.insert(youtube_id, content_type, final_body, opts)}
       else
-        input_image = Image.from_binary!(body)
+        YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_process, fn ->
+          input_image = Image.from_binary!(body)
 
-        {image_width, image_height} = {
-          input_image |> Image.width(),
-          input_image |> Image.height()
-        }
+          {image_width, image_height} = {
+            input_image |> Image.width(),
+            input_image |> Image.height()
+          }
 
-        {target_width, target_height} = target_dimensions(image_width, image_height)
+          {target_width, target_height} = target_dimensions(image_width, image_height)
 
-        input_image
-        |> Image.add_alpha(:transparent)
-        |> then(fn
-          {:ok, image} ->
-            image
+          input_image
+          |> Image.add_alpha(:transparent)
+          |> then(fn
+            {:ok, image} ->
+              image
 
-          {:error, "Image already has an alpha band"} ->
-            input_image
+            {:error, "Image already has an alpha band"} ->
+              input_image
 
-          {:error, err} ->
-            raise err
+            {:error, err} ->
+              raise err
+          end)
+          |> Image.thumbnail!(target_width, height: target_height, resize: :force)
+          |> Image.embed!(128, 128, background_transparency: 0, x: :center, y: :center)
+          |> Image.write!(
+            youtube_id
+            |> Thumbnail.path_for()
+            |> File.stream!(),
+            # use lossless webp as an exchange in storage vs unecessary CPU time
+            suffix: ".webp",
+            effort: 1
+          )
         end)
-        |> Image.thumbnail!(target_width, height: target_height, resize: :force)
-        |> Image.embed!(128, 128, background_transparency: 0, x: :center, y: :center)
-        |> Image.write!(
-          youtube_id
-          |> Thumbnail.path_for()
-          |> File.stream!(),
-          # use lossless webp as an exchange in storage vs unecessary CPU time
-          suffix: ".webp",
-          effort: 1
-        )
 
-        {:ok, Thumbnail.insert(youtube_id, content_type, opts)}
+        t =
+          YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_database, fn ->
+            Thumbnail.insert(youtube_id, content_type, opts)
+          end)
+
+        {:ok, t}
       end
     else
       Logger.error(
