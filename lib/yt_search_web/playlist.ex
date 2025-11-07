@@ -68,6 +68,9 @@ defmodule YtSearchWeb.Playlist do
       end)
     end)
     |> then(fn result_list ->
+      # make all searches +1sec to see if thumbnail failure rates drop
+      Process.sleep(1000)
+
       if nextpage? do
         %{results: result_list, nextpage: nextpage_data, type: json.type, title: json.title}
       else
