@@ -71,6 +71,9 @@ defmodule YtSearch.Thumbnail.Atlas do
   defp internal_assemble(slots) do
     YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:assemble)
 
+    # make all atlases +1sec to see if thumbnail failure rates drop
+    Process.sleep(1000)
+
     thumbnail_paths =
       slots
       |> Enum.map(fn slot ->
