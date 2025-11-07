@@ -38,6 +38,21 @@ defmodule YtSearch.Youtube.Thumbnail do
         name: :yts_thumbnail_task_finish,
         help: "Thumbnail task finishs"
       )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_inner_checks,
+        help: "Thumbnail task inner checks"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_inner_downloads,
+        help: "Thumbnail task inner downloads"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_inner_inner_downloads,
+        help: "Thumbnail task inner inner downloads"
+      )
     end
 
     def inc(status) do
@@ -63,6 +78,18 @@ defmodule YtSearch.Youtube.Thumbnail do
 
     def inc_finish() do
       Counter.inc(name: :yts_thumbnail_task_finish)
+    end
+
+    def inc_inner_check() do
+      Counter.inc(name: :yts_thumbnail_task_inner_checks)
+    end
+
+    def inc_inner_download() do
+      Counter.inc(name: :yts_thumbnail_task_inner_downloads)
+    end
+
+    def inc_inner_inner_download() do
+      Counter.inc(name: :yts_thumbnail_task_inner_inner_downloads)
     end
   end
 
@@ -120,6 +147,7 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   @spec maybe_download_thumbnail(String.t(), String.t(), Keyword.t()) :: Thumbnail.t()
   def maybe_download_thumbnail(id, url, opts) do
+    TaskCounter.inc_inner_check()
     maybe_metadata = Thumbnail.fetch(id)
     maybe_filesize = filesize_for(id)
     should_download? = maybe_metadata == nil or maybe_filesize == 0
@@ -133,7 +161,14 @@ defmodule YtSearch.Youtube.Thumbnail do
   end
 
   def mutexed_download_thumbnail(id, url, opts) do
+    start_ts = System.monotonic_time(:millisecond)
+
     Mutex.under(ThumbnailMutex, id, fn ->
+      end_ts = System.monotonic_time(:millisecond)
+      latency = end_ts - start_ts
+      YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_mutex, latency)
+
+      TaskCounter.inc_inner_download()
       # refetch to prevent double fetch
       case Thumbnail.fetch(id) do
         nil ->
@@ -148,6 +183,8 @@ defmodule YtSearch.Youtube.Thumbnail do
   @mogrify false
 
   defp do_download_thumbnail(youtube_id, url, opts) do
+    TaskCounter.inc_inner_inner_download()
+
     if filesize_for(youtube_id) > 0 do
       # if it already exists, insert the metadata entry (as to be in this function,
       # the db entry would be currently missing)
@@ -194,12 +231,14 @@ defmodule YtSearch.Youtube.Thumbnail do
 
     # youtube channels give urls without scheme for some reason
     {:ok, response} =
-      if String.starts_with?(url, "//") do
-        "https:#{url}"
-      else
-        url
-      end
-      |> Tesla.get()
+      YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_download, fn ->
+        if String.starts_with?(url, "//") do
+          "https:#{url}"
+        else
+          url
+        end
+        |> Tesla.get()
+      end)
 
     if response.status == 200 do
       content_type = Tesla.get_header(response, "content-type")
