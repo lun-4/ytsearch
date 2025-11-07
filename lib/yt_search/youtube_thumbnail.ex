@@ -18,6 +18,26 @@ defmodule YtSearch.Youtube.Thumbnail do
         name: :yts_thumbnail_task_total,
         help: "Thumbnail tasks"
       )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_spawns,
+        help: "Thumbnail task spawns"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_checks,
+        help: "Thumbnail task checks"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_execs,
+        help: "Thumbnail task execs"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_finish,
+        help: "Thumbnail task finishs"
+      )
     end
 
     def inc(status) do
@@ -28,6 +48,22 @@ defmodule YtSearch.Youtube.Thumbnail do
         labels: [to_string(status)]
       )
     end
+
+    def inc_check() do
+      Counter.inc(name: :yts_thumbnail_task_checks)
+    end
+
+    def inc_spawn() do
+      Counter.inc(name: :yts_thumbnail_task_spawns)
+    end
+
+    def inc_exec() do
+      Counter.inc(name: :yts_thumbnail_task_execs)
+    end
+
+    def inc_finish() do
+      Counter.inc(name: :yts_thumbnail_task_finish)
+    end
   end
 
   defmodule ThumbnailMetadata do
@@ -36,9 +72,15 @@ defmodule YtSearch.Youtube.Thumbnail do
   end
 
   def fetch_piped_in_background(youtube_id, data, opts) do
+    TaskCounter.inc_check()
+
     if data["thumbnail"] != nil do
+      TaskCounter.inc_spawn()
+
       task =
         Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
+          TaskCounter.inc_exec()
+
           try do
             maybe_download_thumbnail(
               youtube_id,
@@ -46,6 +88,7 @@ defmodule YtSearch.Youtube.Thumbnail do
               opts
             )
           after
+            TaskCounter.inc_finish()
             # Clean up task ref when done
             :ets.delete(:thumbnail_tasks, youtube_id)
           end
