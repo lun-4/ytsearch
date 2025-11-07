@@ -218,6 +218,8 @@ defmodule YtSearch.Youtube.Thumbnail do
     if should_download? do
       mutexed_download_thumbnail(id, url, opts)
     else
+      TaskCounter.inc(:already_exists)
+
       maybe_metadata
       |> SlotUtilities.refresh_expiration(opts)
     end
