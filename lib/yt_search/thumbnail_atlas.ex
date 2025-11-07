@@ -79,6 +79,16 @@ defmodule YtSearch.Thumbnail.Atlas do
         # them all before assembling atlas
 
         if slot != nil do
+          thumb1 =
+            slot.youtube_id
+            |> Thumbnail.fetch()
+
+          if thumb1 == nil do
+            YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:thumb1_nil)
+          else
+            YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:thumb1_nonil)
+          end
+
           # First, check if there's a pending download task
           YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_check)
 
