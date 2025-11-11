@@ -102,65 +102,74 @@ defmodule YtSearchWeb.HelloController do
           unkeepalive_thumbnails(old_keepalived_slots)
           {:ok, data} = upstream_trending_tab()
 
+          cached_data =
+            if data == nil do
+              :nothing
+            else
+              data
+            end
+
           Cachex.put(
             :tabs,
             "trending",
-            data,
+            cached_data,
             # 2 hours
             ttl: 2 * 60 * 60 * 1000
           )
 
-          old_keepalived_slots
-          |> Enum.map(fn slot ->
-            %module{} = slot
+          unless data == nil do
+            old_keepalived_slots
+            |> Enum.map(fn slot ->
+              %module{} = slot
 
-            # to calculate if a given slot from A is in B we need to check
-            # the video slot (and the channel slot the video slot refers to!)
-            any_match? =
-              data.search_results
-              |> Enum.map(fn
-                %{
-                  type: video_type,
-                  slot_id: slot_id_str,
-                  channel_slot: channel_slot_id
-                }
-                when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) and
-                       is_bitstring(channel_slot_id) ->
-                  # either match on the video slot id, or match on the inner channel slot id
-                  (module == YtSearch.Slot and slot_id_str == "#{slot.id}") or
-                    (module == YtSearch.ChannelSlot and channel_slot_id == "#{slot.id}")
+              # to calculate if a given slot from A is in B we need to check
+              # the video slot (and the channel slot the video slot refers to!)
+              any_match? =
+                data.search_results
+                |> Enum.map(fn
+                  %{
+                    type: video_type,
+                    slot_id: slot_id_str,
+                    channel_slot: channel_slot_id
+                  }
+                  when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) and
+                         is_bitstring(channel_slot_id) ->
+                    # either match on the video slot id, or match on the inner channel slot id
+                    (module == YtSearch.Slot and slot_id_str == "#{slot.id}") or
+                      (module == YtSearch.ChannelSlot and channel_slot_id == "#{slot.id}")
 
-                # i forgot if playlists exist in the trending tab
-                %{type: :playlist, slot_id: slot_id_str, youtube_id: youtube_id}
-                when is_bitstring(slot_id_str) ->
-                  module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}" and
-                    youtube_id == slot.youtube_id
-              end)
-              |> Enum.filter(fn match? -> match? end)
-              |> Enum.at(0)
-              |> then(fn
-                nil -> false
-                v -> v
-              end)
+                  # i forgot if playlists exist in the trending tab
+                  %{type: :playlist, slot_id: slot_id_str, youtube_id: youtube_id}
+                  when is_bitstring(slot_id_str) ->
+                    module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}" and
+                      youtube_id == slot.youtube_id
+                end)
+                |> Enum.filter(fn match? -> match? end)
+                |> Enum.at(0)
+                |> then(fn
+                  nil -> false
+                  v -> v
+                end)
 
-            # if the old slot is not in the new refetched trending tab,
-            # its safe to unset keepalive on the old slot
+              # if the old slot is not in the new refetched trending tab,
+              # its safe to unset keepalive on the old slot
 
-            if not any_match? do
-              slot
-              |> module.changeset(%{keepalive: false})
-              |> SlotUtilities.repo(module).update()
-            else
-              {:ok, nil}
-            end
-          end)
-          |> Enum.map(fn
-            {:error, changeset} ->
-              Logger.warning("failed to update, #{inspect(changeset)}")
+              if not any_match? do
+                slot
+                |> module.changeset(%{keepalive: false})
+                |> SlotUtilities.repo(module).update()
+              else
+                {:ok, nil}
+              end
+            end)
+            |> Enum.map(fn
+              {:error, changeset} ->
+                Logger.warning("failed to update, #{inspect(changeset)}")
 
-            {:ok, _} ->
-              :noop
-          end)
+              {:ok, _} ->
+                :noop
+            end)
+          end
 
           {:ok, data}
 
