@@ -48,6 +48,9 @@ defmodule YtSearch.Application do
     File.mkdir_p!("thumbnails")
     File.mkdir_p!("subtitles")
 
+    # ETS table to track thumbnail download tasks
+    :ets.new(:thumbnail_tasks, [:set, :public, :named_table, read_concurrency: true])
+
     children_before_repos =
       [
         # Start the Telemetry supervisor
@@ -85,6 +88,7 @@ defmodule YtSearch.Application do
         YtSearch.CounterServer,
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
+        YtSearch.Youtube.Thumbnail.Monitor,
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
         {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}

@@ -15,8 +15,55 @@ defmodule YtSearch.Youtube.Thumbnail do
       )
 
       Counter.declare(
+        name: :yts_atlas_count,
+        help: "atlas stuff",
+        labels: [:status]
+      )
+
+      Counter.declare(
         name: :yts_thumbnail_task_total,
         help: "Thumbnail tasks"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_spawns,
+        help: "Thumbnail task spawns"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_checks,
+        help: "Thumbnail task checks"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_execs,
+        help: "Thumbnail task execs"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_finish,
+        help: "Thumbnail task finishs"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_inner_checks,
+        help: "Thumbnail task inner checks"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_inner_downloads,
+        help: "Thumbnail task inner downloads"
+      )
+
+      Counter.declare(
+        name: :yts_thumbnail_task_inner_inner_downloads,
+        help: "Thumbnail task inner inner downloads"
+      )
+
+      Counter.declare(
+        name: :yts_thumb_mon,
+        help: "Thumbnail task monitor exit reasons",
+        labels: [:reason]
       )
     end
 
@@ -28,6 +75,48 @@ defmodule YtSearch.Youtube.Thumbnail do
         labels: [to_string(status)]
       )
     end
+
+    def inc_atlas(status) do
+      Counter.inc(
+        name: :yts_atlas_count,
+        labels: [to_string(status)]
+      )
+    end
+
+    def inc_check() do
+      Counter.inc(name: :yts_thumbnail_task_checks)
+    end
+
+    def inc_spawn() do
+      Counter.inc(name: :yts_thumbnail_task_spawns)
+    end
+
+    def inc_exec() do
+      Counter.inc(name: :yts_thumbnail_task_execs)
+    end
+
+    def inc_finish() do
+      Counter.inc(name: :yts_thumbnail_task_finish)
+    end
+
+    def inc_inner_check() do
+      Counter.inc(name: :yts_thumbnail_task_inner_checks)
+    end
+
+    def inc_inner_download() do
+      Counter.inc(name: :yts_thumbnail_task_inner_downloads)
+    end
+
+    def inc_inner_inner_download() do
+      Counter.inc(name: :yts_thumbnail_task_inner_inner_downloads)
+    end
+
+    def inc_monitor(reason) do
+      Counter.inc(
+        name: :yts_thumb_mon,
+        labels: [to_string(reason)]
+      )
+    end
   end
 
   defmodule ThumbnailMetadata do
@@ -35,15 +124,67 @@ defmodule YtSearch.Youtube.Thumbnail do
     defstruct [:aspect_ratio]
   end
 
+  defmodule Monitor do
+    use GenServer
+
+    def start_link(_opts) do
+      GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+    end
+
+    @doc """
+    Add a PID to be monitored. When the process exits, its exit reason
+    will be recorded via TaskCounter.inc/1
+    """
+    def add(pid) when is_pid(pid) do
+      GenServer.cast(__MODULE__, {:monitor, pid})
+    end
+
+    @impl true
+    def init(_) do
+      {:ok, %{}}
+    end
+
+    @impl true
+    def handle_cast({:monitor, pid}, state) do
+      ref = Process.monitor(pid)
+      {:noreply, Map.put(state, ref, pid)}
+    end
+
+    @impl true
+    def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+      # Record the exit reason to TaskCounter
+      TaskCounter.inc_monitor(reason)
+      {:noreply, Map.delete(state, ref)}
+    end
+  end
+
   def fetch_piped_in_background(youtube_id, data, opts) do
+    TaskCounter.inc_check()
+
     if data["thumbnail"] != nil do
-      Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
-        maybe_download_thumbnail(
-          youtube_id,
-          data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
-          opts
-        )
-      end)
+      TaskCounter.inc_spawn()
+
+      task =
+        Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
+          :ets.insert(:thumbnail_tasks, {youtube_id, self()})
+
+          TaskCounter.inc_exec()
+
+          try do
+            maybe_download_thumbnail(
+              youtube_id,
+              data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
+              opts
+            )
+          after
+            TaskCounter.inc_finish()
+            # Clean up task ref when done
+            :ets.delete(:thumbnail_tasks, youtube_id)
+          end
+        end)
+
+      # Monitor the task to track exit reasons
+      Monitor.add(task.pid)
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
       # UPGRADE: aspect_ratio is not used on /a/2
@@ -68,6 +209,7 @@ defmodule YtSearch.Youtube.Thumbnail do
 
   @spec maybe_download_thumbnail(String.t(), String.t(), Keyword.t()) :: Thumbnail.t()
   def maybe_download_thumbnail(id, url, opts) do
+    TaskCounter.inc_inner_check()
     maybe_metadata = Thumbnail.fetch(id)
     maybe_filesize = filesize_for(id)
     should_download? = maybe_metadata == nil or maybe_filesize == 0
@@ -75,20 +217,36 @@ defmodule YtSearch.Youtube.Thumbnail do
     if should_download? do
       mutexed_download_thumbnail(id, url, opts)
     else
+      TaskCounter.inc(:already_exists)
+
       maybe_metadata
       |> SlotUtilities.refresh_expiration(opts)
     end
   end
 
   def mutexed_download_thumbnail(id, url, opts) do
-    Mutex.under(ThumbnailMutex, id, fn ->
-      # refetch to prevent double fetch
-      case Thumbnail.fetch(id) do
-        nil ->
-          do_download_thumbnail(id, url, opts)
+    start_ts = System.monotonic_time(:millisecond)
 
-        thumb ->
-          thumb
+    Mutex.under(ThumbnailMutex, id, fn ->
+      try do
+        end_ts = System.monotonic_time(:millisecond)
+        latency = end_ts - start_ts
+        YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_mutex, latency)
+
+        TaskCounter.inc_inner_download()
+        # refetch to prevent double fetch
+        case Thumbnail.fetch(id) do
+          nil ->
+            do_download_thumbnail(id, url, opts)
+
+          thumb ->
+            thumb
+        end
+      rescue
+        e ->
+          Logger.error(Exception.format(:error, e, __STACKTRACE__))
+          TaskCounter.inc(:predownload_exception)
+          reraise e, __STACKTRACE__
       end
     end)
   end
@@ -96,6 +254,8 @@ defmodule YtSearch.Youtube.Thumbnail do
   @mogrify false
 
   defp do_download_thumbnail(youtube_id, url, opts) do
+    TaskCounter.inc_inner_inner_download()
+
     if filesize_for(youtube_id) > 0 do
       # if it already exists, insert the metadata entry (as to be in this function,
       # the db entry would be currently missing)
@@ -103,15 +263,22 @@ defmodule YtSearch.Youtube.Thumbnail do
       {:ok, Thumbnail.insert(youtube_id, "image/webp", opts)}
     else
       YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail, fn ->
-        result = really_do_download_thumbnail(youtube_id, url, opts)
+        try do
+          result = really_do_download_thumbnail(youtube_id, url, opts)
 
-        case result do
-          {:ok, _} -> TaskCounter.inc(:success)
-          {:error, {:http_response, status, _, _}} -> TaskCounter.inc("error_http_#{status}")
-          {:error, _} -> TaskCounter.inc(:error_other)
+          case result do
+            {:ok, _} -> TaskCounter.inc(:success)
+            {:error, {:http_response, status, _, _}} -> TaskCounter.inc("error_http_#{status}")
+            {:error, _} -> TaskCounter.inc(:error_other)
+          end
+
+          result
+        rescue
+          e ->
+            Logger.error(Exception.format(:error, e, __STACKTRACE__))
+            TaskCounter.inc(:exception)
+            reraise e, __STACKTRACE__
         end
-
-        result
       end)
     end
   end
@@ -135,12 +302,14 @@ defmodule YtSearch.Youtube.Thumbnail do
 
     # youtube channels give urls without scheme for some reason
     {:ok, response} =
-      if String.starts_with?(url, "//") do
-        "https:#{url}"
-      else
-        url
-      end
-      |> Tesla.get()
+      YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_download, fn ->
+        if String.starts_with?(url, "//") do
+          "https:#{url}"
+        else
+          url
+        end
+        |> Tesla.get()
+      end)
 
     if response.status == 200 do
       content_type = Tesla.get_header(response, "content-type")
@@ -167,39 +336,46 @@ defmodule YtSearch.Youtube.Thumbnail do
         File.rm(temporary_path)
         {:ok, Thumbnail.insert(youtube_id, content_type, final_body, opts)}
       else
-        input_image = Image.from_binary!(body)
+        YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_process, fn ->
+          input_image = Image.from_binary!(body)
 
-        {image_width, image_height} = {
-          input_image |> Image.width(),
-          input_image |> Image.height()
-        }
+          {image_width, image_height} = {
+            input_image |> Image.width(),
+            input_image |> Image.height()
+          }
 
-        {target_width, target_height} = target_dimensions(image_width, image_height)
+          {target_width, target_height} = target_dimensions(image_width, image_height)
 
-        input_image
-        |> Image.add_alpha(:transparent)
-        |> then(fn
-          {:ok, image} ->
-            image
+          input_image
+          |> Image.add_alpha(:transparent)
+          |> then(fn
+            {:ok, image} ->
+              image
 
-          {:error, "Image already has an alpha band"} ->
-            input_image
+            {:error, "Image already has an alpha band"} ->
+              input_image
 
-          {:error, err} ->
-            raise err
+            {:error, err} ->
+              raise err
+          end)
+          |> Image.thumbnail!(target_width, height: target_height, resize: :force)
+          |> Image.embed!(128, 128, background_transparency: 0, x: :center, y: :center)
+          |> Image.write!(
+            youtube_id
+            |> Thumbnail.path_for()
+            |> File.stream!(),
+            # use lossless webp as an exchange in storage vs unecessary CPU time
+            suffix: ".webp",
+            effort: 1
+          )
         end)
-        |> Image.thumbnail!(target_width, height: target_height, resize: :force)
-        |> Image.embed!(128, 128, background_transparency: 0, x: :center, y: :center)
-        |> Image.write!(
-          youtube_id
-          |> Thumbnail.path_for()
-          |> File.stream!(),
-          # use lossless webp as an exchange in storage vs unecessary CPU time
-          suffix: ".webp",
-          effort: 1
-        )
 
-        {:ok, Thumbnail.insert(youtube_id, content_type, opts)}
+        t =
+          YtSearch.MetadataExtractor.Worker.TaskLatency.register(:thumbnail_database, fn ->
+            Thumbnail.insert(youtube_id, content_type, opts)
+          end)
+
+        {:ok, t}
       end
     else
       Logger.error(
