@@ -50,17 +50,22 @@ defmodule YtSearchWeb.HelloController do
   end
 
   defp upstream_trending_tab do
-    {:ok, data} = Youtube.trending()
+    case Youtube.trending() do
+      {:ok, data} ->
+        results =
+          data
+          |> Playlist.from_piped_data(keepalive: true)
 
-    results =
-      data
-      |> Playlist.from_piped_data(keepalive: true)
+        search_slot =
+          results
+          |> SearchSlot.from_playlist("yt://trending", keepalive: true)
 
-    search_slot =
-      results
-      |> SearchSlot.from_playlist("yt://trending", keepalive: true)
+        {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
-    {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+      v ->
+        Logger.warning("yt trending failed: #{inspect(v)}")
+        {:ok, nil}
+    end
   end
 
   defp unkeepalive_thumbnails(old_keepalived_slots) do
