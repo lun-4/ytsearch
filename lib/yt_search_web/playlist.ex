@@ -4,6 +4,7 @@ defmodule YtSearchWeb.Playlist do
 
   def from_piped_data(json, opts \\ []) do
     nextpage? = opts |> Keyword.get(:nextpage?, false)
+    transform_upcoming_videos? = opts |> Keyword.get(:transform_upcoming_videos?, false)
 
     nextpage_data =
       if nextpage? do
@@ -22,10 +23,26 @@ defmodule YtSearchWeb.Playlist do
         case entry["type"] do
           "stream" ->
             cond do
-              entry["isShort"] -> :short
-              entry["duration"] in [-1, 0] -> :livestream
-              entry["views"] == -1 -> :upcoming
-              true -> :video
+              entry["isShort"] ->
+                :short
+
+              entry["duration"] in [-1, 0] ->
+                :livestream
+
+              entry["views"] == -1 ->
+                if transform_upcoming_videos? do
+                  # for the mixed trending tab, videos from the Music and Movie tabs
+                  # return views=-1 (Gaming doesn't, for some fucked up reason).
+                  #
+                  # let Trending (and only Trending) bypass this behavior
+                  # and promote upcoming videos to real videos.
+                  :video
+                else
+                  :upcoming
+                end
+
+              true ->
+                :video
             end
 
           "playlist" ->

@@ -54,7 +54,7 @@ defmodule YtSearchWeb.HelloController do
       {:ok, data} ->
         results =
           data
-          |> Playlist.from_piped_data(keepalive: true)
+          |> Playlist.from_piped_data(keepalive: true, transform_upcoming_videos?: true)
 
         search_slot =
           results
