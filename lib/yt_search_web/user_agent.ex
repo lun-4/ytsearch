@@ -19,7 +19,7 @@ defmodule YtSearchWeb.UserAgent do
       String.contains?(agent, "stagefright") or String.contains?(agent, "AVProMobileVideo") ->
         :quest_video
 
-      String.contains?(agent, "UnityWebRequest") ->
+      String.contains?(agent, "UnityWebRequest") or String.starts_with?(agent, "VRChat") ->
         :unity
 
       # TODO find out a reliable way to distinct yt-dlp and browsers (i dont think ill be able to figure that one out)

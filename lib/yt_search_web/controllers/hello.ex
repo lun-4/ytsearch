@@ -13,8 +13,21 @@ defmodule YtSearchWeb.HelloController do
     trending_tab = fetch_trending_tab()
     counter_value = CounterServer.get_value()
 
+    accept_header =
+      case Plug.Conn.get_req_header(conn, "accept") do
+        [] -> nil
+        [value | _] -> value
+      end
+
+    client_sends_accept_header = accept_header == "*/*"
+
     conn
-    |> json(%{online: true, trending_tab: trending_tab, counter_data: counter_value})
+    |> json(%{
+      online: true,
+      trending_tab: trending_tab,
+      counter_data: counter_value,
+      client_sends_accept_header: client_sends_accept_header
+    })
   end
 
   def fetch_trending_tab(v \\ nil) do
