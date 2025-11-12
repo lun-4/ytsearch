@@ -175,4 +175,14 @@ defmodule YtSearch.Data do
       ],
       dedicated_replicas: []
   end
+
+  defmodule TrendingRepo do
+    use YtSearch.Data.RepoBase,
+      primary: YtSearch.Data.TrendingRepo,
+      read_replicas: [
+        YtSearch.Data.TrendingRepo.Replica1,
+        YtSearch.Data.TrendingRepo.Replica2
+      ],
+      dedicated_replicas: []
+  end
 end
