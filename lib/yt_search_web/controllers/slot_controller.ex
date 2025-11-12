@@ -215,13 +215,15 @@ defmodule YtSearchWeb.SlotController do
               end
           end
         else
-          YtSearch.PubSub.publish(:slot_view, slot)
           # Retain current behavior for Accept: "*/*" or missing/empty header
           case UserAgent.on(conn) do
             :unity ->
               do_slot_metadata(conn, slot)
 
             _ ->
+              # Only publish when we actually redirect (not for metadata requests)
+              YtSearch.PubSub.publish(:slot_view, slot)
+
               case YtSearch.Slot.type(slot) do
                 :video ->
                   handle_quest_video(conn, slot)
