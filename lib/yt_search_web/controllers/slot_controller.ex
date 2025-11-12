@@ -22,6 +22,8 @@ defmodule YtSearchWeb.SlotController do
         |> render("slot.json")
 
       slot ->
+        YtSearch.PubSub.publish(:slot_view, slot)
+
         conn
         |> redirect(external: slot |> Slot.youtube_url())
     end
@@ -213,6 +215,7 @@ defmodule YtSearchWeb.SlotController do
               end
           end
         else
+          YtSearch.PubSub.publish(:slot_view, slot)
           # Retain current behavior for Accept: "*/*" or missing/empty header
           case UserAgent.on(conn) do
             :unity ->
@@ -241,6 +244,8 @@ defmodule YtSearchWeb.SlotController do
         redirect_to(conn, nil)
 
       slot ->
+        YtSearch.PubSub.publish(:slot_view, slot)
+
         # always redirect
         conn
         |> redirect(external: slot |> Slot.youtube_url())

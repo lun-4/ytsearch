@@ -59,8 +59,12 @@ defmodule YtSearch.Application do
 
     children_after_repos =
       [
+        # Start our simple PubSub system
+        YtSearch.PubSub,
+        # Start the Trending tracker
+        YtSearch.Trending,
         # Start the PubSub system
-        {Phoenix.PubSub, name: YtSearch.PubSub},
+        {Phoenix.PubSub, name: YtSearch.PhoenixPubSub},
         # Start Finch
         # {Finch, name: YtSearch.Finch},
         # Start the Endpoint (http/https)
