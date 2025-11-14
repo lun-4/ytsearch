@@ -20,6 +20,31 @@ if System.get_env("PHX_SERVER") do
   config :yt_search, YtSearchWeb.Endpoint, server: true
 end
 
+# Configure cluster topology for distributed Erlang
+# This enables automatic node discovery and connection
+cluster_nodes =
+  case System.get_env("CLUSTER_NODES") do
+    nil ->
+      []
+
+    nodes_string ->
+      nodes_string
+      |> String.split(",")
+      |> Enum.map(&String.trim/1)
+      |> Enum.map(&String.to_atom/1)
+  end
+
+if cluster_nodes != [] do
+  config :yt_search, :topologies,
+    yts: [
+      strategy: Cluster.Strategy.Epmd,
+      config: [
+        hosts: cluster_nodes,
+        timeout: 5000
+      ]
+    ]
+end
+
 if config_env() in [:dev, :prod] do
   config :yt_search, YtSearch.Youtube,
     piped_url: System.get_env("PIPED_URL") || "localhost:8080",
@@ -216,6 +241,27 @@ if config_env() == :prod do
         YtSearch.Data.CounterRepo.Replica1
       ] do
     config :yt_search, repo, database: counter_database_path
+  end
+
+  # Only configure TrendingRepo if role is "trending" or "all" (not "primary")
+  role = System.get_env("ROLE", "all")
+
+  if role in ["trending", "all"] do
+    trending_database_path =
+      System.get_env("TRENDING_DATABASE_PATH") ||
+        raise """
+        environment variable TRENDING_DATABASE_PATH is missing.
+        For example: /etc/yt_search/yt_search_trending.db
+        (Required for ROLE=trending or ROLE=all, not needed for ROLE=primary)
+        """
+
+    for repo <- [
+          YtSearch.Data.TrendingRepo,
+          YtSearch.Data.TrendingRepo.Replica1,
+          YtSearch.Data.TrendingRepo.Replica2
+        ] do
+      config :yt_search, repo, database: trending_database_path
+    end
   end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.

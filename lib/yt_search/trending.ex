@@ -18,16 +18,16 @@ defmodule YtSearch.Trending do
 
   @impl true
   def init(_opts) do
-    # Subscribe to slot_view events
-    :ok = YtSearch.PubSub.subscribe(:slot_view)
+    # Subscribe to slot_view events via Phoenix.PubSub (works across distributed nodes)
+    Phoenix.PubSub.subscribe(YtSearch.PhoenixPubSub, "slot_view")
 
-    Logger.info("Trending tracker started and subscribed to :slot_view")
+    Logger.info("Trending tracker started and subscribed to slot_view")
 
     {:ok, %{}}
   end
 
   @impl true
-  def handle_info({:pubsub, :slot_view, slot}, state) do
+  def handle_info({:slot_view, slot}, state) do
     Logger.debug("Slot viewed: #{slot.youtube_id} (slot_id: #{slot.id})")
 
     {:noreply, state}

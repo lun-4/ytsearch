@@ -8,12 +8,125 @@ defmodule YtSearch.Application do
   alias YtSearch.Tinycron
 
   def primaries() do
-    Application.fetch_env!(:yt_search, :ecto_repos)
+    role = System.get_env("ROLE", "all")
+
+    if role in ["all", "primary"] do
+      Application.fetch_env!(:yt_search, :ecto_repos)
+      |> Enum.reject(fn r -> r == YtSearch.Data.TrendingRepo end)
+    else
+      [YtSearch.Data.TrendingRepo]
+    end
   end
 
-  defp repos() do
+  defp filter_repos_by_role(repos, "primary") do
+    # everything but Trending
+    Enum.reject(repos, fn repo ->
+      repo == YtSearch.Data.TrendingRepo
+    end)
+  end
+
+  defp filter_repos_by_role(repos, "trending") do
+    # only Trending
+    Enum.filter(repos, fn repo ->
+      repo == YtSearch.Data.TrendingRepo
+    end)
+  end
+
+  defp filter_repos_by_role(repos, "all") do
+    # both
+    repos
+  end
+
+  @impl true
+  def start(_type, _args) do
+    role = System.get_env("ROLE", "all")
+    Logger.info("Starting application with ROLE=#{role}")
+
+    children = children_for(role) |> Enum.reject(&is_nil/1)
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: YtSearch.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  defp children_for("primary") do
+    setup_primary_environment()
+    start_telemetry()
+
+    base_children() ++ repos_for("primary") ++ primary_service_children() ++ maybe_janitors()
+  end
+
+  defp children_for("trending") do
+    cluster_and_pubsub() ++ repos_for("trending") ++ [YtSearch.Trending]
+  end
+
+  defp children_for("all") do
+    setup_primary_environment()
+    start_telemetry()
+
+    base_children() ++
+      repos_for("all") ++ primary_service_children() ++ [YtSearch.Trending] ++ maybe_janitors()
+  end
+
+  defp children_for(unknown) do
+    raise "unknown ROLE: #{unknown}"
+  end
+
+  defp base_children do
+    [
+      # Telemetry
+      YtSearchWeb.Telemetry
+    ] ++ cluster_and_pubsub()
+  end
+
+  defp cluster_and_pubsub do
+    [
+      # Cluster & PubSub (needed for distributed communication)
+      {Cluster.Supervisor, [topologies(), [name: YtSearch.ClusterSupervisor]]},
+      {Phoenix.PubSub, name: YtSearch.PhoenixPubSub}
+    ]
+  end
+
+  defp primary_service_children do
+    [
+      # Web server
+      YtSearchWeb.Endpoint,
+      # Mutexes for coordinating work
+      {Mutex, name: Mp4LinkMutex},
+      %{id: ThumbnailMutex, start: {Mutex, :start_link, [[name: ThumbnailMutex]]}},
+      %{id: SubtitleMutex, start: {Mutex, :start_link, [[name: SubtitleMutex]]}},
+      %{id: SearchMutex, start: {Mutex, :start_link, [[name: SearchMutex]]}},
+      %{
+        id: PlaylistEntryCreatorMutex,
+        start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
+      },
+      # Cache and state
+      {Cachex, name: :tabs},
+      YtSearch.CounterServer,
+      # Work supervisors
+      {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
+      {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
+      {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor},
+      YtSearch.Youtube.Thumbnail.Monitor,
+      # Registries
+      {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
+      {Registry, keys: :unique, name: YtSearch.MetadataExtractors}
+    ]
+  end
+
+  defp setup_primary_environment do
+    :erlang.system_flag(:microstate_accounting, true)
+    File.mkdir_p!("thumbnails")
+    File.mkdir_p!("subtitles")
+    # ETS table to track thumbnail download tasks
+    :ets.new(:thumbnail_tasks, [:set, :public, :named_table, read_concurrency: true])
+  end
+
+  defp repos_for(role) do
     Application.fetch_env!(:yt_search, :ecto_repos)
-    |> Enum.map(fn primary ->
+    |> filter_repos_by_role(role)
+    |> Enum.flat_map(fn primary ->
       primary
       |> to_string
       |> then(fn
@@ -25,7 +138,6 @@ defmodule YtSearch.Application do
           []
       end)
     end)
-    |> Enum.reduce(fn x, acc -> x ++ acc end)
     |> Enum.map(fn repo ->
       case Application.fetch_env(:yt_search, repo) do
         :error ->
@@ -41,71 +153,8 @@ defmodule YtSearch.Application do
     end)
   end
 
-  @impl true
-  def start(_type, _args) do
-    :erlang.system_flag(:microstate_accounting, true)
-
-    File.mkdir_p!("thumbnails")
-    File.mkdir_p!("subtitles")
-
-    # ETS table to track thumbnail download tasks
-    :ets.new(:thumbnail_tasks, [:set, :public, :named_table, read_concurrency: true])
-
-    children_before_repos =
-      [
-        # Start the Telemetry supervisor
-        YtSearchWeb.Telemetry
-      ]
-
-    children_after_repos =
-      [
-        # Start our simple PubSub system
-        YtSearch.PubSub,
-        # Start the Trending tracker
-        YtSearch.Trending,
-        # Start the PubSub system
-        {Phoenix.PubSub, name: YtSearch.PhoenixPubSub},
-        # Start Finch
-        # {Finch, name: YtSearch.Finch},
-        # Start the Endpoint (http/https)
-        YtSearchWeb.Endpoint,
-        # Start a worker by calling: YtSearch.Worker.start_link(arg)
-        # {YtSearch.Worker, arg}
-        {Mutex, name: Mp4LinkMutex},
-        %{
-          id: ThumbnailMutex,
-          start: {Mutex, :start_link, [[name: ThumbnailMutex]]}
-        },
-        %{
-          id: SubtitleMutex,
-          start: {Mutex, :start_link, [[name: SubtitleMutex]]}
-        },
-        %{
-          id: SearchMutex,
-          start: {Mutex, :start_link, [[name: SearchMutex]]}
-        },
-        %{
-          id: PlaylistEntryCreatorMutex,
-          start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
-        },
-        {Cachex, name: :tabs},
-        YtSearch.CounterServer,
-        {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
-        {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
-        YtSearch.Youtube.Thumbnail.Monitor,
-        {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
-        {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
-        {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}
-      ] ++ maybe_janitors()
-
-    children = children_before_repos ++ repos() ++ children_after_repos
-
-    start_telemetry()
-
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: YtSearch.Supervisor]
-    Supervisor.start_link(children, opts)
+  defp topologies do
+    Application.get_env(:yt_search, :topologies, [])
   end
 
   def janitor_specs do
