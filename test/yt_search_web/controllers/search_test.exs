@@ -223,6 +223,20 @@ defmodule YtSearchWeb.SearchTest do
     assert rjson["error"]
   end
 
+  test "VRChat user-agent works like UnityWebRequest", %{conn: conn} do
+    mock(fn
+      %{method: :get, url: "example.org" <> _suffix} ->
+        json(Jason.decode!(@piped_search_output))
+    end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "VRChat/2024.1.1")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
+
+    assert verify_search_results(json_response(conn, 200))
+  end
+
   test "ytdlp ratelimiting works" do
     # need to use mock_global because this test involved multiple process
     Tesla.Mock.mock_global(fn

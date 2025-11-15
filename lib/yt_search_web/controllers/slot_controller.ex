@@ -183,19 +183,51 @@ defmodule YtSearchWeb.SlotController do
         redirect_to(conn, nil)
 
       slot ->
-        case UserAgent.on(conn) do
-          :unity ->
-            do_slot_metadata(conn, slot)
+        accept_header =
+          case Plug.Conn.get_req_header(conn, "accept") do
+            [] -> nil
+            [value | _] -> value
+          end
 
-          _ ->
-            case YtSearch.Slot.type(slot) do
-              :video ->
-                handle_quest_video(conn, slot)
+        # If Accept header is exactly "image/*", return raw thumbnail
+        if accept_header == "image/*" do
+          alias YtSearch.Thumbnail
 
-              :livestream ->
-                conn
-                |> redirect(external: slot |> Slot.youtube_url())
-            end
+          case Thumbnail.fetch(slot.youtube_id) do
+            nil ->
+              conn
+              |> put_status(404)
+              |> text("thumbnail not found")
+
+            thumb ->
+              case Thumbnail.blob(thumb.id) do
+                nil ->
+                  conn
+                  |> put_status(404)
+                  |> text("thumbnail file not found")
+
+                binary_data ->
+                  conn
+                  |> put_resp_content_type(thumb.mime_type, nil)
+                  |> resp(200, binary_data)
+              end
+          end
+        else
+          # Retain current behavior for Accept: "*/*" or missing/empty header
+          case UserAgent.on(conn) do
+            :unity ->
+              do_slot_metadata(conn, slot)
+
+            _ ->
+              case YtSearch.Slot.type(slot) do
+                :video ->
+                  handle_quest_video(conn, slot)
+
+                :livestream ->
+                  conn
+                  |> redirect(external: slot |> Slot.youtube_url())
+              end
+          end
         end
     end
   end
