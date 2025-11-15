@@ -58,6 +58,7 @@ defmodule YtSearch.Application do
   end
 
   defp children_for("trending") do
+    start_telemetry()
     cluster_and_pubsub() ++ repos_for("trending") ++ [YtSearch.Trending] ++ maybe_janitors()
   end
 
