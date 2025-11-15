@@ -27,8 +27,17 @@ defmodule YtSearch.Trending do
   end
 
   @impl true
-  def handle_info({:slot_view, slot}, state) do
+  def handle_info({:slot_view, %YtSearch.Slot{} = slot}, state) do
     Logger.debug("Slot viewed: #{slot.youtube_id} (slot_id: #{slot.id})")
+
+    # Increment view count in video_counter table
+    # Using INSERT OR REPLACE to atomically increment the counter
+    YtSearch.Data.TrendingRepo.query!("""
+      INSERT INTO video_counter (yt_video_id, view_count)
+      VALUES (?, 1)
+      ON CONFLICT(yt_video_id) DO UPDATE SET
+        view_count = view_count + 1
+    """, [slot.youtube_id])
 
     {:noreply, state}
   end

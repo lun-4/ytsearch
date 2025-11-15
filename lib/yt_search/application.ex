@@ -58,7 +58,7 @@ defmodule YtSearch.Application do
   end
 
   defp children_for("trending") do
-    cluster_and_pubsub() ++ repos_for("trending") ++ [YtSearch.Trending]
+    cluster_and_pubsub() ++ repos_for("trending") ++ [YtSearch.Trending] ++ maybe_janitors()
   end
 
   defp children_for("all") do
@@ -168,12 +168,27 @@ defmodule YtSearch.Application do
     ]
   end
 
-  def periodic_task_specs do
+  def base_task_specs do
     [
-      [YtSearch.SlotUtilities.UsageMeter, [every: 60, jitter: (-3 * 60)..(3 * 60)]],
       [YtSearch.Repo.FreelistMeter, [every: 30, jitter: -10..30]],
       [YtSearch.Repo.Analyzer, [every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]]
     ]
+  end
+
+  def periodic_task_specs("primary") do
+    [
+      [YtSearch.SlotUtilities.UsageMeter, [every: 60, jitter: (-3 * 60)..(3 * 60)]]
+    ]
+  end
+
+  def periodic_task_specs("trending") do
+    [
+      [YtSearch.Trending.Reporter, [every: 3 * 60 * 60, jitter: 0..0]]
+    ]
+  end
+
+  def periodic_task_specs("all") do
+    periodic_task_specs("primary") ++ periodic_task_specs("trending")
   end
 
   defp maybe_janitors do
@@ -191,9 +206,11 @@ defmodule YtSearch.Application do
         Application.get_env(:yt_search, YtSearch.Constants)[:enable_periodic_janitors]
       end
 
+    role = System.get_env("ROLE", "all")
+
     periodic_tasks =
       if enable_periodic do
-        periodic_task_specs()
+        (base_task_specs() ++ periodic_task_specs(role))
         |> Enum.map(fn [module, opts] ->
           Tinycron.new(module, opts)
         end)
@@ -202,7 +219,7 @@ defmodule YtSearch.Application do
       end
 
     janitor_tasks =
-      if enable_janitor do
+      if role in ["perimary", "all"] and enable_janitor do
         janitor_specs()
         |> Enum.map(fn [module, opts] ->
           Tinycron.new(module, opts)
