@@ -7,25 +7,41 @@ import Config
      YtSearch.Data.SlotRepo,
      YtSearch.Data.SlotRepo.Replica1,
      YtSearch.Data.SlotRepo.Replica2,
-     YtSearch.Data.SlotRepo.Replica3
+     YtSearch.Data.SlotRepo.Replica3,
+     YtSearch.Data.SlotRepo.Replica4,
+     YtSearch.Data.SlotRepo.Replica5,
+     YtSearch.Data.SlotRepo.Replica6,
+     YtSearch.Data.SlotRepo.Replica7
    ], "slots"},
   {[
      YtSearch.Data.ChannelSlotRepo,
      YtSearch.Data.ChannelSlotRepo.Replica1,
      YtSearch.Data.ChannelSlotRepo.Replica2,
-     YtSearch.Data.ChannelSlotRepo.Replica3
+     YtSearch.Data.ChannelSlotRepo.Replica3,
+     YtSearch.Data.ChannelSlotRepo.Replica4,
+     YtSearch.Data.ChannelSlotRepo.Replica5,
+     YtSearch.Data.ChannelSlotRepo.Replica6,
+     YtSearch.Data.ChannelSlotRepo.Replica7
    ], "channel_slots"},
   {[
      YtSearch.Data.PlaylistSlotRepo,
      YtSearch.Data.PlaylistSlotRepo.Replica1,
      YtSearch.Data.PlaylistSlotRepo.Replica2,
-     YtSearch.Data.PlaylistSlotRepo.Replica3
+     YtSearch.Data.PlaylistSlotRepo.Replica3,
+     YtSearch.Data.PlaylistSlotRepo.Replica4,
+     YtSearch.Data.PlaylistSlotRepo.Replica5,
+     YtSearch.Data.PlaylistSlotRepo.Replica6,
+     YtSearch.Data.PlaylistSlotRepo.Replica7
    ], "playlist_slots"},
   {[
      YtSearch.Data.SearchSlotRepo,
      YtSearch.Data.SearchSlotRepo.Replica1,
      YtSearch.Data.SearchSlotRepo.Replica2,
-     YtSearch.Data.SearchSlotRepo.Replica3
+     YtSearch.Data.SearchSlotRepo.Replica3,
+     YtSearch.Data.SearchSlotRepo.Replica4,
+     YtSearch.Data.SearchSlotRepo.Replica5,
+     YtSearch.Data.SearchSlotRepo.Replica6,
+     YtSearch.Data.SearchSlotRepo.Replica7
    ], "search_slots"},
   {[
      YtSearch.Data.ThumbnailRepo,
