@@ -82,18 +82,38 @@ defmodule YtSearchWeb.SlotController do
   @image_reply Path.join(:code.priv_dir(:yt_search), "static/retry.png")
 
   def refresh_with_image_reply(conn, %{"slot_id" => slot_id_query}) do
-    with {:ok, slot_id} <- parse_slot_id(slot_id_query),
-         {:ok, slot} <- fetch_slot(slot_id),
-         :ok <- refresh_slot(slot) do
-      conn
-      |> put_resp_header("content-type", "image/png")
-      |> resp(200, File.read!(@image_reply))
-    else
-      {:error, :invalid_slot_id} ->
-        conn_has_invalid_slot(conn)
+    case UserAgent.on(conn) do
+      :unity ->
+        with {:ok, slot_id} <- parse_slot_id(slot_id_query),
+             {:ok, slot} <- fetch_slot(slot_id),
+             :ok <- refresh_slot(slot) do
+          conn
+          |> put_resp_header("content-type", "image/png")
+          |> resp(200, File.read!(@image_reply))
+        else
+          {:error, :invalid_slot_id} ->
+            conn_has_invalid_slot(conn)
 
-      {:error, :slot_not_found} ->
-        conn_has_invalid_slot(conn)
+          {:error, :slot_not_found} ->
+            conn_has_invalid_slot(conn)
+        end
+
+      # video players can use /qr/ to redirect to youtube, bypassing server-side resolving
+      # this is same as /yt/ but using UA for overloading the url
+      _ ->
+        with {:ok, slot_id} <- parse_slot_id(slot_id_query),
+             {:ok, slot} <- fetch_slot(slot_id) do
+          conn
+          |> redirect(external: slot |> Slot.youtube_url())
+        else
+          {:error, :invalid_slot_id} ->
+            Logger.warning("unavailable (invalid parse)")
+            redirect_to(conn, nil)
+
+          {:error, :slot_not_found} ->
+            Logger.warning("unavailable (not found)")
+            redirect_to(conn, nil)
+        end
     end
   end
 
