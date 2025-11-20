@@ -22,6 +22,8 @@ defmodule YtSearchWeb.SlotController do
         |> render("slot.json")
 
       slot ->
+        Phoenix.PubSub.broadcast(YtSearch.PhoenixPubSub, "slot_view", {:slot_view, slot})
+
         conn
         |> redirect(external: slot |> Slot.youtube_url())
     end
@@ -239,6 +241,9 @@ defmodule YtSearchWeb.SlotController do
               do_slot_metadata(conn, slot)
 
             _ ->
+              # Only publish when we actually redirect (not for metadata requests)
+              Phoenix.PubSub.broadcast(YtSearch.PhoenixPubSub, "slot_view", {:slot_view, slot})
+
               case YtSearch.Slot.type(slot) do
                 :video ->
                   handle_quest_video(conn, slot)
@@ -261,6 +266,8 @@ defmodule YtSearchWeb.SlotController do
         redirect_to(conn, nil)
 
       slot ->
+        Phoenix.PubSub.broadcast(YtSearch.PhoenixPubSub, "slot_view", {:slot_view, slot})
+
         # always redirect
         conn
         |> redirect(external: slot |> Slot.youtube_url())

@@ -19,7 +19,8 @@ config :yt_search,
     YtSearch.Data.SubtitleRepo,
     YtSearch.Data.LinkRepo,
     YtSearch.Data.AudioConfigRepo,
-    YtSearch.Data.CounterRepo
+    YtSearch.Data.CounterRepo,
+    YtSearch.Data.TrendingRepo
   ]
 
 # Configures the endpoint
@@ -116,7 +117,10 @@ repos = [
   YtSearch.Data.AudioConfigRepo.Replica2,
   YtSearch.Data.AudioConfigRepo.JanitorReplica,
   YtSearch.Data.CounterRepo,
-  YtSearch.Data.CounterRepo.Replica1
+  YtSearch.Data.CounterRepo.Replica1,
+  YtSearch.Data.TrendingRepo,
+  YtSearch.Data.TrendingRepo.Replica1,
+  YtSearch.Data.TrendingRepo.Replica2
 ]
 
 for repo <- repos do

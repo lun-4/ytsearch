@@ -97,6 +97,14 @@ import Config
       YtSearch.Data.CounterRepo.Replica1
     ],
     "counter"
+  },
+  {
+    [
+      YtSearch.Data.TrendingRepo,
+      YtSearch.Data.TrendingRepo.Replica1,
+      YtSearch.Data.TrendingRepo.Replica2
+    ],
+    "trending"
   }
 ]
 |> Enum.each(fn {repos, name} ->
