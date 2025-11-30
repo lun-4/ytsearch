@@ -61,7 +61,10 @@ defmodule YtSearch.Data do
         YtSearch.Data.SlotRepo.Replica4,
         YtSearch.Data.SlotRepo.Replica5,
         YtSearch.Data.SlotRepo.Replica6,
-        YtSearch.Data.SlotRepo.Replica7
+        YtSearch.Data.SlotRepo.Replica7,
+        YtSearch.Data.SlotRepo.Replica8,
+        YtSearch.Data.SlotRepo.Replica9,
+        YtSearch.Data.SlotRepo.Replica10
       ],
       dedicated_replicas: []
   end
@@ -76,7 +79,10 @@ defmodule YtSearch.Data do
         YtSearch.Data.ChannelSlotRepo.Replica4,
         YtSearch.Data.ChannelSlotRepo.Replica5,
         YtSearch.Data.ChannelSlotRepo.Replica6,
-        YtSearch.Data.ChannelSlotRepo.Replica7
+        YtSearch.Data.ChannelSlotRepo.Replica7,
+        YtSearch.Data.ChannelSlotRepo.Replica8,
+        YtSearch.Data.ChannelSlotRepo.Replica9,
+        YtSearch.Data.ChannelSlotRepo.Replica10
       ],
       dedicated_replicas: []
   end
@@ -91,7 +97,10 @@ defmodule YtSearch.Data do
         YtSearch.Data.PlaylistSlotRepo.Replica4,
         YtSearch.Data.PlaylistSlotRepo.Replica5,
         YtSearch.Data.PlaylistSlotRepo.Replica6,
-        YtSearch.Data.PlaylistSlotRepo.Replica7
+        YtSearch.Data.PlaylistSlotRepo.Replica7,
+        YtSearch.Data.PlaylistSlotRepo.Replica8,
+        YtSearch.Data.PlaylistSlotRepo.Replica9,
+        YtSearch.Data.PlaylistSlotRepo.Replica10
       ],
       dedicated_replicas: []
   end
@@ -106,7 +115,10 @@ defmodule YtSearch.Data do
         YtSearch.Data.SearchSlotRepo.Replica4,
         YtSearch.Data.SearchSlotRepo.Replica5,
         YtSearch.Data.SearchSlotRepo.Replica6,
-        YtSearch.Data.SearchSlotRepo.Replica7
+        YtSearch.Data.SearchSlotRepo.Replica7,
+        YtSearch.Data.SearchSlotRepo.Replica8,
+        YtSearch.Data.SearchSlotRepo.Replica9,
+        YtSearch.Data.SearchSlotRepo.Replica10
       ],
       dedicated_replicas: []
   end
@@ -116,7 +128,10 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.ThumbnailRepo,
       read_replicas: [
         YtSearch.Data.ThumbnailRepo.Replica1,
-        YtSearch.Data.ThumbnailRepo.Replica2
+        YtSearch.Data.ThumbnailRepo.Replica2,
+        YtSearch.Data.ThumbnailRepo.Replica3,
+        YtSearch.Data.ThumbnailRepo.Replica4,
+        YtSearch.Data.ThumbnailRepo.Replica5
       ],
       dedicated_replicas: [
         YtSearch.Data.ThumbnailRepo.JanitorReplica
@@ -128,7 +143,10 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.ChapterRepo,
       read_replicas: [
         YtSearch.Data.ChapterRepo.Replica1,
-        YtSearch.Data.ChapterRepo.Replica2
+        YtSearch.Data.ChapterRepo.Replica2,
+        YtSearch.Data.ChapterRepo.Replica3,
+        YtSearch.Data.ChapterRepo.Replica4,
+        YtSearch.Data.ChapterRepo.Replica5
       ],
       dedicated_replicas: [
         YtSearch.Data.ChapterRepo.JanitorReplica
@@ -140,7 +158,10 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.SponsorblockRepo,
       read_replicas: [
         YtSearch.Data.SponsorblockRepo.Replica1,
-        YtSearch.Data.SponsorblockRepo.Replica2
+        YtSearch.Data.SponsorblockRepo.Replica2,
+        YtSearch.Data.SponsorblockRepo.Replica3,
+        YtSearch.Data.SponsorblockRepo.Replica4,
+        YtSearch.Data.SponsorblockRepo.Replica5
       ],
       dedicated_replicas: [
         YtSearch.Data.SponsorblockRepo.JanitorReplica
@@ -152,7 +173,10 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.SubtitleRepo,
       read_replicas: [
         YtSearch.Data.SubtitleRepo.Replica1,
-        YtSearch.Data.SubtitleRepo.Replica2
+        YtSearch.Data.SubtitleRepo.Replica2,
+        YtSearch.Data.SubtitleRepo.Replica3,
+        YtSearch.Data.SubtitleRepo.Replica4,
+        YtSearch.Data.SubtitleRepo.Replica5
       ],
       dedicated_replicas: [
         YtSearch.Data.SubtitleRepo.JanitorReplica
@@ -164,7 +188,10 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.LinkRepo,
       read_replicas: [
         YtSearch.Data.LinkRepo.Replica1,
-        YtSearch.Data.LinkRepo.Replica2
+        YtSearch.Data.LinkRepo.Replica2,
+        YtSearch.Data.LinkRepo.Replica3,
+        YtSearch.Data.LinkRepo.Replica4,
+        YtSearch.Data.LinkRepo.Replica5
       ],
       dedicated_replicas: [
         YtSearch.Data.LinkRepo.JanitorReplica
@@ -176,7 +203,10 @@ defmodule YtSearch.Data do
       primary: YtSearch.Data.AudioConfigRepo,
       read_replicas: [
         YtSearch.Data.AudioConfigRepo.Replica1,
-        YtSearch.Data.AudioConfigRepo.Replica2
+        YtSearch.Data.AudioConfigRepo.Replica2,
+        YtSearch.Data.AudioConfigRepo.Replica3,
+        YtSearch.Data.AudioConfigRepo.Replica4,
+        YtSearch.Data.AudioConfigRepo.Replica5
       ],
       dedicated_replicas: [
         YtSearch.Data.AudioConfigRepo.JanitorReplica
@@ -187,7 +217,10 @@ defmodule YtSearch.Data do
     use YtSearch.Data.RepoBase,
       primary: YtSearch.Data.CounterRepo,
       read_replicas: [
-        YtSearch.Data.CounterRepo.Replica1
+        YtSearch.Data.CounterRepo.Replica1,
+        YtSearch.Data.CounterRepo.Replica2,
+        YtSearch.Data.CounterRepo.Replica3,
+        YtSearch.Data.CounterRepo.Replica4
       ],
       dedicated_replicas: []
   end
