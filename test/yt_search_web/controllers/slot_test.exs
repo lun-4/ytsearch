@@ -674,6 +674,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/a/6/qr/#{slot.id}")
 
     assert conn.status == 200
@@ -756,6 +757,7 @@ defmodule YtSearchWeb.SlotTest do
 
     conn =
       build_conn()
+      |> put_req_header("user-agent", "UnityWebRequest")
       |> get(~p"/a/6/qr2/#{slot.id}")
 
     assert conn.status == 200
