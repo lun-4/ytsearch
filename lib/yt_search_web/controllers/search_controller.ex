@@ -7,6 +7,7 @@ defmodule YtSearchWeb.SearchController do
   alias YtSearch.SearchSlot
   alias YtSearch.ChannelSlot
   alias YtSearch.PlaylistSlot
+  alias YtSearch.ThumbnailerClient
   alias YtSearchWeb.Playlist
   alias YtSearchWeb.UserAgent
 
@@ -162,6 +163,14 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
+  defp broadcast_sync(search_slot, nextpage_search_slot \\ nil) do
+    ThumbnailerClient.submit_search_slot(search_slot)
+
+    if nextpage_search_slot do
+      ThumbnailerClient.submit_search_slot(nextpage_search_slot)
+    end
+  end
+
   def search(entity) do
     case fetch_by_query_and_valid(entity) do
       nil ->
@@ -174,6 +183,9 @@ defmodule YtSearchWeb.SearchController do
             {search_slot, nextpage_search_slot} =
               results
               |> SearchSlot.from_playlist(entity, nextpage?: true)
+
+            # Sync to thumbnailer
+            broadcast_sync(search_slot, nextpage_search_slot)
 
             {:ok,
              %{
@@ -218,6 +230,8 @@ defmodule YtSearchWeb.SearchController do
             results
             |> SearchSlot.from_unfetched_slot(unfetched_slot)
 
+          broadcast_sync(search_slot, nextpage_search_slot)
+
           {:ok,
            %{
              result_type: search_slot.result_type,
@@ -234,6 +248,7 @@ defmodule YtSearchWeb.SearchController do
         end
 
       %YtSearch.SearchSlot{} = search_slot ->
+        broadcast_sync(search_slot)
         nextpage_search_slot_id = search_slot.nextpage_slot_id
 
         {:ok,
@@ -263,6 +278,11 @@ defmodule YtSearchWeb.SearchController do
         |> text("not found")
 
       slot ->
+        # Resync on fetch for consistency
+        if entity == YtSearch.SearchSlot do
+          broadcast_sync(slot)
+        end
+
         case slot
              |> search() do
           {:ok, resp} ->

@@ -9,6 +9,11 @@ defmodule YtSearchWeb.Router do
     pipe_through(:api)
   end
 
+  scope "/api/node", YtSearchWeb do
+    post("/thumbnail", NodeController, :submit_thumbnail)
+    post("/search_slot", NodeController, :submit_search_slot)
+  end
+
   scope "/api/v6", YtSearchWeb do
     get("/search", SearchController, :search_by_text)
     get("/search/:id", SearchController, :search_by_id)

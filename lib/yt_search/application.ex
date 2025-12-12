@@ -11,8 +11,57 @@ defmodule YtSearch.Application do
     Application.fetch_env!(:yt_search, :ecto_repos)
   end
 
+  defp is_thumbnailer_node? do
+    # Thumbnailer node has NODE_AUTH but no EXTERNAL_THUMBNAIL_NODE
+    is_thumbnailer? = System.get_env("MODE") == "thumbnailer"
+
+    if is_thumbnailer? do
+      # required
+      if System.get_env("NODE_AUTH") == nil or System.get_env("EXTERNAL_THUMBNAIL_NODE") != nil do
+        raise "thumbnailer invalid config, needs NODE_AUTH not nil and EXTERNAL_THUMBNAIL_NODE not nil"
+      end
+
+      true
+    else
+      false
+    end
+  end
+
+  defp has_external_thumbnailer? do
+    # Main app has EXTERNAL_THUMBNAIL_NODE configured
+    case System.get_env("EXTERNAL_THUMBNAIL_NODE") do
+      nil -> false
+      "" -> false
+      _ -> true
+    end
+  end
+
   defp repos() do
     Application.fetch_env!(:yt_search, :ecto_repos)
+    |> then(fn repos ->
+      cond do
+        has_external_thumbnailer?() ->
+          # Exclude thumbnail repos from main app
+          Enum.reject(repos, fn repo ->
+            to_string(repo) |> String.contains?("ThumbnailRepo")
+          end)
+
+        is_thumbnailer_node?() ->
+          # Only thumbnail-related repos for thumbnailer
+          Enum.filter(repos, fn repo ->
+            repo_name = to_string(repo)
+
+            String.contains?(repo_name, "ThumbnailRepo") or
+              String.contains?(repo_name, "SearchSlotRepo") or
+              String.contains?(repo_name, "SlotRepo") or
+              String.contains?(repo_name, "ChannelSlotRepo")
+          end)
+
+        true ->
+          # Monolith mode - all repos
+          repos
+      end
+    end)
     |> Enum.map(fn primary ->
       primary
       |> to_string
@@ -41,19 +90,35 @@ defmodule YtSearch.Application do
     end)
   end
 
+  # the processes necessary to do thumbnails
+  defp thumbnail_children do
+    [
+      %{
+        id: ThumbnailMutex,
+        start: {Mutex, :start_link, [[name: ThumbnailMutex]]}
+      },
+      {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
+      YtSearch.Youtube.Thumbnail.Monitor
+    ]
+  end
+
   @impl true
   def start(_type, _args) do
     :erlang.system_flag(:microstate_accounting, true)
 
-    File.mkdir_p!("thumbnails")
-    File.mkdir_p!("subtitles")
+    # Conditional setup for thumbnails
+    unless has_external_thumbnailer?() do
+      File.mkdir_p!("thumbnails")
+      # ETS table to track thumbnail download tasks
+      :ets.new(:thumbnail_tasks, [:set, :public, :named_table, read_concurrency: true])
+    end
 
-    # ETS table to track thumbnail download tasks
-    :ets.new(:thumbnail_tasks, [:set, :public, :named_table, read_concurrency: true])
+    File.mkdir_p!("subtitles")
 
     children_before_repos =
       [
-        # Start the Telemetry supervisor
+        # Start the Telemetry supervisor, wanted to be before repos
+        # since repos need telemetry setup
         YtSearchWeb.Telemetry
       ]
 
@@ -69,10 +134,6 @@ defmodule YtSearch.Application do
         # {YtSearch.Worker, arg}
         {Mutex, name: Mp4LinkMutex},
         %{
-          id: ThumbnailMutex,
-          start: {Mutex, :start_link, [[name: ThumbnailMutex]]}
-        },
-        %{
           id: SubtitleMutex,
           start: {Mutex, :start_link, [[name: SubtitleMutex]]}
         },
@@ -87,12 +148,12 @@ defmodule YtSearch.Application do
         {Cachex, name: :tabs},
         YtSearch.CounterServer,
         {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
-        {Task.Supervisor, strategy: :one_for_one, name: YtSearch.ThumbnailSupervisor},
-        YtSearch.Youtube.Thumbnail.Monitor,
         {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
         {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
         {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}
-      ] ++ maybe_janitors()
+      ] ++
+        if(has_external_thumbnailer?(), do: [], else: thumbnail_children()) ++
+        maybe_janitors()
 
     children = children_before_repos ++ repos() ++ children_after_repos
 
@@ -150,7 +211,23 @@ defmodule YtSearch.Application do
 
     janitor_tasks =
       if enable_janitor do
-        janitor_specs()
+        specs =
+          cond do
+            is_thumbnailer_node?() ->
+              # Only thumbnail janitor for thumbnailer
+              [[YtSearch.Thumbnail.Janitor, [every: 2 * 60, jitter: 60..(1 * 60)]]]
+
+            has_external_thumbnailer?() ->
+              # All janitors except thumbnail (thumbnail runs on thumbnailer)
+              janitor_specs()
+              |> Enum.reject(fn [module, _] -> module == YtSearch.Thumbnail.Janitor end)
+
+            true ->
+              # Monolith mode - all janitors
+              janitor_specs()
+          end
+
+        specs
         |> Enum.map(fn [module, opts] ->
           Tinycron.new(module, opts)
         end)
