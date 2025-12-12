@@ -30,7 +30,7 @@ defmodule YtSearch.ThumbnailerClient do
 
   @doc """
   Unkeepalive thumbnails on thumbnailer node.
-  Fire-and-forget - doesn't block main app.
+  Synchronous RPC - blocks until completion.
   """
   def unkeepalive_thumbnails(youtube_ids) do
     case System.get_env("EXTERNAL_THUMBNAIL_NODE") do
@@ -41,11 +41,7 @@ defmodule YtSearch.ThumbnailerClient do
         :ok
 
       thumbnailer_url ->
-        Task.start(fn ->
-          do_unkeepalive_thumbnails(thumbnailer_url, youtube_ids)
-        end)
-
-        :ok
+        do_unkeepalive_thumbnails(thumbnailer_url, youtube_ids)
     end
   end
 
