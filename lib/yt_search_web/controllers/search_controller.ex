@@ -163,7 +163,7 @@ defmodule YtSearchWeb.SearchController do
     end
   end
 
-  defp broadcast_sync(search_slot, nextpage_search_slot \\ nil) do
+  def broadcast_sync(search_slot, nextpage_search_slot \\ nil) do
     ThumbnailerClient.submit_search_slot(search_slot)
 
     if nextpage_search_slot do

@@ -73,6 +73,8 @@ defmodule YtSearchWeb.HelloController do
           results
           |> SearchSlot.from_playlist("yt://trending", keepalive: true)
 
+        YtSearchWeb.SearchController.broadcast_sync(search_slot)
+
         {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
       v ->
