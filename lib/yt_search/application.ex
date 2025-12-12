@@ -9,6 +9,31 @@ defmodule YtSearch.Application do
 
   def primaries() do
     Application.fetch_env!(:yt_search, :ecto_repos)
+    # TODO decrease copypaste
+    |> then(fn repos ->
+      cond do
+        has_external_thumbnailer?() ->
+          # Exclude thumbnail repos from main app
+          Enum.reject(repos, fn repo ->
+            to_string(repo) |> String.contains?("ThumbnailRepo")
+          end)
+
+        is_thumbnailer_node?() ->
+          # Only thumbnail-related repos for thumbnailer
+          Enum.filter(repos, fn repo ->
+            repo_name = to_string(repo)
+
+            String.contains?(repo_name, "ThumbnailRepo") or
+              String.contains?(repo_name, "SearchSlotRepo") or
+              String.contains?(repo_name, "SlotRepo") or
+              String.contains?(repo_name, "ChannelSlotRepo")
+          end)
+
+        true ->
+          # Monolith mode - all repos
+          repos
+      end
+    end)
   end
 
   defp is_thumbnailer_node? do
