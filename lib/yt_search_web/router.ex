@@ -11,6 +11,7 @@ defmodule YtSearchWeb.Router do
 
   scope "/api/node", YtSearchWeb do
     post("/thumbnail", NodeController, :submit_thumbnail)
+    post("/unkeepalive_thumbnails", NodeController, :unkeepalive_thumbnails)
     post("/search_slot", NodeController, :submit_search_slot)
   end
 

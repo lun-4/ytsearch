@@ -11,7 +11,7 @@ defmodule YtSearch.ThumbnailerClient do
   Submit thumbnail for download on thumbnailer node.
   Fire-and-forget - doesn't block main app.
   """
-  def submit_thumbnail(youtube_id, thumbnail_url) do
+  def submit_thumbnail(youtube_id, thumbnail_url, opts \\ []) do
     case System.get_env("EXTERNAL_THUMBNAIL_NODE") do
       nil ->
         :ok
@@ -21,7 +21,28 @@ defmodule YtSearch.ThumbnailerClient do
 
       thumbnailer_url ->
         Task.start(fn ->
-          do_submit_thumbnail(thumbnailer_url, youtube_id, thumbnail_url)
+          do_submit_thumbnail(thumbnailer_url, youtube_id, thumbnail_url, opts)
+        end)
+
+        :ok
+    end
+  end
+
+  @doc """
+  Unkeepalive thumbnails on thumbnailer node.
+  Fire-and-forget - doesn't block main app.
+  """
+  def unkeepalive_thumbnails(youtube_ids) do
+    case System.get_env("EXTERNAL_THUMBNAIL_NODE") do
+      nil ->
+        :ok
+
+      "" ->
+        :ok
+
+      thumbnailer_url ->
+        Task.start(fn ->
+          do_unkeepalive_thumbnails(thumbnailer_url, youtube_ids)
         end)
 
         :ok
@@ -51,11 +72,14 @@ defmodule YtSearch.ThumbnailerClient do
     end
   end
 
-  defp do_submit_thumbnail(thumbnailer_url, youtube_id, thumbnail_url) do
+  defp do_submit_thumbnail(thumbnailer_url, youtube_id, thumbnail_url, opts) do
     try do
+      keepalive = Keyword.get(opts, :keepalive, false)
+
       payload = %{
         youtube_id: youtube_id,
-        thumbnail_url: thumbnail_url
+        thumbnail_url: thumbnail_url,
+        keepalive: keepalive
       }
 
       url = "#{thumbnailer_url}/api/node/thumbnail"
@@ -80,6 +104,34 @@ defmodule YtSearch.ThumbnailerClient do
     rescue
       e ->
         Logger.error("Exception submitting thumbnail to thumbnailer: #{inspect(e)}")
+        Logger.error(Exception.format_stacktrace())
+    end
+  end
+
+  defp do_unkeepalive_thumbnails(thumbnailer_url, youtube_ids) do
+    try do
+      payload = %{youtube_ids: youtube_ids}
+      url = "#{thumbnailer_url}/api/node/unkeepalive_thumbnails"
+
+      headers = [
+        {"Authorization", "Bearer #{System.get_env("NODE_AUTH")}"},
+        {"Content-Type", "application/json"}
+      ]
+
+      case HTTPoison.post(url, Jason.encode!(payload), headers, timeout: 5000) do
+        {:ok, %{status_code: 200, body: body}} ->
+          resp = Jason.decode!(body)
+          Logger.debug("Successfully unkeepalived #{resp["count"]} thumbnails on thumbnailer")
+
+        {:ok, %{status_code: status, body: body}} ->
+          Logger.warning("Thumbnailer returned status #{status} for unkeepalive: #{body}")
+
+        {:error, reason} ->
+          Logger.warning("Failed to unkeepalive thumbnails on thumbnailer: #{inspect(reason)}")
+      end
+    rescue
+      e ->
+        Logger.error("Exception unkeepaliving thumbnails on thumbnailer: #{inspect(e)}")
         Logger.error(Exception.format_stacktrace())
     end
   end

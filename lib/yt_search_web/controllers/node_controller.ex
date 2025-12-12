@@ -29,6 +29,7 @@ defmodule YtSearchWeb.NodeController do
   def submit_thumbnail(conn, params) do
     youtube_id = params["youtube_id"]
     thumbnail_url = params["thumbnail_url"]
+    keepalive = params["keepalive"] || false
 
     if youtube_id == nil or thumbnail_url == nil do
       conn
@@ -36,6 +37,8 @@ defmodule YtSearchWeb.NodeController do
       |> json(%{error: "missing youtube_id or thumbnail_url"})
     else
       # Trigger background download (same as main app)
+      opts = if keepalive, do: [keepalive: true], else: []
+
       Task.Supervisor.async_nolink(YtSearch.ThumbnailSupervisor, fn ->
         :ets.insert(:thumbnail_tasks, {youtube_id, self()})
 
@@ -45,7 +48,7 @@ defmodule YtSearchWeb.NodeController do
           YtSearch.Youtube.Thumbnail.maybe_download_thumbnail(
             youtube_id,
             unproxied_url,
-            []
+            opts
           )
         after
           :ets.delete(:thumbnail_tasks, youtube_id)
@@ -54,6 +57,24 @@ defmodule YtSearchWeb.NodeController do
 
       json(conn, %{status: "ok"})
     end
+  end
+
+  def unkeepalive_thumbnails(conn, params) do
+    youtube_ids = params["youtube_ids"] || []
+
+    # Unkeepalive all specified thumbnails
+    import Ecto.Query
+
+    youtube_ids
+    |> Enum.each(fn youtube_id ->
+      from(t in YtSearch.Thumbnail,
+        update: [set: [keepalive: false]],
+        where: t.id == ^youtube_id
+      )
+      |> YtSearch.Data.ThumbnailRepo.update_all([])
+    end)
+
+    json(conn, %{status: "ok", count: length(youtube_ids)})
   end
 
   def submit_search_slot(conn, params) do

@@ -164,7 +164,7 @@ defmodule YtSearch.Youtube.Thumbnail do
     if data["thumbnail"] != nil do
       # If external thumbnailer is configured, submit to thumbnailer instead
       if System.get_env("EXTERNAL_THUMBNAIL_NODE") do
-        YtSearch.ThumbnailerClient.submit_thumbnail(youtube_id, data["thumbnail"])
+        YtSearch.ThumbnailerClient.submit_thumbnail(youtube_id, data["thumbnail"], opts)
       else
         # Local download in background
         TaskCounter.inc_spawn()

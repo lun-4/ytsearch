@@ -139,6 +139,37 @@ defmodule YtSearchWeb.ThumbnailerNodeTest do
       System.delete_env("NODE_AUTH")
     end
 
+    @tag :slow
+    test "submit_thumbnail endpoint with keepalive flag", %{conn: conn} do
+      System.put_env("NODE_AUTH", "test-secret-token")
+
+      payload = %{
+        "youtube_id" => "keepalive_test_id",
+        "thumbnail_url" => "https://i.ytimg.com/vi/test/maxresdefault.jpg",
+        "keepalive" => true
+      }
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer test-secret-token")
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/node/thumbnail", payload)
+
+      resp = json_response(conn, 200)
+      assert resp["status"] == "ok"
+
+      # Wait a bit for async download
+      Process.sleep(100)
+
+      # Verify thumbnail was downloaded with keepalive=true
+      thumbnail = Thumbnail.fetch("keepalive_test_id")
+      assert thumbnail != nil
+      assert thumbnail.id == "keepalive_test_id"
+      assert thumbnail.keepalive == true
+
+      System.delete_env("NODE_AUTH")
+    end
+
     test "submit_thumbnail endpoint rejects missing parameters", %{conn: _conn} do
       System.put_env("NODE_AUTH", "test-secret-token")
 
@@ -161,6 +192,42 @@ defmodule YtSearchWeb.ThumbnailerNodeTest do
 
       resp2 = json_response(conn2, 400)
       assert resp2["error"] == "missing youtube_id or thumbnail_url"
+
+      System.delete_env("NODE_AUTH")
+    end
+
+    @tag :slow
+    test "unkeepalive_thumbnails endpoint", %{conn: conn} do
+      System.put_env("NODE_AUTH", "test-secret-token")
+
+      # First create some thumbnails with keepalive=true
+      Thumbnail.insert("unkeepalive_test_1", "image/webp", keepalive: true)
+      Thumbnail.insert("unkeepalive_test_2", "image/webp", keepalive: true)
+
+      # Verify they are kept alive
+      thumb1 = Thumbnail.fetch("unkeepalive_test_1")
+      assert thumb1.keepalive == true
+
+      # Call unkeepalive endpoint
+      payload = %{
+        "youtube_ids" => ["unkeepalive_test_1", "unkeepalive_test_2"]
+      }
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer test-secret-token")
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/node/unkeepalive_thumbnails", payload)
+
+      resp = json_response(conn, 200)
+      assert resp["status"] == "ok"
+      assert resp["count"] == 2
+
+      # Verify thumbnails are no longer kept alive
+      thumb1_after = Thumbnail.fetch("unkeepalive_test_1")
+      thumb2_after = Thumbnail.fetch("unkeepalive_test_2")
+      assert thumb1_after.keepalive == false
+      assert thumb2_after.keepalive == false
 
       System.delete_env("NODE_AUTH")
     end
