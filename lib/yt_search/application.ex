@@ -66,12 +66,14 @@ defmodule YtSearch.Application do
     |> then(fn repos ->
       cond do
         has_external_thumbnailer?() ->
+          IO.puts("has_external_thumbnailer? => true")
           # Exclude thumbnail repos from main app
           Enum.reject(repos, fn repo ->
             to_string(repo) |> String.contains?("ThumbnailRepo")
           end)
 
         is_thumbnailer_node?() ->
+          IO.puts("is_thumbnailer_node? => true")
           # Only thumbnail-related repos for thumbnailer
           Enum.filter(repos, fn repo ->
             repo_name = to_string(repo)
@@ -83,6 +85,7 @@ defmodule YtSearch.Application do
           end)
 
         true ->
+          IO.puts("monolith mode")
           # Monolith mode - all repos
           repos
       end
