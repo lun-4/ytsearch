@@ -38,8 +38,8 @@ defmodule YtSearch.Application do
 
   defp is_thumbnailer_node? do
     # Thumbnailer node has NODE_AUTH but no EXTERNAL_THUMBNAIL_NODE
-    is_thumbnailer? = System.get_env("MODE") == "thumbnailer"
-    IO.puts("MODE is thumbnailer? #{System.get_env("MODE")} #{is_thumbnailer?}")
+    is_thumbnailer? = System.get_env("ROLE") == "thumbnailer"
+    IO.puts("ROLE is thumbnailer? #{System.get_env("ROLE")} #{is_thumbnailer?}")
 
     if is_thumbnailer? do
       # required
