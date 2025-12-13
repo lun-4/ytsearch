@@ -73,6 +73,8 @@ defmodule YtSearchWeb.HelloController do
           results
           |> SearchSlot.from_playlist("yt://trending", keepalive: true)
 
+        YtSearchWeb.SearchController.broadcast_sync(search_slot)
+
         {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
       v ->
@@ -85,14 +87,22 @@ defmodule YtSearchWeb.HelloController do
     # thumbnails follow different logic from slots, unkeepalive them prematurely
     # (slots are more important to keep alive mid-trending-tab-refresh than thumbs)
 
-    old_keepalived_slots
-    |> Enum.each(fn slot ->
-      from(s in YtSearch.Thumbnail,
-        update: [set: [keepalive: false]],
-        where: s.id == ^slot.youtube_id
-      )
-      |> ThumbnailRepo.update_all([])
-    end)
+    youtube_ids = old_keepalived_slots |> Enum.map(fn slot -> slot.youtube_id end)
+
+    # If external thumbnailer is configured, send unkeepalive to thumbnailer
+    if System.get_env("EXTERNAL_THUMBNAIL_NODE") do
+      YtSearch.ThumbnailerClient.unkeepalive_thumbnails(youtube_ids)
+    else
+      # Local unkeepalive
+      youtube_ids
+      |> Enum.each(fn youtube_id ->
+        from(s in YtSearch.Thumbnail,
+          update: [set: [keepalive: false]],
+          where: s.id == ^youtube_id
+        )
+        |> ThumbnailRepo.update_all([])
+      end)
+    end
   end
 
   defp do_fetch_trending_tab() do

@@ -29,6 +29,10 @@ end
 config :yt_search, YtSearch.ThumbnailAtlas,
   montage_command: System.get_env("MONTAGE_COMMAND") || "montage"
 
+config :yt_search, YtSearch.ThumbnailHttpClient,
+  socks5_host: System.get_env("THUMBNAIL_SOCKS5_HOST"),
+  socks5_port: System.get_env("THUMBNAIL_SOCKS5_PORT")
+
 if config_env() in [:prod, :dev] do
   config :yt_search, YtSearch.Ratelimit,
     ytdlp_search: {

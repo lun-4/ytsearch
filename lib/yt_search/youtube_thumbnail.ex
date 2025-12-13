@@ -162,29 +162,35 @@ defmodule YtSearch.Youtube.Thumbnail do
     TaskCounter.inc_check()
 
     if data["thumbnail"] != nil do
-      TaskCounter.inc_spawn()
+      # If external thumbnailer is configured, submit to thumbnailer instead
+      if System.get_env("EXTERNAL_THUMBNAIL_NODE") do
+        YtSearch.ThumbnailerClient.submit_thumbnail(youtube_id, data["thumbnail"], opts)
+      else
+        # Local download in background
+        TaskCounter.inc_spawn()
 
-      task =
-        Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
-          :ets.insert(:thumbnail_tasks, {youtube_id, self()})
+        task =
+          Task.Supervisor.async(YtSearch.ThumbnailSupervisor, fn ->
+            :ets.insert(:thumbnail_tasks, {youtube_id, self()})
 
-          TaskCounter.inc_exec()
+            TaskCounter.inc_exec()
 
-          try do
-            maybe_download_thumbnail(
-              youtube_id,
-              data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
-              opts
-            )
-          after
-            TaskCounter.inc_finish()
-            # Clean up task ref when done
-            :ets.delete(:thumbnail_tasks, youtube_id)
-          end
-        end)
+            try do
+              maybe_download_thumbnail(
+                youtube_id,
+                data["thumbnail"] |> YtSearch.Youtube.unproxied_piped_url(),
+                opts
+              )
+            after
+              TaskCounter.inc_finish()
+              # Clean up task ref when done
+              :ets.delete(:thumbnail_tasks, youtube_id)
+            end
+          end)
 
-      # Monitor the task to track exit reasons
-      Monitor.add(task.pid)
+        # Monitor the task to track exit reasons
+        Monitor.add(task.pid)
+      end
 
       # NOTE: this is a fake ratio because we now do 1:1 ratio with alpha on atlas
       # UPGRADE: aspect_ratio is not used on /a/2
@@ -308,7 +314,7 @@ defmodule YtSearch.Youtube.Thumbnail do
         else
           url
         end
-        |> Tesla.get()
+        |> YtSearch.ThumbnailHttpClient.get()
       end)
 
     if response.status == 200 do
