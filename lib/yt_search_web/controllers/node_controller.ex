@@ -117,7 +117,7 @@ defmodule YtSearchWeb.NodeController do
       |> SlotRepo.delete_all()
 
       SlotRepo.insert!(struct(Slot, slot_attrs))
-    end)
+    end, mode: :immediate)
   end
 
   defp upsert_channel_slot!(slot_data) do
@@ -143,7 +143,7 @@ defmodule YtSearchWeb.NodeController do
       |> ChannelSlotRepo.delete_all()
 
       ChannelSlotRepo.insert!(struct(ChannelSlot, slot_attrs))
-    end)
+    end, mode: :immediate)
   end
 
   defp upsert_search_slot!(search_slot_data) do
@@ -171,7 +171,7 @@ defmodule YtSearchWeb.NodeController do
       |> SearchSlotRepo.delete_all()
 
       SearchSlotRepo.insert!(struct(SearchSlot, slot_attrs))
-    end)
+    end, mode: :immediate)
   end
 
   defp parse_datetime(nil), do: nil
