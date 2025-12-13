@@ -47,7 +47,9 @@ defmodule YtSearch.ThumbnailerClient do
 
   @doc """
   Submit search slot to thumbnailer node for syncing.
-  Fire-and-forget - doesn't block main app.
+  Since search slot syncing is a "sync barrier" in terms of the yts data model,
+  this is a blocking/synchronous operation, so we can safely assume the
+  targets of the broadcast received the search slot.
   """
   def submit_search_slot(search_slot) do
     case System.get_env("EXTERNAL_THUMBNAIL_NODE") do
@@ -59,10 +61,7 @@ defmodule YtSearch.ThumbnailerClient do
         :ok
 
       thumbnailer_url ->
-        # Fire and forget - don't block main app
-        Task.start(fn ->
-          do_submit(thumbnailer_url, search_slot)
-        end)
+        do_submit(thumbnailer_url, search_slot)
 
         :ok
     end
