@@ -39,7 +39,6 @@ defmodule YtSearch.Application do
   defp is_thumbnailer_node? do
     # Thumbnailer node has NODE_AUTH but no EXTERNAL_THUMBNAIL_NODE
     is_thumbnailer? = System.get_env("ROLE") == "thumbnailer"
-    IO.puts("ROLE is thumbnailer? #{System.get_env("ROLE")} #{is_thumbnailer?}")
 
     if is_thumbnailer? do
       # required
@@ -119,6 +118,14 @@ defmodule YtSearch.Application do
     end)
   end
 
+  defp children_for(:thumbnailer) do
+    # necessary processes for thumbnailer
+    [
+      # only _really_ endpoint since node api is http lol
+      YtSearchWeb.Endpoint
+    ] ++ thumbnail_children()
+  end
+
   # the processes necessary to do thumbnails
   defp thumbnail_children do
     [
@@ -152,37 +159,35 @@ defmodule YtSearch.Application do
       ]
 
     children_after_repos =
-      [
-        # Start the PubSub system
-        {Phoenix.PubSub, name: YtSearch.PubSub},
-        # Start Finch
-        # {Finch, name: YtSearch.Finch},
-        # Start the Endpoint (http/https)
-        YtSearchWeb.Endpoint,
-        # Start a worker by calling: YtSearch.Worker.start_link(arg)
-        # {YtSearch.Worker, arg}
-        {Mutex, name: Mp4LinkMutex},
-        %{
-          id: SubtitleMutex,
-          start: {Mutex, :start_link, [[name: SubtitleMutex]]}
-        },
-        %{
-          id: SearchMutex,
-          start: {Mutex, :start_link, [[name: SearchMutex]]}
-        },
-        %{
-          id: PlaylistEntryCreatorMutex,
-          start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
-        },
-        {Cachex, name: :tabs},
-        YtSearch.CounterServer,
-        {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
-        {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
-        {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
-        {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}
-      ] ++
-        if(has_external_thumbnailer?(), do: [], else: thumbnail_children()) ++
-        maybe_janitors()
+      if is_thumbnailer_node?() do
+        children_for(:thumbnailer) ++ maybe_janitors()
+      else
+        [
+          {Phoenix.PubSub, name: YtSearch.PubSub},
+          YtSearchWeb.Endpoint,
+          {Mutex, name: Mp4LinkMutex},
+          %{
+            id: SubtitleMutex,
+            start: {Mutex, :start_link, [[name: SubtitleMutex]]}
+          },
+          %{
+            id: SearchMutex,
+            start: {Mutex, :start_link, [[name: SearchMutex]]}
+          },
+          %{
+            id: PlaylistEntryCreatorMutex,
+            start: {Mutex, :start_link, [[name: PlaylistEntryCreatorMutex]]}
+          },
+          {Cachex, name: :tabs},
+          YtSearch.CounterServer,
+          {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
+          {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
+          {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
+          {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}
+        ] ++
+          if(has_external_thumbnailer?(), do: [], else: thumbnail_children()) ++
+          maybe_janitors()
+      end
 
     children = children_before_repos ++ repos() ++ children_after_repos
 
