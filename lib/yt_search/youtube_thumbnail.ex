@@ -314,7 +314,7 @@ defmodule YtSearch.Youtube.Thumbnail do
         else
           url
         end
-        |> Tesla.get()
+        |> YtSearch.ThumbnailHttpClient.get()
       end)
 
     if response.status == 200 do
