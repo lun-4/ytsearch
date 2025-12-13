@@ -109,8 +109,7 @@ defmodule YtSearchWeb.NodeController do
 
     SlotRepo.insert!(
       struct(Slot, slot_attrs),
-      on_conflict: :replace_all,
-      conflict_target: :youtube_id
+      on_conflict: :replace_all
     )
   end
 
@@ -129,8 +128,7 @@ defmodule YtSearchWeb.NodeController do
 
     ChannelSlotRepo.insert!(
       struct(ChannelSlot, slot_attrs),
-      on_conflict: :replace_all,
-      conflict_target: :youtube_id
+      on_conflict: :replace_all
     )
   end
 
@@ -151,8 +149,7 @@ defmodule YtSearchWeb.NodeController do
 
     SearchSlotRepo.insert!(
       struct(SearchSlot, slot_attrs),
-      on_conflict: :replace_all,
-      conflict_target: :query
+      on_conflict: :replace_all
     )
   end
 
