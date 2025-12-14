@@ -256,10 +256,58 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+// responseWriter wraps http.ResponseWriter to capture status code and bytes written
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	bytesWritten int
+}
+
+func (rw *responseWriter) WriteHeader(statusCode int) {
+	rw.statusCode = statusCode
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	n, err := rw.ResponseWriter.Write(b)
+	rw.bytesWritten += n
+	return n, err
+}
+
+// loggingMiddleware logs request and response details
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Wrap the response writer to capture status and size
+		wrapped := &responseWriter{
+			ResponseWriter: w,
+			statusCode:     http.StatusOK, // default status
+			bytesWritten:   0,
+		}
+
+		// Call the next handler
+		next.ServeHTTP(wrapped, r)
+
+		// Log request details
+		duration := time.Since(start)
+		log.Printf("%s %s - %d - %d bytes - %v",
+			r.Method,
+			r.URL.Path,
+			wrapped.statusCode,
+			wrapped.bytesWritten,
+			duration,
+		)
+	})
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/detect", handleDetect)
 	mux.HandleFunc("/health", handleHealth)
+
+	// Wrap mux with logging middleware
+	handler := loggingMiddleware(mux)
 
 	// Get port from environment variable, default to 8080
 	port := os.Getenv("PORT")
@@ -270,7 +318,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
