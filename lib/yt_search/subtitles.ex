@@ -80,7 +80,7 @@ defmodule YtSearch.Subtitle do
   end
 
   def find_like_and_subscribe(vtt_content) when is_binary(vtt_content) do
-    YtSearch.Subtitle.CTAExtractor.detect_and_merge_engagement_prompts(vtt_content)
+    YtSearch.Subtitle.CTAExtractorHTTP.detect_and_merge_engagement_prompts(vtt_content)
   end
 
   def parse_timestamp(timestamp) do

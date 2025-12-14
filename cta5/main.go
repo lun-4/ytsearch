@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -260,8 +261,15 @@ func main() {
 	mux.HandleFunc("/detect", handleDetect)
 	mux.HandleFunc("/health", handleHealth)
 
+	// Get port from environment variable, default to 8080
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := ":" + port
+
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -270,6 +278,6 @@ func main() {
 		MaxHeaderBytes: 1 << 20, // 1MB
 	}
 
-	log.Println("CTA Extractor HTTP service listening on :8080")
+	log.Printf("CTA Extractor HTTP service listening on %s", addr)
 	log.Fatal(server.ListenAndServe())
 }
