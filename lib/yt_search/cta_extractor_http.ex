@@ -197,10 +197,10 @@ defmodule YtSearch.Subtitle.CTAExtractorHTTP do
     |> merge_overlapping_ranges()
   end
 
-  # Get the service URL from environment variable or use default
+  # Get the service URL from application config
   defp get_service_url do
-    host = System.get_env("CTA_HTTP_HOST") || "localhost"
-    port = System.get_env("CTA_HTTP_PORT") || "8080"
+    host = Application.get_env(:yt_search, __MODULE__)[:host] || "localhost"
+    port = Application.get_env(:yt_search, __MODULE__)[:port] || "8080"
     "http://#{host}:#{port}/detect"
   end
 end

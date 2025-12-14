@@ -33,6 +33,10 @@ config :yt_search, YtSearch.ThumbnailHttpClient,
   socks5_host: System.get_env("THUMBNAIL_SOCKS5_HOST"),
   socks5_port: System.get_env("THUMBNAIL_SOCKS5_PORT")
 
+config :yt_search, YtSearch.Subtitle.CTAExtractorHTTP,
+  host: System.get_env("CTA_HTTP_HOST") || "localhost",
+  port: System.get_env("CTA_HTTP_PORT") || "8080"
+
 if config_env() in [:prod, :dev] do
   config :yt_search, YtSearch.Ratelimit,
     ytdlp_search: {

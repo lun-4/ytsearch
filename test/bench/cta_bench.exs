@@ -73,7 +73,7 @@ IO.puts("")
 
 # Check if HTTP service is running
 IO.puts("Checking HTTP service...")
-http_port = System.get_env("CTA_HTTP_PORT") || "8080"
+http_port = Application.get_env(:yt_search, YtSearch.Subtitle.CTAExtractorHTTP)[:port] || "8080"
 
 case HTTPoison.get("http://localhost:#{http_port}/health") do
   {:ok, %HTTPoison.Response{status_code: 200}} ->

@@ -17,9 +17,11 @@ defmodule YtSearch.Test.CTAServer do
     # Find a random free port
     port = find_free_port()
 
-    # Set environment variables for the CTA extractor HTTP module
-    System.put_env("CTA_HTTP_HOST", "localhost")
-    System.put_env("CTA_HTTP_PORT", Integer.to_string(port))
+    # Set application config for the CTA extractor HTTP module
+    Application.put_env(:yt_search, YtSearch.Subtitle.CTAExtractorHTTP,
+      host: "localhost",
+      port: Integer.to_string(port)
+    )
     IO.puts("starting cta server on localhost:#{port}")
 
     # Start the Go server
