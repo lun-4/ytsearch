@@ -10,6 +10,10 @@ defmodule YtSearch.Youtube do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:piped_url]
   end
 
+  defp streams_piped() do
+    Application.fetch_env!(:yt_search, YtSearch.Youtube)[:streams_piped_url]
+  end
+
   defp sponsorblock() do
     Application.fetch_env!(:yt_search, YtSearch.Youtube)[:sponsorblock_url]
   end
@@ -705,8 +709,15 @@ defmodule YtSearch.Youtube do
   defp piped_call(call_type, func, id, opts) do
     CallCounter.inc(call_type)
 
+    piped_url =
+      if call_type in [:streams, :streams_retry] do
+        streams_piped()
+      else
+        piped()
+      end
+
     start_ts = System.monotonic_time(:millisecond)
-    result = func.(piped(), id)
+    result = func.(piped_url, id)
     end_ts = System.monotonic_time(:millisecond)
     Latency.register(call_type, end_ts - start_ts)
     CallCounter.response(call_type, result)
