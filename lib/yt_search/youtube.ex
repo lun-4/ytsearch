@@ -841,6 +841,9 @@ defmodule YtSearch.Youtube do
           String.contains?(message, "Sign in to confirm") ->
             {:error, :blocked}
 
+          String.contains?(message, "The page needs to be reloaded.") ->
+            {:error, :blocked}
+
           true ->
             {:error, response}
         end
