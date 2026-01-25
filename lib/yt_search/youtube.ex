@@ -710,7 +710,7 @@ defmodule YtSearch.Youtube do
     CallCounter.inc(call_type)
 
     piped_url =
-      if call_type in [:streams, :streams_retry] do
+      if call_type in [:streams, :streams_retry, :streams_retry_2] do
         streams_piped()
       else
         piped()
@@ -1059,7 +1059,13 @@ defmodule YtSearch.Youtube do
   def video_metadata(youtube_id) do
     case piped_call(:streams, &Piped.streams/2, youtube_id, nil) do
       {:error, :blocked} ->
-        piped_call(:streams_retry, &Piped.streams/2, youtube_id, nil)
+        case piped_call(:streams_retry, &Piped.streams/2, youtube_id, nil) do
+          {:error, :blocked} ->
+            piped_call(:streams_retry_2, &Piped.streams/2, youtube_id, nil)
+
+          v ->
+            v
+        end
 
       v ->
         v
