@@ -49,10 +49,6 @@ defmodule YtSearchWeb.Endpoint do
   plug(Plug.Head)
   plug(Plug.Session, @session_options)
 
-  defmodule Instrumenter do
-    use Prometheus.PhoenixInstrumenter
-  end
-
   defmodule PipelineInstrumenter do
     use Prometheus.PlugPipelineInstrumenter
   end

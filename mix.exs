@@ -57,8 +57,7 @@ defmodule YtSearch.MixProject do
        branch: "fix/elixir-1.14",
        override: true},
       {:prometheus_plugs, "~> 1.1"},
-      {:prometheus_phoenix, "~> 1.3"},
-      # Note: once `prometheus_phx` is integrated into `prometheus_phoenix`, remove the former:
+      # prometheus_phx replaces prometheus_phoenix with telemetry-based instrumentation
       {:prometheus_phx,
        git: "https://git.pleroma.social/pleroma/elixir-libraries/prometheus-phx.git",
        branch: "no-logging"},

@@ -306,8 +306,6 @@ defmodule YtSearch.Application do
     YtSearch.Thumbnail.Atlas.InvalidRatio.setup()
     YtSearch.Youtube.Thumbnail.TaskCounter.setup()
 
-    # Note: disabled until prometheus-phx is integrated into prometheus-phoenix:
-    # YtSearchWeb.Endpoint.Instrumenter.setup()
     PrometheusPhx.setup()
     Logger.info("telemetry started!")
   end
