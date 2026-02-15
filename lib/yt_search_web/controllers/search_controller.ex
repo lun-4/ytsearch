@@ -36,14 +36,34 @@ defmodule YtSearchWeb.SearchController do
   end
 
   def search_by_id(conn, %{"id" => id}) do
-    case UserAgent.on(conn) do
-      :unity ->
-        do_search_by_slot(conn, id)
+    accept_header =
+      case Plug.Conn.get_req_header(conn, "accept") do
+        [] -> nil
+        [value | _] -> value
+      end
 
-      _ ->
-        conn
-        |> put_status(400)
-        |> json(%{error: true, message: "only unity should request this route"})
+    if accept_header == "image/*" do
+      case YtSearch.Thumbnail.Atlas.assemble(id) do
+        {:ok, mimetype, binary_data} ->
+          conn
+          |> put_resp_content_type(mimetype, nil)
+          |> resp(200, binary_data)
+
+        {:error, :unknown_search_slot} ->
+          conn
+          |> put_status(404)
+          |> text("search slot not found")
+      end
+    else
+      case UserAgent.on(conn) do
+        :unity ->
+          do_search_by_slot(conn, id)
+
+        _ ->
+          conn
+          |> put_status(400)
+          |> json(%{error: true, message: "only unity should request this route"})
+      end
     end
   end
 

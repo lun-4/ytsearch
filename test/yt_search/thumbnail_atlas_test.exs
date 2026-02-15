@@ -40,4 +40,21 @@ defmodule YtSearch.ThumbnailAtlasTest do
     File.write!(temporary_path, resp.resp_body)
     YtSearch.AssertUtil.image(temporary_path)
   end
+
+  test "search slot route returns atlas when Accept is image/*", %{
+    conn: conn,
+    search_slot: search_slot
+  } do
+    resp =
+      conn
+      |> put_req_header("accept", "image/*")
+      |> get("/a/6/r/#{search_slot.id}")
+
+    assert resp.status == 200
+    assert Plug.Conn.get_resp_header(resp, "content-type") == ["image/png"]
+
+    temporary_path = Temp.path!()
+    File.write!(temporary_path, resp.resp_body)
+    YtSearch.AssertUtil.image(temporary_path)
+  end
 end
