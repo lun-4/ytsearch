@@ -27,7 +27,7 @@ defmodule YtSearch.PlaylistSlot do
 
   @spec fetch(Integer.t()) :: Slot.t() | nil
   def fetch(slot_id) do
-    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    query = from(s in __MODULE__, where: s.id == ^slot_id, select: s)
 
     PlaylistSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -35,7 +35,7 @@ defmodule YtSearch.PlaylistSlot do
 
   @spec fetch_by_youtube_id(String.t()) :: t() | nil
   def fetch_by_youtube_id(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
 
     PlaylistSlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -52,7 +52,7 @@ defmodule YtSearch.PlaylistSlot do
     keepalive = Keyword.get(opts, :keepalive, false)
 
     PlaylistSlotRepo.transaction(fn ->
-      query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+      query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
       playlist_slot = PlaylistSlotRepo.replica(youtube_id).one(query)
 
       if playlist_slot == nil do

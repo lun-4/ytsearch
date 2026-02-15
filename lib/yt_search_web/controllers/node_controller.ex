@@ -109,15 +109,18 @@ defmodule YtSearchWeb.NodeController do
       |> Map.update(:inserted_at, nil, &parse_datetime/1)
       |> Map.update(:updated_at, nil, &parse_datetime/1)
 
-    SlotRepo.transaction(fn ->
-      # Delete any existing slot with same id OR youtube_id
-      from(s in Slot,
-        where: s.id == ^slot_attrs.id or s.youtube_id == ^slot_attrs.youtube_id
-      )
-      |> SlotRepo.delete_all()
+    SlotRepo.transaction(
+      fn ->
+        # Delete any existing slot with same id OR youtube_id
+        from(s in Slot,
+          where: s.id == ^slot_attrs.id or s.youtube_id == ^slot_attrs.youtube_id
+        )
+        |> SlotRepo.delete_all()
 
-      SlotRepo.insert!(struct(Slot, slot_attrs))
-    end, mode: :immediate)
+        SlotRepo.insert!(struct(Slot, slot_attrs))
+      end,
+      mode: :immediate
+    )
   end
 
   defp upsert_channel_slot!(slot_data) do
@@ -135,15 +138,18 @@ defmodule YtSearchWeb.NodeController do
       |> Map.update(:inserted_at, nil, &parse_datetime/1)
       |> Map.update(:updated_at, nil, &parse_datetime/1)
 
-    ChannelSlotRepo.transaction(fn ->
-      # Delete any existing slot with same id OR youtube_id
-      from(s in ChannelSlot,
-        where: s.id == ^slot_attrs.id or s.youtube_id == ^slot_attrs.youtube_id
-      )
-      |> ChannelSlotRepo.delete_all()
+    ChannelSlotRepo.transaction(
+      fn ->
+        # Delete any existing slot with same id OR youtube_id
+        from(s in ChannelSlot,
+          where: s.id == ^slot_attrs.id or s.youtube_id == ^slot_attrs.youtube_id
+        )
+        |> ChannelSlotRepo.delete_all()
 
-      ChannelSlotRepo.insert!(struct(ChannelSlot, slot_attrs))
-    end, mode: :immediate)
+        ChannelSlotRepo.insert!(struct(ChannelSlot, slot_attrs))
+      end,
+      mode: :immediate
+    )
   end
 
   defp upsert_search_slot!(search_slot_data) do
@@ -163,15 +169,18 @@ defmodule YtSearchWeb.NodeController do
       |> Map.update(:type, nil, &parse_atom/1)
       |> Map.update(:result_type, nil, &parse_atom/1)
 
-    SearchSlotRepo.transaction(fn ->
-      # Delete any existing slot with same id OR query
-      from(s in SearchSlot,
-        where: s.id == ^slot_attrs.id or s.query == ^slot_attrs.query
-      )
-      |> SearchSlotRepo.delete_all()
+    SearchSlotRepo.transaction(
+      fn ->
+        # Delete any existing slot with same id OR query
+        from(s in SearchSlot,
+          where: s.id == ^slot_attrs.id or s.query == ^slot_attrs.query
+        )
+        |> SearchSlotRepo.delete_all()
 
-      SearchSlotRepo.insert!(struct(SearchSlot, slot_attrs))
-    end, mode: :immediate)
+        SearchSlotRepo.insert!(struct(SearchSlot, slot_attrs))
+      end,
+      mode: :immediate
+    )
   end
 
   defp parse_datetime(nil), do: nil

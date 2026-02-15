@@ -22,6 +22,7 @@ defmodule YtSearch.Test.CTAServer do
       host: "localhost",
       port: Integer.to_string(port)
     )
+
     IO.puts("starting cta server on localhost:#{port}")
 
     # Start the Go server

@@ -46,6 +46,7 @@ defmodule YtSearchWeb.VideoUnavailableTest do
 
       %{method: :get, url: "sb.example.org/api/skipSegments", query: query_args} = env ->
         youtube_id = query_args |> Keyword.get(:videoID)
+
         if youtube_id == @no_subtitles_id do
           json([])
         else
