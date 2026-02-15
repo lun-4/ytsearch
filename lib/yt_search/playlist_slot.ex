@@ -20,7 +20,7 @@ defmodule YtSearch.PlaylistSlot do
   def slot_spec() do
     %{
       # this number must be synced with the world build
-      max_ids: 20_000,
+      max_ids: 14_000,
       ttl: 20 * 60
     }
   end

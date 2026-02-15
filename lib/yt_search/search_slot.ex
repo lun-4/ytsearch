@@ -30,7 +30,7 @@ defmodule YtSearch.SearchSlot do
 
   def slot_spec() do
     %{
-      max_ids: 30_000,
+      max_ids: 21_000,
       ttl: 20 * 60
     }
   end
