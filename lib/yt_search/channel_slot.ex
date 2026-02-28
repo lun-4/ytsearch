@@ -20,14 +20,14 @@ defmodule YtSearch.ChannelSlot do
   @spec fetch(Integer.t()) :: Slot.t() | nil
   def fetch(slot_id) when is_bitstring(slot_id) do
     slot_id = slot_id |> Integer.parse() |> then(fn {x, ""} -> x end)
-    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    query = from(s in __MODULE__, where: s.id == ^slot_id, select: s)
 
     ChannelSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
   end
 
   def fetch(slot_id) do
-    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    query = from(s in __MODULE__, where: s.id == ^slot_id, select: s)
 
     ChannelSlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -35,7 +35,7 @@ defmodule YtSearch.ChannelSlot do
 
   @spec fetch_by_youtube_id(String.t()) :: t() | nil
   def fetch_by_youtube_id(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
 
     ChannelSlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -56,7 +56,7 @@ defmodule YtSearch.ChannelSlot do
     end
 
     ChannelSlotRepo.transaction(fn ->
-      query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+      query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
       channel_slot = ChannelSlotRepo.replica(youtube_id).one(query)
 
       if channel_slot == nil do
