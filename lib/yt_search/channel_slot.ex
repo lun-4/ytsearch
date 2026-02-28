@@ -94,7 +94,7 @@ defmodule YtSearch.ChannelSlot do
   def slot_spec() do
     %{
       # this number must be synced with the world build
-      max_ids: 60_000,
+      max_ids: 80_000,
       ttl: 20 * 60
     }
   end
