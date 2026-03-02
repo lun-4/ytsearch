@@ -150,11 +150,23 @@ defmodule YtSearch.SlotUtilities do
     end)
   end
 
+  # `fragment("+?", s.id)` is used instead of bare s.id in the WHERE clauses below.
+  #
+  # this is done because doing "id < @max_ids" leads to a full table scan when that shouldn't
+  # be done. the unixepoch() index is better for this case and a full table scan sucks, especially
+  # for hot path like v3id
+  #
+  # turns out this is "documented" behavior by sqlite, though i assume that would break in
+  # some version in 10 years or on sqlite4. who knows. more here:
+  # https://sqlite.org/optoverview.html#disqualifying_where_clause_terms_using_unary_
   def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
+    max_ids = module.slot_spec().max_ids
 
     from(s in module,
-      where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
+      where:
+        fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive and
+          fragment("+?", s.id) < ^max_ids,
       select: s,
       limit: 1
     )
@@ -165,7 +177,7 @@ defmodule YtSearch.SlotUtilities do
 
         from(s in module,
           select: s,
-          where: not s.keepalive,
+          where: not s.keepalive and fragment("+?", s.id) < ^max_ids,
           order_by: [
             asc: fragment("unixepoch(?)", s.used_at)
           ],
