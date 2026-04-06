@@ -10,6 +10,7 @@ defmodule YtSearch.Application do
   def primaries() do
     Application.fetch_env!(:yt_search, :ecto_repos)
     # TODO decrease copypaste
+    |> filter_repos_by_trending_role()
     |> then(fn repos ->
       cond do
         has_external_thumbnailer?() ->
@@ -34,6 +35,27 @@ defmodule YtSearch.Application do
           repos
       end
     end)
+  end
+
+  defp is_trending_node? do
+    System.get_env("ROLE") == "trending"
+  end
+
+  defp filter_repos_by_trending_role(repos) do
+    case System.get_env("ROLE", "all") do
+      "trending" ->
+        Enum.filter(repos, fn repo ->
+          repo == YtSearch.Data.TrendingRepo
+        end)
+
+      "primary" ->
+        Enum.reject(repos, fn repo ->
+          repo == YtSearch.Data.TrendingRepo
+        end)
+
+      _ ->
+        repos
+    end
   end
 
   defp is_thumbnailer_node? do
@@ -63,6 +85,7 @@ defmodule YtSearch.Application do
 
   defp repos() do
     Application.fetch_env!(:yt_search, :ecto_repos)
+    |> filter_repos_by_trending_role()
     |> then(fn repos ->
       cond do
         has_external_thumbnailer?() ->
@@ -126,6 +149,14 @@ defmodule YtSearch.Application do
     ] ++ thumbnail_children()
   end
 
+  defp children_for(:trending) do
+    [
+      {Phoenix.PubSub, name: YtSearch.PubSub},
+      # Endpoint needed for /api/node/view HTTP endpoint
+      YtSearchWeb.Endpoint
+    ]
+  end
+
   # the processes necessary to do thumbnails
   defp thumbnail_children do
     [
@@ -138,8 +169,38 @@ defmodule YtSearch.Application do
     ]
   end
 
+  defp maybe_trending_children do
+    # No extra children needed - trending views arrive via HTTP,
+    # and Reporter runs via Tinycron
+    []
+  end
+
   @impl true
   def start(_type, _args) do
+    role = System.get_env("ROLE", "all")
+    Logger.info("Starting application with ROLE=#{role}")
+
+    if is_trending_node?() do
+      start_trending()
+    else
+      start_primary_or_all()
+    end
+  end
+
+  defp start_trending do
+    start_telemetry()
+
+    children =
+      [YtSearchWeb.Telemetry] ++
+        repos() ++
+        children_for(:trending) ++
+        maybe_janitors()
+
+    opts = [strategy: :one_for_one, name: YtSearch.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  defp start_primary_or_all do
     :erlang.system_flag(:microstate_accounting, true)
 
     # Conditional setup for thumbnails
@@ -186,6 +247,7 @@ defmodule YtSearch.Application do
           {Task.Supervisor, strategy: :one_for_one, name: YtSearch.SlotMetadataSupervisor}
         ] ++
           if(has_external_thumbnailer?(), do: [], else: thumbnail_children()) ++
+          maybe_trending_children() ++
           maybe_janitors()
       end
 
@@ -210,13 +272,31 @@ defmodule YtSearch.Application do
     ]
   end
 
-  def periodic_task_specs do
+  def base_task_specs do
     [
-      [YtSearch.SlotUtilities.UsageMeter, [every: 60, jitter: (-3 * 60)..(3 * 60)]],
       [YtSearch.Repo.FreelistMeter, [every: 30, jitter: -10..30]],
       [YtSearch.Repo.Analyzer, [every: 3 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]]
     ]
   end
+
+  def periodic_task_specs("primary") do
+    [
+      [YtSearch.SlotUtilities.UsageMeter, [every: 60, jitter: (-3 * 60)..(3 * 60)]]
+    ]
+  end
+
+  def periodic_task_specs("trending") do
+    [
+      [YtSearch.Trending.Reporter, [every: 3 * 60 * 60, jitter: 0..0]]
+    ]
+  end
+
+  def periodic_task_specs("all") do
+    periodic_task_specs("primary") ++ periodic_task_specs("trending")
+  end
+
+  # Default for thumbnailer or other roles
+  def periodic_task_specs(_), do: []
 
   defp maybe_janitors do
     enable_periodic =
@@ -233,9 +313,11 @@ defmodule YtSearch.Application do
         Application.get_env(:yt_search, YtSearch.Constants)[:enable_periodic_janitors]
       end
 
+    role = System.get_env("ROLE", "all")
+
     periodic_tasks =
       if enable_periodic do
-        periodic_task_specs()
+        (base_task_specs() ++ periodic_task_specs(role))
         |> Enum.map(fn [module, opts] ->
           Tinycron.new(module, opts)
         end)
@@ -244,7 +326,7 @@ defmodule YtSearch.Application do
       end
 
     janitor_tasks =
-      if enable_janitor do
+      if role in ["primary", "all"] and enable_janitor do
         specs =
           cond do
             is_thumbnailer_node?() ->

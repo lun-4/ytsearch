@@ -236,6 +236,8 @@ defmodule YtSearchWeb.SlotController do
           # Retain current behavior for Accept: "*/*" or missing/empty header
           case UserAgent.on(conn) do
             :unity ->
+              # Submit view to trending node (fire-and-forget)
+              YtSearch.TrendingClient.submit_view(slot)
               do_slot_metadata(conn, slot)
 
             _ ->

@@ -278,6 +278,27 @@ if config_env() == :prod do
     config :yt_search, repo, database: counter_database_path
   end
 
+  # Only configure TrendingRepo if role is "trending" or "all" (not "primary")
+  role = System.get_env("ROLE", "all")
+
+  if role in ["trending", "all"] do
+    trending_database_path =
+      System.get_env("TRENDING_DATABASE_PATH") ||
+        raise """
+        environment variable TRENDING_DATABASE_PATH is missing.
+        For example: /etc/yt_search/yt_search_trending.db
+        (Required for ROLE=trending or ROLE=all, not needed for ROLE=primary)
+        """
+
+    for repo <- [
+          YtSearch.Data.TrendingRepo,
+          YtSearch.Data.TrendingRepo.Replica1,
+          YtSearch.Data.TrendingRepo.Replica2
+        ] do
+      config :yt_search, repo, database: trending_database_path
+    end
+  end
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want

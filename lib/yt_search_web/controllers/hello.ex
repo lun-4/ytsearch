@@ -161,6 +161,15 @@ defmodule YtSearchWeb.HelloController do
                     (module == YtSearch.Slot and slot_id_str == "#{slot.id}") or
                       (module == YtSearch.ChannelSlot and channel_slot_id == "#{slot.id}")
 
+                  %{
+                    type: video_type,
+                    slot_id: slot_id_str,
+                    channel_slot: nil
+                  }
+                  when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) ->
+                    # match on the video slot id
+                    module == YtSearch.Slot and slot_id_str == "#{slot.id}"
+
                   # i forgot if playlists exist in the trending tab
                   %{type: :playlist, slot_id: slot_id_str, youtube_id: youtube_id}
                   when is_bitstring(slot_id_str) ->

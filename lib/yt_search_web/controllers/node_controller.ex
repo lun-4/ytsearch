@@ -77,6 +77,25 @@ defmodule YtSearchWeb.NodeController do
     json(conn, %{status: "ok", count: length(youtube_ids)})
   end
 
+  def submit_view(conn, params) do
+    youtube_id = params["youtube_id"]
+
+    if youtube_id == nil do
+      conn
+      |> put_status(400)
+      |> json(%{error: "missing youtube_id"})
+    else
+      YtSearch.Data.TrendingRepo.query!("""
+        INSERT INTO video_counter (yt_video_id, view_count)
+        VALUES (?, 1)
+        ON CONFLICT(yt_video_id) DO UPDATE SET
+          view_count = view_count + 1
+      """, [youtube_id])
+
+      json(conn, %{status: "ok"})
+    end
+  end
+
   def submit_search_slot(conn, params) do
     # Extract data from params
     search_slot_data = params["search_slot_data"]

@@ -32,8 +32,11 @@ defmodule YtSearch.Constants do
   def apply(new_constants) do
     cron_callback(YtSearch.Application.janitor_specs(), new_constants[:enable_periodic_janitors])
 
+    role = System.get_env("ROLE", "all")
+
     cron_callback(
-      YtSearch.Application.periodic_task_specs(),
+      YtSearch.Application.base_task_specs() ++
+        YtSearch.Application.periodic_task_specs(role),
       new_constants[:enable_periodic_tasks]
     )
 
