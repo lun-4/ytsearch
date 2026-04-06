@@ -19,9 +19,12 @@ config :yt_search,
     YtSearch.Data.SubtitleRepo,
     YtSearch.Data.LinkRepo,
     YtSearch.Data.AudioConfigRepo,
-    YtSearch.Data.CounterRepo,
-    YtSearch.Data.TrendingRepo
-  ]
+    YtSearch.Data.CounterRepo
+  ] ++
+    if(System.get_env("EXTERNAL_TRENDING_NODE") in [nil, ""],
+      do: [YtSearch.Data.TrendingRepo],
+      else: []
+    )
 
 # Configures the endpoint
 config :yt_search, YtSearchWeb.Endpoint,
@@ -150,11 +153,16 @@ repos = [
   YtSearch.Data.CounterRepo.Replica1,
   YtSearch.Data.CounterRepo.Replica2,
   YtSearch.Data.CounterRepo.Replica3,
-  YtSearch.Data.CounterRepo.Replica4,
-  YtSearch.Data.TrendingRepo,
-  YtSearch.Data.TrendingRepo.Replica1,
-  YtSearch.Data.TrendingRepo.Replica2
-]
+  YtSearch.Data.CounterRepo.Replica4
+] ++
+  if(System.get_env("EXTERNAL_TRENDING_NODE") in [nil, ""],
+    do: [
+      YtSearch.Data.TrendingRepo,
+      YtSearch.Data.TrendingRepo.Replica1,
+      YtSearch.Data.TrendingRepo.Replica2
+    ],
+    else: []
+  )
 
 for repo <- repos do
   config :yt_search, repo,
