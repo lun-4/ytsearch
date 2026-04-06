@@ -41,6 +41,14 @@ defmodule YtSearch.Application do
     System.get_env("ROLE") == "trending"
   end
 
+  defp has_external_trending? do
+    case System.get_env("EXTERNAL_TRENDING_NODE") do
+      nil -> false
+      "" -> false
+      _ -> true
+    end
+  end
+
   defp filter_repos_by_trending_role(repos) do
     case System.get_env("ROLE", "all") do
       "trending" ->
@@ -54,7 +62,13 @@ defmodule YtSearch.Application do
         end)
 
       _ ->
-        repos
+        if has_external_trending?() do
+          Enum.reject(repos, fn repo ->
+            repo == YtSearch.Data.TrendingRepo
+          end)
+        else
+          repos
+        end
     end
   end
 

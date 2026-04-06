@@ -279,9 +279,11 @@ if config_env() == :prod do
   end
 
   # Only configure TrendingRepo if role is "trending" or "all" (not "primary")
+  # Skip if EXTERNAL_TRENDING_NODE is set (trending is handled externally)
   role = System.get_env("ROLE", "all")
+  has_external_trending = System.get_env("EXTERNAL_TRENDING_NODE") not in [nil, ""]
 
-  if role in ["trending", "all"] do
+  if role in ["trending", "all"] and not has_external_trending do
     trending_database_path =
       System.get_env("TRENDING_DATABASE_PATH") ||
         raise """
