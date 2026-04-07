@@ -85,12 +85,22 @@ defmodule YtSearchWeb.NodeController do
       |> put_status(400)
       |> json(%{error: "missing youtube_id"})
     else
-      YtSearch.Data.TrendingRepo.query!("""
-        INSERT INTO video_counter (yt_video_id, view_count)
-        VALUES (?, 1)
-        ON CONFLICT(yt_video_id) DO UPDATE SET
-          view_count = view_count + 1
-      """, [youtube_id])
+      YtSearch.Data.TrendingRepo.transaction(
+        fn ->
+          YtSearch.Data.TrendingRepo.query!("""
+            INSERT INTO video_counter (yt_video_id, view_count)
+            VALUES (?, 1)
+            ON CONFLICT(yt_video_id) DO UPDATE SET
+              view_count = view_count + 1
+          """, [youtube_id])
+
+          YtSearch.Data.TrendingRepo.query!("""
+            INSERT INTO video_views (yt_video_id, viewed_at)
+            VALUES (?, datetime('now'))
+          """, [youtube_id])
+        end,
+        mode: :immediate
+      )
 
       json(conn, %{status: "ok"})
     end

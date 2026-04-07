@@ -1,10 +1,11 @@
 defmodule YtSearch.Trending.Reporter do
   @moduledoc """
-  Periodic reporting of top trending videos from video_counter table.
+  Periodic reporting of top trending videos (runs every 3h).
 
-  1. Query top 10 most-viewed videos
+  1. Query top 10 most-viewed videos from video_counter
   2. Log them and send to Discord webhook
-  3. Clear the video_counter table
+  3. Prune view events older than 48h from video_views
+  4. Rebuild video_counter from remaining events (rolling 48h window)
   """
 
   require Logger
@@ -37,9 +38,39 @@ defmodule YtSearch.Trending.Reporter do
       Logger.info("No videos tracked...")
     end
 
+    # Prune view events older than 48h
+    YtSearch.Data.TrendingRepo.query!("""
+      DELETE FROM video_views WHERE unixepoch(viewed_at) < (unixepoch() - 48 * 3600)
+    """)
+
+    # Rebuild video_counter from remaining events
+    rebuild_video_counter()
+
+    Logger.info("Trending Reporter: Pruned views older than 48h and rebuilt video_counter")
+  end
+
+  defp rebuild_video_counter do
     YtSearch.Data.TrendingRepo.query!("DELETE FROM video_counter")
 
-    Logger.info("Trending Reporter: Cleared video_counter table")
+    {:ok, counts} =
+      YtSearch.Data.TrendingRepo.transaction(fn ->
+        Ecto.Adapters.SQL.stream(
+          YtSearch.Data.TrendingRepo,
+          "SELECT yt_video_id FROM video_views"
+        )
+        |> Enum.reduce(%{}, fn %{rows: rows}, acc ->
+          Enum.reduce(rows, acc, fn [yt_video_id], inner_acc ->
+            Map.update(inner_acc, yt_video_id, 1, &(&1 + 1))
+          end)
+        end)
+      end)
+
+    Enum.each(counts, fn {yt_video_id, view_count} ->
+      YtSearch.Data.TrendingRepo.query!("""
+        INSERT INTO video_counter (yt_video_id, view_count)
+        VALUES (?, ?)
+      """, [yt_video_id, view_count])
+    end)
   end
 
   defp send_discord_webhook(trending_videos) do
