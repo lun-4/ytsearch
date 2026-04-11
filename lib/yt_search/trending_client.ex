@@ -11,16 +11,20 @@ defmodule YtSearch.TrendingClient do
   """
   def submit_view(%YtSearch.Slot{} = slot) do
     case System.get_env("EXTERNAL_TRENDING_NODE") do
-      nil ->
-        :ok
-
-      "" ->
-        :ok
-
-      trending_url ->
+      trending_url when is_binary(trending_url) and trending_url != "" ->
         Task.start(fn ->
           do_submit_view(trending_url, slot)
         end)
+
+        :ok
+
+      _ ->
+        # Monolith mode: record directly if TrendingRepo is running locally
+        if GenServer.whereis(YtSearch.Data.TrendingRepo) do
+          Task.start(fn ->
+            YtSearch.Trending.record_view(slot.youtube_id)
+          end)
+        end
 
         :ok
     end

@@ -4,7 +4,6 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.Data.ThumbnailRepo
   alias YtSearch.SlotUtilities
   alias YtSearch.SearchSlot
-  alias YtSearch.Youtube
   alias YtSearchWeb.Playlist
   alias YtSearch.CounterServer
 
@@ -63,8 +62,8 @@ defmodule YtSearchWeb.HelloController do
   end
 
   defp upstream_trending_tab do
-    case Youtube.trending() do
-      {:ok, data} ->
+    case YtSearch.Trending.Mixer.mixed_trending() do
+      {:ok, data} when is_list(data) ->
         results =
           data
           |> Playlist.from_piped_data(keepalive: true, transform_upcoming_videos?: true)
@@ -78,7 +77,7 @@ defmodule YtSearchWeb.HelloController do
         {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
       v ->
-        Logger.warning("yt trending failed: #{inspect(v)}")
+        Logger.warning("mixed trending failed: #{inspect(v)}")
         {:ok, nil}
     end
   end

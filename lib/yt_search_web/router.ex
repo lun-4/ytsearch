@@ -14,6 +14,7 @@ defmodule YtSearchWeb.Router do
     post("/unkeepalive_thumbnails", NodeController, :unkeepalive_thumbnails)
     post("/search_slot", NodeController, :submit_search_slot)
     post("/view", NodeController, :submit_view)
+    get("/top_videos", NodeController, :top_videos)
   end
 
   scope "/api/v6", YtSearchWeb do
