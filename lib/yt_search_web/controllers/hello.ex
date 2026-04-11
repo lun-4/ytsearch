@@ -4,12 +4,22 @@ defmodule YtSearchWeb.HelloController do
   alias YtSearch.Data.ThumbnailRepo
   alias YtSearch.SlotUtilities
   alias YtSearch.SearchSlot
+  alias YtSearch.Trending.Mixer
+  alias YtSearch.Youtube
   alias YtSearchWeb.Playlist
   alias YtSearch.CounterServer
 
   def hello(conn, params) do
     __MODULE__.BuildReporter.increment(params["build_number"] || "<unknown>")
-    trending_tab = fetch_trending_tab()
+    render_hello(conn, fetch_trending_tab())
+  end
+
+  def hello_staging(conn, params) do
+    __MODULE__.BuildReporter.increment(params["build_number"] || "<unknown>")
+    render_hello(conn, fetch_staging_trending_tab())
+  end
+
+  defp render_hello(conn, trending_tab) do
     counter_value = CounterServer.get_value()
 
     accept_header =
@@ -50,6 +60,27 @@ defmodule YtSearchWeb.HelloController do
     end
   end
 
+  def fetch_staging_trending_tab(v \\ nil) do
+    case v || Cachex.get(:tabs, "staging_trending") do
+      {:ok, nil} ->
+        if v != nil do
+          raise "should not re-request on given do_fetch value"
+        else
+          fetch_staging_trending_tab(do_fetch_staging_trending_tab())
+        end
+
+      {:ok, :nothing} ->
+        nil
+
+      {:ok, data} ->
+        data
+
+      value ->
+        Logger.error("staging trending tab fetch failed: #{inspect(value)}")
+        nil
+    end
+  end
+
   import Ecto.Query
 
   defp keepalived_slots do
@@ -62,7 +93,7 @@ defmodule YtSearchWeb.HelloController do
   end
 
   defp upstream_trending_tab do
-    case YtSearch.Trending.Mixer.mixed_trending() do
+    case Youtube.trending() do
       {:ok, data} when is_list(data) ->
         results =
           data
@@ -77,7 +108,7 @@ defmodule YtSearchWeb.HelloController do
         {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
 
       v ->
-        Logger.warning("mixed trending failed: #{inspect(v)}")
+        Logger.warning("upstream trending failed: #{inspect(v)}")
         {:ok, nil}
     end
   end
@@ -201,6 +232,61 @@ defmodule YtSearchWeb.HelloController do
                 :noop
             end)
           end
+
+          {:ok, data}
+
+        v ->
+          v
+      end
+    end)
+  end
+
+  defp upstream_staging_trending_tab do
+    case Mixer.mixed_trending() do
+      {:ok, data} when is_list(data) ->
+        results =
+          data
+          |> Playlist.from_piped_data(keepalive: true, transform_upcoming_videos?: true)
+
+        search_slot =
+          results
+          |> SearchSlot.from_playlist("yt://trending-staging", keepalive: true)
+
+        YtSearchWeb.SearchController.broadcast_sync(search_slot)
+
+        {:ok, %{search_results: results, slot_id: "#{search_slot.id}"}}
+
+      v ->
+        Logger.warning("staging mixed trending failed: #{inspect(v)}")
+        {:ok, nil}
+    end
+  end
+
+  # Staging-only trending fetch. Intentionally does NOT run the
+  # keepalived-slot cleanup dance that do_fetch_trending_tab/0 does — it is
+  # purely additive. See plan: staging slots are keepalive:true and will be
+  # unkeepalived on the next prod fetch (~2h), which is accepted for the
+  # dogfood test.
+  defp do_fetch_staging_trending_tab() do
+    Mutex.under(SearchMutex, "staging_trending", fn ->
+      case Cachex.get(:tabs, "staging_trending") do
+        {:ok, nil} ->
+          {:ok, data} = upstream_staging_trending_tab()
+
+          cached_data =
+            if data == nil do
+              :nothing
+            else
+              data
+            end
+
+          Cachex.put(
+            :tabs,
+            "staging_trending",
+            cached_data,
+            # 2 hours
+            ttl: 2 * 60 * 60 * 1000
+          )
 
           {:ok, data}
 

@@ -1,8 +1,10 @@
 defmodule YtSearchWeb.TrendingMixerTest do
   @moduledoc """
-  End-to-end tests for the trending mixer: hits /api/v6/hello and verifies
-  that YTS community-trending videos appear in the trending tab alongside
-  upstream YouTube trending data.
+  End-to-end tests for the trending mixer: hits /api/v6/hello-staging and
+  verifies that YTS community-trending videos appear in the trending tab
+  alongside upstream YouTube trending data. The mixer is currently only
+  reachable via the staging endpoint — prod /hello still uses raw
+  Youtube.trending().
   """
   use YtSearchWeb.ConnCase, async: false
 
@@ -14,6 +16,7 @@ defmodule YtSearchWeb.TrendingMixerTest do
 
   setup do
     Cachex.del(:tabs, "trending")
+    Cachex.del(:tabs, "staging_trending")
     TrendingRepo.query!("DELETE FROM video_counter")
     TrendingRepo.query!("DELETE FROM video_views")
     :ok
@@ -61,7 +64,7 @@ defmodule YtSearchWeb.TrendingMixerTest do
 
   defp fetch_trending(conn) do
     conn
-    |> get(~p"/api/v6/hello")
+    |> get(~p"/api/v6/hello-staging")
     |> json_response(200)
     |> get_in(["trending_tab", "search_results"])
   end

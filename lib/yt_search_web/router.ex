@@ -29,6 +29,8 @@ defmodule YtSearchWeb.Router do
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
     get("/hello/:build_number", HelloController, :hello)
+    get("/hello-staging", HelloController, :hello_staging)
+    get("/hello-staging/:build_number", HelloController, :hello_staging)
     get("/aod/retry", AngelOfDeathController, :report_video_retry_error)
     get("/aod/retry:number", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)
