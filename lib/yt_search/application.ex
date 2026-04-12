@@ -301,7 +301,7 @@ defmodule YtSearch.Application do
 
   def periodic_task_specs("trending") do
     [
-      [YtSearch.Trending.Reporter, [every: 3 * 60 * 60, jitter: 0..0]]
+      # [YtSearch.Trending.Reporter, [every: 3 * 60 * 60, jitter: 0..0]]
     ]
   end
 
