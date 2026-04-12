@@ -21,7 +21,7 @@ defmodule YtSearch.Trending.Mixer do
     {"thumbnailUrl", "thumbnail"}
   ]
 
-  @yts_slots 5
+  @yts_slots 15
   @min_views 100
   @metadata_concurrency 5
   @metadata_timeout 5_000
