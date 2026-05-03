@@ -184,11 +184,29 @@ defmodule YtSearchWeb.SearchController do
   end
 
   def broadcast_sync(search_slot, nextpage_search_slot \\ nil) do
-    ThumbnailerClient.submit_search_slot(search_slot)
+    search_sync_status = ThumbnailerClient.submit_search_slot(search_slot)
 
-    if nextpage_search_slot do
-      ThumbnailerClient.submit_search_slot(nextpage_search_slot)
-    end
+    nextpage_sync_status =
+      if nextpage_search_slot do
+        ThumbnailerClient.submit_search_slot(nextpage_search_slot)
+      else
+        nil
+      end
+
+    search_sync_ok =
+      case search_sync_status do
+        :ok -> true
+        _ -> false
+      end
+
+    nextpage_sync_ok =
+      case nextpage_sync_status do
+        :ok -> true
+        nil -> nil
+        _ -> false
+      end
+
+    {search_sync_ok, nextpage_sync_ok}
   end
 
   def search(entity) do
@@ -205,7 +223,8 @@ defmodule YtSearchWeb.SearchController do
               |> SearchSlot.from_playlist(entity, nextpage?: true)
 
             # Sync to thumbnailer
-            broadcast_sync(search_slot, nextpage_search_slot)
+            {search_sync_ok, nextpage_sync_ok} =
+              broadcast_sync(search_slot, nextpage_search_slot)
 
             {:ok,
              %{
@@ -218,7 +237,9 @@ defmodule YtSearchWeb.SearchController do
                    "#{nextpage_search_slot.id}"
                  else
                    nil
-                 end
+                 end,
+               search_sync_ok: search_sync_ok,
+               nextpage_sync_ok: nextpage_sync_ok
              }}
 
           {:error, :overloaded_ytdlp_seats} ->
@@ -250,7 +271,8 @@ defmodule YtSearchWeb.SearchController do
             results
             |> SearchSlot.from_unfetched_slot(unfetched_slot)
 
-          broadcast_sync(search_slot, nextpage_search_slot)
+          {search_sync_ok, nextpage_sync_ok} =
+            broadcast_sync(search_slot, nextpage_search_slot)
 
           {:ok,
            %{
@@ -263,12 +285,16 @@ defmodule YtSearchWeb.SearchController do
                  "#{nextpage_search_slot.id}"
                else
                  nil
-               end
+               end,
+             search_sync_ok: search_sync_ok,
+             nextpage_sync_ok: nextpage_sync_ok
            }}
         end
 
       %YtSearch.SearchSlot{} = search_slot ->
-        broadcast_sync(search_slot)
+        {search_sync_ok, nextpage_sync_ok} =
+          broadcast_sync(search_slot)
+
         nextpage_search_slot_id = search_slot.nextpage_slot_id
 
         {:ok,
@@ -282,7 +308,9 @@ defmodule YtSearchWeb.SearchController do
                "#{nextpage_search_slot_id}"
              else
                nil
-             end
+             end,
+           search_sync_ok: search_sync_ok,
+           nextpage_sync_ok: nextpage_sync_ok
          }}
     end
   end
@@ -300,7 +328,11 @@ defmodule YtSearchWeb.SearchController do
       slot ->
         # Resync on fetch for consistency
         if entity == YtSearch.SearchSlot do
-          broadcast_sync(slot)
+          {search_sync_ok} = broadcast_sync(slot)
+
+          if not search_sync_ok do
+            Logger.warning("search sync failed for #{slot_id}")
+          end
         end
 
         case slot

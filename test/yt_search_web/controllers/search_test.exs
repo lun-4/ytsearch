@@ -214,6 +214,27 @@ defmodule YtSearchWeb.SearchTest do
     assert verify_search_results(json_response(conn, 200))
   end
 
+  test "search_sync_ok is false when external thumbnailer is offline", %{conn: conn} do
+    mock(fn
+      %{method: :get, url: "example.org/search" <> _suffix} ->
+        json(Jason.decode!(@piped_search_output))
+    end)
+
+    # point at a port nothing is listening on so HTTPoison.post fails fast with
+    # :econnrefused, which is how submit_search_slot/1 reports an offline node
+    System.put_env("EXTERNAL_THUMBNAIL_NODE", "http://127.0.0.1:1")
+    on_exit(fn -> System.delete_env("EXTERNAL_THUMBNAIL_NODE") end)
+
+    conn =
+      conn
+      |> put_req_header("user-agent", "UnityWebRequest")
+      |> get(~p"/a/6/s?q=urban+rescue+ranch")
+
+    resp_json = json_response(conn, 200)
+    verify_search_results(resp_json)
+    assert resp_json["search_sync_ok"] == false
+  end
+
   test "fails on non-UnityWebRequest", %{conn: conn} do
     conn =
       conn

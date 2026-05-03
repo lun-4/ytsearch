@@ -62,8 +62,6 @@ defmodule YtSearch.ThumbnailerClient do
 
       thumbnailer_url ->
         do_submit(thumbnailer_url, search_slot)
-
-        :ok
     end
   end
 
@@ -155,19 +153,24 @@ defmodule YtSearch.ThumbnailerClient do
       case HTTPoison.post(url, Jason.encode!(payload), headers, timeout: 5000) do
         {:ok, %{status_code: 200}} ->
           Logger.debug("Successfully synced search slot #{search_slot.id} to thumbnailer")
+          :ok
 
         {:ok, %{status_code: status, body: body}} ->
           Logger.warning(
             "Thumbnailer returned status #{status} for slot #{search_slot.id}: #{body}"
           )
 
+          {:error, status}
+
         {:error, reason} ->
           Logger.warning("Failed to sync to thumbnailer: #{inspect(reason)}")
+          {:error, reason}
       end
     rescue
       e ->
         Logger.error("Exception syncing to thumbnailer: #{inspect(e)}")
         Logger.error(Exception.format_stacktrace())
+        {:error, e}
     end
   end
 
