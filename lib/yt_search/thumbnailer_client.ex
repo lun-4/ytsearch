@@ -82,7 +82,7 @@ defmodule YtSearch.ThumbnailerClient do
         {"Content-Type", "application/json"}
       ]
 
-      case HTTPoison.post(url, Jason.encode!(payload), headers, timeout: 5000) do
+      case HTTPoison.post(url, Jason.encode!(payload), headers, timeout: 1000, recv_timeout: 1000) do
         {:ok, %{status_code: 200}} ->
           Logger.debug("Successfully submitted thumbnail #{youtube_id} to thumbnailer")
 
