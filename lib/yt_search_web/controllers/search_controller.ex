@@ -328,7 +328,7 @@ defmodule YtSearchWeb.SearchController do
       slot ->
         # Resync on fetch for consistency
         if entity == YtSearch.SearchSlot do
-          {search_sync_ok} = broadcast_sync(slot)
+          {search_sync_ok, _} = broadcast_sync(slot)
 
           if not search_sync_ok do
             Logger.warning("search sync failed for #{slot_id}")
