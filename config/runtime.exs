@@ -355,3 +355,14 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
+
+if config_env() == :test do
+  wanted_log_level =
+    cond do
+      System.get_env("CLAUDECODE") == "1" -> :critical
+      System.get_env("DEBUG") == "1" -> :info
+      true -> :warning
+    end
+
+  config :logger, level: wanted_log_level
+end

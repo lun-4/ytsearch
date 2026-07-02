@@ -156,6 +156,9 @@ for repo <- repos do
   config :yt_search, repo,
     cache_size: -8_000,
     pool_size: 1,
+    # applied via custom_pragmas so it's set BEFORE the journal_mode pragma
+    # during connect, avoiding "database is locked" races on fresh databases
+    custom_pragmas: [busy_timeout: 5000],
     auto_vacuum: :incremental,
     telemetry_prefix: [:yt_search, :repo],
     telemetry_event: [YtSearch.Repo.Instrumenter],
