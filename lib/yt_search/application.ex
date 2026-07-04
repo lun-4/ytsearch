@@ -395,6 +395,7 @@ defmodule YtSearch.Application do
     YtSearch.SlotUtilities.UsageMeter.Gauge.setup()
     YtSearchWeb.HelloController.BuildReporter.setup()
     YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
+    YtSearchWeb.GiftDropController.GiftCounter.setup()
     YtSearch.Repo.FreelistMeter.Gauge.setup()
     YtSearch.SlotUtilities.RecycledSlotAge.setup()
     YtSearch.CounterServer.Metrics.setup()

@@ -6,6 +6,8 @@ defmodule YtSearch.Counter do
 
   @type t :: %__MODULE__{}
 
+  @counter_ids %{global: 1, gift_drops: 2}
+
   @primary_key {:id, :integer, autogenerate: false}
 
   schema "counter" do
@@ -24,22 +26,23 @@ defmodule YtSearch.Counter do
     |> changeset(params)
   end
 
-  @spec get_counter() :: t() | nil
-  def get_counter() do
-    query = from(c in __MODULE__, where: c.id == 1, select: c)
+  @spec get_counter(atom()) :: t() | nil
+  def get_counter(name \\ :global) do
+    id = Map.fetch!(@counter_ids, name)
+    query = from(c in __MODULE__, where: c.id == ^id, select: c)
     CounterRepo.one(query)
   end
 
-  @spec increment(number()) :: t()
-  def increment(delta) when is_number(delta) do
+  @spec increment(number(), atom()) :: t()
+  def increment(delta, name \\ :global) when is_number(delta) do
     CounterRepo.transaction(
       fn ->
-        counter = get_counter()
+        counter = get_counter(name)
         int_delta = round(delta)
 
         if counter == nil do
           # Create initial counter
-          %__MODULE__{id: 1, value: int_delta}
+          %__MODULE__{id: Map.fetch!(@counter_ids, name), value: int_delta}
           |> CounterRepo.insert!()
         else
           new_value = counter.value + int_delta
@@ -54,9 +57,9 @@ defmodule YtSearch.Counter do
     |> then(fn {:ok, counter} -> counter end)
   end
 
-  @spec get_value() :: integer()
-  def get_value() do
-    case get_counter() do
+  @spec get_value(atom()) :: integer()
+  def get_value(name \\ :global) do
+    case get_counter(name) do
       nil -> 0
       counter -> counter.value
     end

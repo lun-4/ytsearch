@@ -35,6 +35,7 @@ defmodule YtSearchWeb.Router do
     get("/aod/retry:number", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)
     get("/co/:delta", CounterController, :increment)
+    get("/g/:number", GiftDropController, :increment)
   end
 
   # smaller url version of the api, this is a bodge for
@@ -58,6 +59,7 @@ defmodule YtSearchWeb.Router do
     get("/aod/retry:number", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)
     get("/co/:delta", CounterController, :increment)
+    get("/g/:number", GiftDropController, :increment)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
