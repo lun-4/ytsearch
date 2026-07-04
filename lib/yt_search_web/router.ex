@@ -13,6 +13,8 @@ defmodule YtSearchWeb.Router do
     post("/thumbnail", NodeController, :submit_thumbnail)
     post("/unkeepalive_thumbnails", NodeController, :unkeepalive_thumbnails)
     post("/search_slot", NodeController, :submit_search_slot)
+    post("/view", NodeController, :submit_view)
+    get("/top_videos", NodeController, :top_videos)
   end
 
   scope "/api/v6", YtSearchWeb do
@@ -27,6 +29,8 @@ defmodule YtSearchWeb.Router do
     get("/thumbnail_atlas/:search_slot_id", AtlasController, :fetch)
     get("/hello", HelloController, :hello)
     get("/hello/:build_number", HelloController, :hello)
+    get("/hello-trending", HelloController, :hello_staging)
+    get("/hello-trending/:build_number", HelloController, :hello_staging)
     get("/aod/retry", AngelOfDeathController, :report_video_retry_error)
     get("/aod/retry:number", AngelOfDeathController, :report_video_retry_error)
     get("/aod/:error_id", AngelOfDeathController, :report_error)

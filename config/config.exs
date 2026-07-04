@@ -20,7 +20,11 @@ config :yt_search,
     YtSearch.Data.LinkRepo,
     YtSearch.Data.AudioConfigRepo,
     YtSearch.Data.CounterRepo
-  ]
+  ] ++
+    if(System.get_env("EXTERNAL_TRENDING_NODE") in [nil, ""],
+      do: [YtSearch.Data.TrendingRepo],
+      else: []
+    )
 
 # Configures the endpoint
 config :yt_search, YtSearchWeb.Endpoint,
@@ -150,12 +154,23 @@ repos = [
   YtSearch.Data.CounterRepo.Replica2,
   YtSearch.Data.CounterRepo.Replica3,
   YtSearch.Data.CounterRepo.Replica4
-]
+] ++
+  if(System.get_env("EXTERNAL_TRENDING_NODE") in [nil, ""],
+    do: [
+      YtSearch.Data.TrendingRepo,
+      YtSearch.Data.TrendingRepo.Replica1,
+      YtSearch.Data.TrendingRepo.Replica2
+    ],
+    else: []
+  )
 
 for repo <- repos do
   config :yt_search, repo,
     cache_size: -8_000,
     pool_size: 1,
+    # applied via custom_pragmas so it's set BEFORE the journal_mode pragma
+    # during connect, avoiding "database is locked" races on fresh databases
+    custom_pragmas: [busy_timeout: 5000],
     auto_vacuum: :incremental,
     telemetry_prefix: [:yt_search, :repo],
     telemetry_event: [YtSearch.Repo.Instrumenter],

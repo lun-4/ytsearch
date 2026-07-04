@@ -278,6 +278,29 @@ if config_env() == :prod do
     config :yt_search, repo, database: counter_database_path
   end
 
+  # Only configure TrendingRepo if role is "trending" or "all" (not "primary")
+  # Skip if EXTERNAL_TRENDING_NODE is set (trending is handled externally)
+  role = System.get_env("ROLE", "all")
+  has_external_trending = System.get_env("EXTERNAL_TRENDING_NODE") not in [nil, ""]
+
+  if role in ["trending", "all"] and not has_external_trending do
+    trending_database_path =
+      System.get_env("TRENDING_DATABASE_PATH") ||
+        raise """
+        environment variable TRENDING_DATABASE_PATH is missing.
+        For example: /etc/yt_search/yt_search_trending.db
+        (Required for ROLE=trending or ROLE=all, not needed for ROLE=primary)
+        """
+
+    for repo <- [
+          YtSearch.Data.TrendingRepo,
+          YtSearch.Data.TrendingRepo.Replica1,
+          YtSearch.Data.TrendingRepo.Replica2
+        ] do
+      config :yt_search, repo, database: trending_database_path
+    end
+  end
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want
@@ -354,4 +377,15 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+end
+
+if config_env() == :test do
+  wanted_log_level =
+    cond do
+      System.get_env("CLAUDECODE") == "1" -> :critical
+      System.get_env("DEBUG") == "1" -> :info
+      true -> :warning
+    end
+
+  config :logger, level: wanted_log_level
 end

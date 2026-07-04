@@ -77,6 +77,25 @@ defmodule YtSearchWeb.NodeController do
     json(conn, %{status: "ok", count: length(youtube_ids)})
   end
 
+  def submit_view(conn, params) do
+    youtube_id = params["youtube_id"]
+
+    if youtube_id == nil do
+      conn
+      |> put_status(400)
+      |> json(%{error: "missing youtube_id"})
+    else
+      YtSearch.Trending.record_view(youtube_id)
+      json(conn, %{status: "ok"})
+    end
+  end
+
+  def top_videos(conn, params) do
+    limit = min(String.to_integer(params["limit"] || "10"), 50)
+    videos = YtSearch.Trending.top_videos(limit)
+    json(conn, %{videos: videos})
+  end
+
   def submit_search_slot(conn, params) do
     # Extract data from params
     search_slot_data = params["search_slot_data"]

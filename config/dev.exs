@@ -130,8 +130,21 @@ import Config
       YtSearch.Data.CounterRepo.Replica4
     ],
     "counter"
-  }
-]
+  },
+] ++
+  if(System.get_env("EXTERNAL_TRENDING_NODE") in [nil, ""],
+    do: [
+      {
+        [
+          YtSearch.Data.TrendingRepo,
+          YtSearch.Data.TrendingRepo.Replica1,
+          YtSearch.Data.TrendingRepo.Replica2
+        ],
+        "trending"
+      }
+    ],
+    else: []
+  )
 |> Enum.each(fn {repos, name} ->
   for repo <- repos do
     config :yt_search, repo,
