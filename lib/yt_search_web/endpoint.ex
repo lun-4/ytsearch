@@ -70,16 +70,26 @@ defmodule YtSearchWeb.Endpoint do
       [x_request_id] = get_resp_header(conn, "x-request-id")
       server_time = System.system_time(:millisecond) / 1000
 
+      # splice the keys into the already-encoded body instead of a full
+      # decode+re-encode round-trip. only object bodies get the keys,
+      # matching the old is_map(body) behavior
       with [type] <- content_types,
            "application/json" <> _whatever <- type,
-           {:ok, body} <- conn.resp_body |> Jason.decode(),
-           true <- is_map(body),
-           {:ok, new_body} <-
-             body
-             |> Map.put("__x_request_id", x_request_id)
-             # used for counter syncing
-             |> Map.put("__time", server_time)
-             |> Jason.encode() do
+           "{" <> rest <- conn.resp_body |> IO.iodata_to_binary() |> String.trim_leading() do
+        # __time is used for counter syncing
+        injected =
+          ~s({"__x_request_id":) <>
+            Jason.encode!(x_request_id) <>
+            ~s(,"__time":) <> Float.to_string(server_time)
+
+        # decide the comma by the trimmed remainder: an empty object ("{}" with
+        # any interior whitespace) starts with "}" and must not get a trailing comma
+        new_body =
+          case String.trim_leading(rest) do
+            "}" <> _ = trimmed -> injected <> trimmed
+            trimmed -> injected <> "," <> trimmed
+          end
+
         conn
         |> resp(conn.status, new_body)
       else

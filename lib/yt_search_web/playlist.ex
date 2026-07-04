@@ -13,6 +13,9 @@ defmodule YtSearchWeb.Playlist do
         nil
       end
 
+    thumbnail_limit =
+      Application.get_env(:yt_search, YtSearch.Constants)[:thumbnails_in_search_page]
+
     if nextpage? do
       json.results
     else
@@ -65,9 +68,6 @@ defmodule YtSearchWeb.Playlist do
     end)
     |> Enum.with_index()
     |> Enum.map(fn {{entity_type, data}, index} ->
-      thumbnail_limit =
-        Application.get_env(:yt_search, YtSearch.Constants)[:thumbnails_in_search_page]
-
       youtube_id = data["url"] |> youtube_id_from_url
 
       thumbnail_metadata =

@@ -152,25 +152,13 @@ defmodule YtSearchWeb.SearchController do
         Logger.debug("child_slots = #{inspect(child_slots)}")
 
         if is_valid_slot do
+          # one UPDATE per slot module (usually gated down to none)
+          # instead of one UPDATE per child slot
           child_slots
-          |> Enum.reduce(%{}, fn slot, acc ->
-            Logger.debug("attempt to refresh #{inspect(slot)}")
-
-            %module{} = slot
-            refreshed? = Map.get(acc, {module, slot.id})
-
-            unless refreshed? do
-              case slot do
-                %YtSearch.Slot{} ->
-                  YtSearch.Slot.refresh(slot)
-
-                other_slot ->
-                  other_slot
-                  |> SlotUtilities.refresh_expiration()
-              end
-            end
-
-            acc |> Map.put({module, slot.id}, true)
+          |> Enum.reject(&is_nil/1)
+          |> Enum.group_by(fn %module{} -> module end)
+          |> Enum.each(fn {module, slots} ->
+            SlotUtilities.refresh_expiration_bulk(module, slots)
           end)
 
           data
@@ -297,11 +285,25 @@ defmodule YtSearchWeb.SearchController do
 
         nextpage_search_slot_id = search_slot.nextpage_slot_id
 
+        # cache hit: slots_json is already valid JSON, embed it raw
+        # instead of decoding and re-encoding the largest response field
+        search_results =
+          case search_slot.type do
+            :unfetched ->
+              []
+
+            _ when search_slot.slots_json != "" ->
+              Jason.Fragment.new(search_slot.slots_json)
+
+            _ ->
+              search_slot |> SearchSlot.get_slots()
+          end
+
         {:ok,
          %{
            result_type: search_slot.result_type,
            result_title: search_slot.result_title,
-           search_results: search_slot |> SearchSlot.get_slots(),
+           search_results: search_results,
            slot_id: "#{search_slot.id}",
            nextpage_slot_id:
              if nextpage_search_slot_id != nil do
@@ -326,15 +328,8 @@ defmodule YtSearchWeb.SearchController do
         |> text("not found")
 
       slot ->
-        # Resync on fetch for consistency
-        if entity == YtSearch.SearchSlot do
-          {search_sync_ok, _} = broadcast_sync(slot)
-
-          if not search_sync_ok do
-            Logger.warning("search sync failed for #{slot_id}")
-          end
-        end
-
+        # no broadcast_sync here: every success path of search/1 already
+        # syncs the (re-resolved) search slot to the thumbnailer
         case slot
              |> search() do
           {:ok, resp} ->

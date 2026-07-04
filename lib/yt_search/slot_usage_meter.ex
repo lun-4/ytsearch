@@ -43,15 +43,27 @@ defmodule YtSearch.SlotUtilities.UsageMeter do
       @slot_types
       |> Enum.map(fn slot_type ->
         now = SlotUtilities.generate_unix_timestamp_integer()
+        replica = SlotUtilities.repo(slot_type).replica()
 
-        count =
+        # split the `unexpired OR keepalive` count into two disjoint
+        # index-friendly counts: the OR would force a full-table scan,
+        # while these hit the unixepoch(expires_at) expression index and
+        # the partial keepalive index respectively
+        unexpired =
           from(s in slot_type,
-            where: fragment("unixepoch(?)", s.expires_at) > ^now or s.keepalive,
+            where: fragment("unixepoch(?)", s.expires_at) > ^now,
             select: count("*")
           )
-          |> SlotUtilities.repo(slot_type).replica().one()
+          |> replica.one()
 
-        {slot_type, count}
+        expired_keepalive =
+          from(s in slot_type,
+            where: s.keepalive and fragment("unixepoch(?)", s.expires_at) <= ^now,
+            select: count("*")
+          )
+          |> replica.one()
+
+        {slot_type, unexpired + expired_keepalive}
       end)
 
     counts

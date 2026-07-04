@@ -55,39 +55,43 @@ defmodule YtSearch.ChannelSlot do
       raise "invalid youtube id"
     end
 
-    ChannelSlotRepo.transaction(fn ->
-      query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
-      channel_slot = ChannelSlotRepo.replica(youtube_id).one(query)
+    ChannelSlotRepo.transaction(
+      fn ->
+        # read on the primary so the check participates in this transaction
+        query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
+        channel_slot = ChannelSlotRepo.one(query)
 
-      if channel_slot == nil do
-        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+        if channel_slot == nil do
+          {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
-        params =
-          %{
-            id: new_id,
-            youtube_id: youtube_id,
-            keepalive: keepalive
-          }
-          |> SlotUtilities.put_simple_expiration(__MODULE__)
-          |> SlotUtilities.put_used()
-
-        %__MODULE__{}
-        |> changeset(params)
-        |> ChannelSlotRepo.insert!(
-          on_conflict: [
-            set: [
+          params =
+            %{
+              id: new_id,
               youtube_id: youtube_id,
-              expires_at: params.expires_at,
-              used_at: params.used_at,
               keepalive: keepalive
+            }
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
+            |> SlotUtilities.put_used()
+
+          %__MODULE__{}
+          |> changeset(params)
+          |> ChannelSlotRepo.insert!(
+            on_conflict: [
+              set: [
+                youtube_id: youtube_id,
+                expires_at: params.expires_at,
+                used_at: params.used_at,
+                keepalive: keepalive
+              ]
             ]
-          ]
-        )
-      else
-        channel_slot
-        |> SlotUtilities.refresh_expiration(opts)
-      end
-    end)
+          )
+        else
+          channel_slot
+          |> SlotUtilities.refresh_expiration(opts)
+        end
+      end,
+      mode: :immediate
+    )
     |> then(fn {:ok, slot} -> slot end)
   end
 

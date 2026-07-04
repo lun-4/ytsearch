@@ -29,7 +29,7 @@ defmodule YtSearch.Slot do
 
   @spec fetch_by_id(Integer.t()) :: Slot.t() | nil
   def fetch_by_id(slot_id) do
-    query = from s in __MODULE__, where: s.id == ^slot_id, select: s
+    query = from(s in __MODULE__, where: s.id == ^slot_id, select: s)
 
     SlotRepo.replica(slot_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -37,7 +37,7 @@ defmodule YtSearch.Slot do
 
   @spec fetch_by_youtube_id(String.t()) :: Slot.t() | nil
   def fetch_by_youtube_id(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
 
     SlotRepo.replica(youtube_id).one(query)
     |> SlotUtilities.strict_ttl()
@@ -70,8 +70,9 @@ defmodule YtSearch.Slot do
 
     SlotRepo.transaction(
       fn ->
-        query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
-        maybe_slot = SlotRepo.replica(youtube_id).one(query)
+        # read on the primary so the check participates in this transaction
+        query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
+        maybe_slot = SlotRepo.one(query)
 
         if maybe_slot == nil do
           {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
@@ -107,7 +108,7 @@ defmodule YtSearch.Slot do
             on_conflict: [
               set: [
                 youtube_id: youtube_id,
-                video_duration: video_duration,
+                video_duration: params.video_duration,
                 expires_at: params.expires_at,
                 used_at: params.used_at,
                 type: params.type,
@@ -128,33 +129,32 @@ defmodule YtSearch.Slot do
   def refresh(slot, opts \\ [])
 
   def refresh(slot_id, opts) when is_number(slot_id) do
-    Logger.info("refreshing video by id #{slot_id}")
-
     slot =
       from(s in __MODULE__, select: s, where: s.id == ^slot_id)
       |> SlotRepo.replica(slot_id).one()
 
-    slot
-    |> changeset(
-      %{}
-      |> SlotUtilities.put_simple_expiration(__MODULE__)
-      |> SlotUtilities.put_used()
-      |> SlotUtilities.put_opts(opts)
-    )
-    |> SlotRepo.update!()
+    refresh(slot, opts)
   end
 
   def refresh(%__MODULE__{} = slot, opts) do
-    Logger.info("refreshing video by slot #{slot.id}")
+    keepalive = Keyword.get(opts, :keepalive)
+    keepalive_changed? = keepalive != nil and keepalive != slot.keepalive
 
-    slot
-    |> change(
-      %{}
-      |> SlotUtilities.put_simple_expiration(__MODULE__)
-      |> SlotUtilities.put_used()
-      |> SlotUtilities.put_opts(opts)
-    )
-    |> SlotRepo.update!()
+    if not keepalive_changed? and
+         SlotUtilities.recently_refreshed?(slot, SlotUtilities.generate_unix_timestamp()) do
+      slot
+    else
+      Logger.info("refreshing video by slot #{slot.id}")
+
+      slot
+      |> change(
+        %{}
+        |> SlotUtilities.put_simple_expiration(__MODULE__)
+        |> SlotUtilities.put_used()
+        |> SlotUtilities.put_opts(opts)
+      )
+      |> SlotRepo.update!()
+    end
   end
 
   def used(%__MODULE__{} = slot) do

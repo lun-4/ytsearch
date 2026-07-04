@@ -68,30 +68,55 @@ defmodule YtSearchWeb.SlotUsageMeterTest do
 
   @tag :slow
   test "correctly gives slot count" do
+    # the setup gives duration markers to ids 0..100_000 only, the rest of
+    # the (unexpired) pool stays counted throughout, so expectations are
+    # relative to the full pool size instead of a hardcoded 100k pool
+    pool_size = Slot.slot_spec().max_ids
+
     counters = UsageMeter.tick()
     IO.inspect(counters)
-    assert Keyword.get(counters, Slot) == 100_000
+    assert Keyword.get(counters, Slot) == pool_size
 
     # now, if we set the slots with duration 720 to inserted_at_v2 - 720,
-    # our countes should be around 50k
+    # our counters should drop by those 50k
     time_travel_slots_to_expiration(720)
     counters = UsageMeter.tick()
     IO.inspect(counters)
-    assert Keyword.get(counters, Slot) == 50_000
+    assert Keyword.get(counters, Slot) == pool_size - 50_000
 
     time_travel_slots_to_expiration(1800)
     counters = UsageMeter.tick()
     IO.inspect(counters)
-    assert Keyword.get(counters, Slot) == 30_000
+    assert Keyword.get(counters, Slot) == pool_size - 70_000
 
     time_travel_slots_to_expiration(3600)
     counters = UsageMeter.tick()
     IO.inspect(counters)
-    assert Keyword.get(counters, Slot) == 10_000
+    assert Keyword.get(counters, Slot) == pool_size - 90_000
 
     time_travel_slots_to_expiration(7200)
     counters = UsageMeter.tick()
     IO.inspect(counters)
-    assert Keyword.get(counters, Slot) == 0
+    assert Keyword.get(counters, Slot) == pool_size - 100_000
+  end
+
+  @tag :slow
+  test "counts expired keepalive slots" do
+    from(s in YtSearch.Slot, select: s)
+    |> SlotRepo.update_all(
+      set: [
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-600, :second)
+          |> NaiveDateTime.truncate(:second),
+        keepalive: false
+      ]
+    )
+
+    from(s in YtSearch.Slot, select: s, where: s.id < 100)
+    |> SlotRepo.update_all(set: [keepalive: true])
+
+    counters = UsageMeter.tick()
+    assert Keyword.get(counters, Slot) == 100
   end
 end

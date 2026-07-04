@@ -39,28 +39,79 @@ defmodule YtSearch.SlotUtilities do
   end
 
   def mark_used(%module{} = slot) do
-    Logger.info("mark used #{inspect(module)} slot #{slot.id}")
+    if recently_used?(slot, generate_unix_timestamp()) do
+      slot
+    else
+      Logger.info("mark used #{inspect(module)} slot #{slot.id}")
 
-    slot
-    |> module.changeset(%{} |> put_used())
-    |> repo(module).update!()
+      slot
+      |> module.changeset(%{} |> put_used())
+      |> repo(module).update!()
+    end
   end
 
   def min_time_between_refreshes do
     Application.get_env(:yt_search, YtSearch.Constants)[:minimum_time_between_refreshes] || 60
   end
 
-  def refresh_expiration(%module{} = slot, opts \\ []) do
-    Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
+  def recently_used?(slot, now) do
+    slot.used_at != nil and
+      NaiveDateTime.diff(now, slot.used_at, :second) < min_time_between_refreshes()
+  end
 
-    slot
-    |> module.changeset(
-      %{}
-      |> put_simple_expiration(module)
-      |> put_opts(opts)
-      |> put_used()
-    )
-    |> repo(module).update!()
+  # a slot only counts as recently refreshed when its used_at is fresh AND
+  # its remaining TTL is still near the maximum. the second clause matters
+  # because mark_used bumps only used_at: without it, a near-expiry slot in
+  # active use would never get its expiration extended
+  def recently_refreshed?(%module{} = slot, now) do
+    recently_used?(slot, now) and
+      calc_seconds_until_expiry(slot, now) >=
+        module.slot_spec().ttl - min_time_between_refreshes()
+  end
+
+  def refresh_expiration(%module{} = slot, opts \\ []) do
+    keepalive = Keyword.get(opts, :keepalive)
+    keepalive_changed? = keepalive != nil and keepalive != slot.keepalive
+
+    if not keepalive_changed? and recently_refreshed?(slot, generate_unix_timestamp()) do
+      slot
+    else
+      Logger.info("refresh expiration on #{inspect(module)} slot #{slot.id}")
+
+      slot
+      |> module.changeset(
+        %{}
+        |> put_simple_expiration(module)
+        |> put_opts(opts)
+        |> put_used()
+      )
+      |> repo(module).update!()
+    end
+  end
+
+  @doc """
+  Refresh expiration on many slots of the same module with a single UPDATE,
+  skipping slots that were recently refreshed.
+  """
+  def refresh_expiration_bulk(module, slots) do
+    now = generate_unix_timestamp()
+
+    ids =
+      slots
+      |> Enum.reject(&recently_refreshed?(&1, now))
+      |> Enum.map(fn slot -> slot.id end)
+      |> Enum.uniq()
+
+    if ids != [] do
+      expires_at = expiration_for(module.slot_spec())
+
+      # update_all bypasses changesets and does not auto-bump updated_at,
+      # set it explicitly for parity with the changeset path
+      from(s in module, where: s.id in ^ids)
+      |> repo(module).update_all(set: [expires_at: expires_at, used_at: now, updated_at: now])
+    end
+
+    :ok
   end
 
   def generate_unix_timestamp do
@@ -159,6 +210,15 @@ defmodule YtSearch.SlotUtilities do
   # turns out this is "documented" behavior by sqlite, though i assume that would break in
   # some version in 10 years or on sqlite4. who knows. more here:
   # https://sqlite.org/optoverview.html#disqualifying_where_clause_terms_using_unary_
+
+  @doc """
+  Find a reusable slot id for the given module.
+
+  Must be called inside a `repo(module).transaction` (as the slot create
+  functions do): candidate selection reads run on the primary so they
+  participate in the caller's transaction. Reading from a replica here
+  would allow two concurrent creates to select the same expired slot id.
+  """
   def generate_id_v3(module) do
     now = generate_unix_timestamp_integer()
     max_ids = module.slot_spec().max_ids
@@ -170,7 +230,7 @@ defmodule YtSearch.SlotUtilities do
       select: s,
       limit: 1
     )
-    |> repo(module).replica().all()
+    |> repo(module).all()
     |> then(fn
       [] ->
         Logger.debug("no expired slots, force expiring...")
@@ -183,7 +243,7 @@ defmodule YtSearch.SlotUtilities do
           ],
           limit: 5
         )
-        |> repo(module).replica().all()
+        |> repo(module).all()
         |> then(fn slots ->
           now = generate_unix_timestamp()
 

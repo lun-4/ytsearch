@@ -650,6 +650,18 @@ defmodule YtSearchWeb.SearchTest do
       end)
 
   test "it refreshes the child slots on new search", %{conn: conn, ets_table: table} do
+    # this test asserts refresh-on-repeat-search behavior, so turn off
+    # the minimum_time_between_refreshes gating that would skip the writes
+    constants = Application.get_env(:yt_search, YtSearch.Constants)
+
+    Application.put_env(
+      :yt_search,
+      YtSearch.Constants,
+      Keyword.put(constants, :minimum_time_between_refreshes, 0)
+    )
+
+    on_exit(fn -> Application.put_env(:yt_search, YtSearch.Constants, constants) end)
+
     mock(fn
       %{method: :get, url: "example.org/search" <> _suffix} ->
         calls = :ets.update_counter(table, :notitg_search, 1, {:notitg_search, 0})

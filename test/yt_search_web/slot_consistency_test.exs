@@ -83,6 +83,33 @@ defmodule YtSearchWeb.SlotConsistencyTest do
     end
   end
 
+  test "concurrent creates never allocate the same slot id" do
+    # expire the entire pool so every create goes through id generation
+    # and has the whole pool of candidate ids to collide on
+    past =
+      YtSearch.SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(-99_999, :second)
+
+    from(s in Slot, select: s)
+    |> YtSearch.Data.SlotRepo.update_all(set: [expires_at: past, used_at: past, keepalive: false])
+
+    youtube_ids = 1..20 |> Enum.map(fn i -> "concurrent_ytid_#{i}" end)
+
+    slots =
+      youtube_ids
+      |> Enum.map(fn ytid -> Task.async(fn -> Slot.create(ytid, 3600) end) end)
+      |> Task.await_many(30_000)
+
+    allocated_ids = slots |> Enum.map(& &1.id)
+    assert Enum.uniq(allocated_ids) == allocated_ids
+
+    for ytid <- youtube_ids do
+      fetched = Slot.fetch_by_youtube_id(ytid)
+      assert fetched != nil, "youtube_id #{ytid} lost its slot mapping"
+      assert fetched.id in allocated_ids
+    end
+  end
+
   test "it gets the mp4 url given multiple deregisters back and forth" do
     slot = Data.insert_slot()
 

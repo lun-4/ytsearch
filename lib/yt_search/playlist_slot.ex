@@ -51,39 +51,43 @@ defmodule YtSearch.PlaylistSlot do
   def create(youtube_id, opts \\ []) do
     keepalive = Keyword.get(opts, :keepalive, false)
 
-    PlaylistSlotRepo.transaction(fn ->
-      query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
-      playlist_slot = PlaylistSlotRepo.replica(youtube_id).one(query)
+    PlaylistSlotRepo.transaction(
+      fn ->
+        # read on the primary so the check participates in this transaction
+        query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
+        playlist_slot = PlaylistSlotRepo.one(query)
 
-      if playlist_slot == nil do
-        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+        if playlist_slot == nil do
+          {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
-        params =
-          %{
-            id: new_id,
-            youtube_id: youtube_id,
-            keepalive: keepalive
-          }
-          |> SlotUtilities.put_simple_expiration(__MODULE__)
-          |> SlotUtilities.put_used()
-
-        %__MODULE__{}
-        |> changeset(params)
-        |> PlaylistSlotRepo.insert!(
-          on_conflict: [
-            set: [
+          params =
+            %{
+              id: new_id,
               youtube_id: youtube_id,
-              expires_at: params.expires_at,
-              used_at: params.used_at,
               keepalive: keepalive
+            }
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
+            |> SlotUtilities.put_used()
+
+          %__MODULE__{}
+          |> changeset(params)
+          |> PlaylistSlotRepo.insert!(
+            on_conflict: [
+              set: [
+                youtube_id: youtube_id,
+                expires_at: params.expires_at,
+                used_at: params.used_at,
+                keepalive: keepalive
+              ]
             ]
-          ]
-        )
-      else
-        playlist_slot
-        |> SlotUtilities.refresh_expiration(opts)
-      end
-    end)
+          )
+        else
+          playlist_slot
+          |> SlotUtilities.refresh_expiration(opts)
+        end
+      end,
+      mode: :immediate
+    )
     |> then(fn {:ok, slot} -> slot end)
   end
 

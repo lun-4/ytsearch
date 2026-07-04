@@ -168,9 +168,17 @@ for repo <- repos do
   config :yt_search, repo,
     cache_size: -8_000,
     pool_size: 1,
-    # applied via custom_pragmas so it's set BEFORE the journal_mode pragma
-    # during connect, avoiding "database is locked" races on fresh databases
-    custom_pragmas: [busy_timeout: 5000],
+    journal_mode: :wal,
+    synchronous: :normal,
+    foreign_keys: :on,
+    temp_store: :memory,
+    # busy_timeout is applied via custom_pragmas so it's set BEFORE the
+    # journal_mode pragma during connect, avoiding "database is locked"
+    # races on fresh databases; the top-level key is ALSO needed because
+    # exqlite unconditionally re-applies busy_timeout (default 2000) late
+    # in the connect sequence, which would clobber the custom_pragmas value
+    busy_timeout: 5_000,
+    custom_pragmas: [busy_timeout: 5000, mmap_size: 268_435_456],
     auto_vacuum: :incremental,
     telemetry_prefix: [:yt_search, :repo],
     telemetry_event: [YtSearch.Repo.Instrumenter],

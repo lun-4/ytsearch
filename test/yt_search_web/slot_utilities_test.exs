@@ -118,6 +118,68 @@ defmodule YtSearchWeb.SlotUtilitiesTest do
     assert same_slot.expires_at > changed_slot.expires_at
   end
 
+  test "it skips refresh writes within the minimum refresh window" do
+    slot = Slot.create(random_yt_id(), 3600)
+
+    # freshly created slot: recently used with a near-full TTL, so both
+    # refresh paths must be write-free no-ops
+    refreshed = SlotUtilities.refresh_expiration(slot)
+    assert refreshed.used_at == slot.used_at
+    assert refreshed.expires_at == slot.expires_at
+
+    marked = SlotUtilities.mark_used(slot)
+    assert marked.used_at == slot.used_at
+
+    in_db = SlotRepo.get(Slot, slot.id)
+    assert in_db.used_at == slot.used_at
+    assert in_db.expires_at == slot.expires_at
+
+    # a keepalive change forces the write even within the window
+    kept = SlotUtilities.refresh_expiration(slot, keepalive: true)
+    assert kept.keepalive == true
+  end
+
+  test "it refreshes a recently-used slot that is close to expiry" do
+    slot = Slot.create(random_yt_id(), 3600)
+
+    near_expiry =
+      SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(30, :second)
+
+    slot =
+      slot
+      |> Ecto.Changeset.change(expires_at: near_expiry)
+      |> SlotRepo.update!()
+
+    # used_at is fresh but the remaining TTL is nearly gone: the
+    # used_at-only gate must not starve the expiration bump
+    refreshed = SlotUtilities.refresh_expiration(slot)
+    assert NaiveDateTime.compare(refreshed.expires_at, near_expiry) == :gt
+  end
+
+  test "refresh_expiration_bulk refreshes stale slots and skips fresh ones" do
+    past =
+      SlotUtilities.generate_unix_timestamp()
+      |> NaiveDateTime.add(-3600, :second)
+
+    stale_slot =
+      Slot.create(random_yt_id(), 3600)
+      |> Ecto.Changeset.change(used_at: past, expires_at: past)
+      |> SlotRepo.update!()
+
+    fresh_slot = Slot.create(random_yt_id(), 3600)
+
+    SlotUtilities.refresh_expiration_bulk(Slot, [stale_slot, fresh_slot])
+
+    reloaded_stale = SlotRepo.get(Slot, stale_slot.id)
+    assert NaiveDateTime.compare(reloaded_stale.expires_at, stale_slot.expires_at) == :gt
+    assert NaiveDateTime.compare(reloaded_stale.used_at, stale_slot.used_at) == :gt
+
+    reloaded_fresh = SlotRepo.get(Slot, fresh_slot.id)
+    assert reloaded_fresh.expires_at == fresh_slot.expires_at
+    assert reloaded_fresh.used_at == fresh_slot.used_at
+  end
+
   test "it correctly expires the oldest-used slot" do
     # setup by writing all of em
 

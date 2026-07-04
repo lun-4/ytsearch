@@ -85,46 +85,66 @@ defmodule YtSearch.SearchSlot do
     end
   end
 
+  @video_entry_types ["video", "short", "livestream"]
+
   def fetched_slots_from_search(search_slot, opts \\ []) do
     follow_inner_channel? = Keyword.get(opts, :follow_inner_channel, false)
     follow_nextpage? = Keyword.get(opts, :follow_nextpage, false)
     is_luna? = Keyword.get(opts, :luna, false)
 
-    Logger.info(
+    Logger.debug(
       "LUNA: exec #{search_slot.id} q=#{inspect(search_slot.query)} t=#{inspect(search_slot.type)} nph=#{inspect(search_slot.nextpage_data_hash)}"
     )
 
-    search_slot
-    |> get_slots
+    entries = search_slot |> get_slots
+
+    # one batched query per slot type instead of one query per entry
+    videos = batch_fetch_by_youtube_id(Slot, entry_youtube_ids(entries, @video_entry_types))
+    playlists = batch_fetch_by_youtube_id(PlaylistSlot, entry_youtube_ids(entries, ["playlist"]))
+    channels = batch_fetch_by_youtube_id(ChannelSlot, entry_youtube_ids(entries, ["channel"]))
+
+    inner_channels =
+      if follow_inner_channel? do
+        entries
+        |> Enum.filter(fn entry ->
+          entry["type"] in @video_entry_types and entry["channel_slot"] != nil
+        end)
+        |> Enum.map(fn entry -> parse_slot_id(entry["channel_slot"]) end)
+        |> then(&batch_fetch_by_id(ChannelSlot, &1))
+      else
+        %{}
+      end
+
+    entries
     |> Enum.map(fn %{"type" => slot_type, "youtube_id" => youtube_id} = maybe_slot ->
       # assumes all slot types are "strict ttl" as in,
       # fetches won't give nil values if the respective slots
       # are going to be obliterated any time now
       case slot_type do
-        t when t in ["video", "short", "livestream"] ->
+        t when t in @video_entry_types ->
           channel_slot_id = maybe_slot["channel_slot"]
 
           # channel_slot is always optional on videos especially because
           # of collab videos. don't assume channel_slot inside slots_json is not nil
           if follow_inner_channel? and channel_slot_id != nil do
             [
-              Slot.fetch_by_youtube_id(youtube_id),
-              ChannelSlot.fetch(channel_slot_id)
+              Map.get(videos, youtube_id),
+              Map.get(inner_channels, parse_slot_id(channel_slot_id))
             ]
           else
             [
-              Slot.fetch_by_youtube_id(youtube_id)
+              Map.get(videos, youtube_id)
             ]
           end
 
         "playlist" ->
           [
-            PlaylistSlot.fetch_by_youtube_id(youtube_id)
+            Map.get(playlists, youtube_id)
           ]
 
         "channel" ->
           [
-            ChannelSlot.fetch_by_youtube_id(youtube_id)
+            Map.get(channels, youtube_id)
           ]
 
         nil ->
@@ -138,7 +158,7 @@ defmodule YtSearch.SearchSlot do
     |> List.flatten()
     |> then(fn slots ->
       if is_luna? do
-        Logger.info("LUNA: found #{length(slots)} slots for #{search_slot.id}")
+        Logger.debug("LUNA: found #{length(slots)} slots for #{search_slot.id}")
       end
 
       slots
@@ -163,14 +183,14 @@ defmodule YtSearch.SearchSlot do
                 slots
 
               nextpage_slot ->
-                Logger.info("LUNA: at #{search_slot.id}, going to #{nextpage_slot.id}")
+                Logger.debug("LUNA: at #{search_slot.id}, going to #{nextpage_slot.id}")
 
                 results =
                   slots ++
                     [nextpage_slot] ++
                     fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
 
-                Logger.info("LUNA: finished for #{search_slot.id}. results #{length(results)}")
+                Logger.debug("LUNA: finished for #{search_slot.id}. results #{length(results)}")
                 results
             end
         end
@@ -178,6 +198,37 @@ defmodule YtSearch.SearchSlot do
         slots
       end
     end)
+  end
+
+  defp entry_youtube_ids(entries, types) do
+    entries
+    |> Enum.filter(fn entry -> entry["type"] in types end)
+    |> Enum.map(fn entry -> entry["youtube_id"] end)
+  end
+
+  defp parse_slot_id(slot_id) when is_bitstring(slot_id) do
+    slot_id |> Integer.parse() |> then(fn {x, ""} -> x end)
+  end
+
+  defp parse_slot_id(slot_id), do: slot_id
+
+  # batched equivalent of the per-id fetch_by_youtube_id/fetch functions:
+  # values go through strict_ttl, so expired non-keepalive slots map to nil
+  # and Map.get misses behave exactly like the old single fetches
+  defp batch_fetch_by_youtube_id(_module, []), do: %{}
+
+  defp batch_fetch_by_youtube_id(module, youtube_ids) do
+    from(s in module, where: s.youtube_id in ^youtube_ids)
+    |> SlotUtilities.repo(module).replica().all()
+    |> Map.new(fn slot -> {slot.youtube_id, SlotUtilities.strict_ttl(slot)} end)
+  end
+
+  defp batch_fetch_by_id(_module, []), do: %{}
+
+  defp batch_fetch_by_id(module, ids) do
+    from(s in module, where: s.id in ^ids)
+    |> SlotUtilities.repo(module).replica().all()
+    |> Map.new(fn slot -> {slot.id, SlotUtilities.strict_ttl(slot)} end)
   end
 
   def fetch_all_nextpages(parent_slot), do: fetch_all_nextpages(parent_slot, [])
@@ -304,70 +355,74 @@ defmodule YtSearch.SearchSlot do
     result_type = Keyword.get(opts, :result_type)
     result_title = Keyword.get(opts, :result_title)
 
-    SearchSlotRepo.transaction(fn ->
-      query = from(s in __MODULE__, where: s.query == ^search_query, select: s)
-      search_slot = SearchSlotRepo.replica(search_query).one(query)
+    SearchSlotRepo.transaction(
+      fn ->
+        # read on the primary so the check participates in this transaction
+        query = from(s in __MODULE__, where: s.query == ^search_query, select: s)
+        search_slot = SearchSlotRepo.one(query)
 
-      if search_slot == nil do
-        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+        if search_slot == nil do
+          {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
-        params =
-          %{
-            id: new_id,
-            query: search_query,
-            slots_json: slots_json,
-            keepalive: keepalive,
-            type: :fetched,
-            nextpage_slot_id: nextpage_slot_id,
-            result_type: result_type,
-            result_title: result_title,
-            nextpage_data: nil,
-            nextpage_data_hash: nil
-          }
-          |> SlotUtilities.put_simple_expiration(__MODULE__)
-          |> SlotUtilities.put_used()
+          params =
+            %{
+              id: new_id,
+              query: search_query,
+              slots_json: slots_json,
+              keepalive: keepalive,
+              type: :fetched,
+              nextpage_slot_id: nextpage_slot_id,
+              result_type: result_type,
+              result_title: result_title,
+              nextpage_data: nil,
+              nextpage_data_hash: nil
+            }
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
+            |> SlotUtilities.put_used()
 
-        %__MODULE__{}
-        |> changeset(params)
-        |> SearchSlotRepo.insert!(
-          on_conflict: [
-            set: [
-              query: params.query,
-              slots_json: params.slots_json,
-              expires_at: params.expires_at,
-              used_at: params.used_at,
-              keepalive: params.keepalive,
-              nextpage_slot_id: params.nextpage_slot_id,
-              result_type: params.result_type,
-              result_title: params.result_title,
-              type: params.type,
-              nextpage_data: params.nextpage_data,
-              nextpage_data_hash: params.nextpage_data_hash
+          %__MODULE__{}
+          |> changeset(params)
+          |> SearchSlotRepo.insert!(
+            on_conflict: [
+              set: [
+                query: params.query,
+                slots_json: params.slots_json,
+                expires_at: params.expires_at,
+                used_at: params.used_at,
+                keepalive: params.keepalive,
+                nextpage_slot_id: params.nextpage_slot_id,
+                result_type: params.result_type,
+                result_title: params.result_title,
+                type: params.type,
+                nextpage_data: params.nextpage_data,
+                nextpage_data_hash: params.nextpage_data_hash
+              ]
             ]
-          ]
-        )
-        |> validate_slot_type_fields!
-      else
-        search_slot
-        |> changeset(
-          %{
-            slots_json: slots_json,
-            keepalive: keepalive,
-            nextpage_slot_id: nextpage_slot_id,
-            result_type: result_type,
-            result_title: result_title,
-            type: :fetched,
-            nextpage_data: nil,
-            nextpage_data_hash: nil
-          }
-          |> SlotUtilities.put_simple_expiration(__MODULE__)
-          |> SlotUtilities.put_opts(opts)
-          |> SlotUtilities.put_used()
-        )
-        |> SearchSlotRepo.update!()
-        |> validate_slot_type_fields!
-      end
-    end)
+          )
+          |> validate_slot_type_fields!
+        else
+          search_slot
+          |> changeset(
+            %{
+              slots_json: slots_json,
+              keepalive: keepalive,
+              nextpage_slot_id: nextpage_slot_id,
+              result_type: result_type,
+              result_title: result_title,
+              type: :fetched,
+              nextpage_data: nil,
+              nextpage_data_hash: nil
+            }
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
+            |> SlotUtilities.put_opts(opts)
+            |> SlotUtilities.put_used()
+          )
+          |> SearchSlotRepo.update!()
+          |> validate_slot_type_fields!
+        end
+      end,
+      mode: :immediate
+    )
     |> then(fn {:ok, slot} -> slot end)
     |> validate_slot_type_fields!
   end
@@ -421,71 +476,75 @@ defmodule YtSearch.SearchSlot do
 
     nextpage_packed_hash = :erlang.phash2(nextpage_packed) |> to_string |> :base64.encode()
 
-    SearchSlotRepo.transaction(fn ->
-      query =
-        from(s in __MODULE__,
-          where:
-            not is_nil(s.nextpage_data_hash) and s.nextpage_data_hash == ^nextpage_packed_hash,
-          select: s
-        )
+    SearchSlotRepo.transaction(
+      fn ->
+        # read on the primary so the check participates in this transaction
+        query =
+          from(s in __MODULE__,
+            where:
+              not is_nil(s.nextpage_data_hash) and s.nextpage_data_hash == ^nextpage_packed_hash,
+            select: s
+          )
 
-      search_slot = SearchSlotRepo.replica(nextpage_packed).one(query)
+        search_slot = SearchSlotRepo.one(query)
 
-      if search_slot == nil do
-        {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
+        if search_slot == nil do
+          {:ok, new_id} = SlotUtilities.generate_id_v3(__MODULE__)
 
-        params =
-          %{
-            id: new_id,
-            slots_json: "",
-            query: internal_id_for(%__MODULE__{id: new_id}),
-            nextpage_data: nextpage_packed,
-            nextpage_data_hash: nextpage_packed_hash,
-            nextpage_slot_id: nil,
-            type: :unfetched,
-            keepalive: false
-          }
-          # TODO (DO NOT MERGE) set expiration based on the parent
-          |> SlotUtilities.put_simple_expiration(__MODULE__)
-          |> SlotUtilities.put_used()
-
-        %__MODULE__{}
-        |> changeset(params)
-        |> SearchSlotRepo.insert!(
-          on_conflict: [
-            set: [
-              query: params.query,
-              slots_json: params.slots_json,
-              nextpage_data: params.nextpage_data,
-              nextpage_data_hash: params.nextpage_data_hash,
-              nextpage_slot_id: params.nextpage_slot_id,
-              type: params.type,
-              expires_at: params.expires_at,
-              used_at: params.used_at,
+          params =
+            %{
+              id: new_id,
+              slots_json: "",
+              query: internal_id_for(%__MODULE__{id: new_id}),
+              nextpage_data: nextpage_packed,
+              nextpage_data_hash: nextpage_packed_hash,
+              nextpage_slot_id: nil,
+              type: :unfetched,
               keepalive: false
+            }
+            # TODO (DO NOT MERGE) set expiration based on the parent
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
+            |> SlotUtilities.put_used()
+
+          %__MODULE__{}
+          |> changeset(params)
+          |> SearchSlotRepo.insert!(
+            on_conflict: [
+              set: [
+                query: params.query,
+                slots_json: params.slots_json,
+                nextpage_data: params.nextpage_data,
+                nextpage_data_hash: params.nextpage_data_hash,
+                nextpage_slot_id: params.nextpage_slot_id,
+                type: params.type,
+                expires_at: params.expires_at,
+                used_at: params.used_at,
+                keepalive: false
+              ]
             ]
-          ]
-        )
-        |> validate_slot_type_fields!
-      else
-        search_slot
-        |> changeset(
-          %{
-            query: internal_id_for(%__MODULE__{id: search_slot.id}),
-            slots_json: "",
-            nextpage_data: nextpage_packed,
-            nextpage_data_hash: nextpage_packed_hash,
-            nextpage_slot_id: nil,
-            type: :unfetched,
-            keepalive: false
-          }
-          |> SlotUtilities.put_simple_expiration(__MODULE__)
-          |> SlotUtilities.put_used()
-        )
-        |> SearchSlotRepo.update!()
-        |> validate_slot_type_fields!
-      end
-    end)
+          )
+          |> validate_slot_type_fields!
+        else
+          search_slot
+          |> changeset(
+            %{
+              query: internal_id_for(%__MODULE__{id: search_slot.id}),
+              slots_json: "",
+              nextpage_data: nextpage_packed,
+              nextpage_data_hash: nextpage_packed_hash,
+              nextpage_slot_id: nil,
+              type: :unfetched,
+              keepalive: false
+            }
+            |> SlotUtilities.put_simple_expiration(__MODULE__)
+            |> SlotUtilities.put_used()
+          )
+          |> SearchSlotRepo.update!()
+          |> validate_slot_type_fields!
+        end
+      end,
+      mode: :immediate
+    )
     |> then(fn {:ok, slot} -> slot end)
     |> validate_slot_type_fields!
   end

@@ -4,6 +4,7 @@ defmodule YtSearch.ThumbnailerClient do
   Main app calls this module to keep thumbnailer state in sync.
   """
   require Logger
+  import Ecto.Query, only: [from: 2]
 
   alias YtSearch.{SearchSlot, Data}
 
@@ -131,9 +132,10 @@ defmodule YtSearch.ThumbnailerClient do
 
   defp do_submit(thumbnailer_url, search_slot) do
     try do
-      # Gather all related slots
-      video_slots = gather_video_slots(search_slot)
-      channel_slots = gather_channel_slots(search_slot)
+      # Gather all related slots (decode slots_json once for both gathers)
+      entries = SearchSlot.get_slots(search_slot)
+      video_slots = gather_video_slots(entries)
+      channel_slots = gather_channel_slots(entries)
 
       # Build payload
       payload = %{
@@ -174,33 +176,45 @@ defmodule YtSearch.ThumbnailerClient do
     end
   end
 
-  defp gather_video_slots(search_slot) do
-    # Parse slots_json and fetch all video slots
-    search_slot
-    |> SearchSlot.get_slots()
-    |> Enum.filter(fn slot ->
-      slot["type"] in ["video", "short", "livestream"]
-    end)
-    |> Enum.map(fn slot ->
-      slot_id = String.to_integer(slot["slot_id"])
-      Data.SlotRepo.get(YtSearch.Slot, slot_id)
-    end)
+  @doc false
+  def gather_video_slots(entries) do
+    # single batched replica query instead of one primary point-read per entry
+    ids =
+      entries
+      |> Enum.filter(fn slot ->
+        slot["type"] in ["video", "short", "livestream"]
+      end)
+      |> Enum.map(fn slot -> String.to_integer(slot["slot_id"]) end)
+
+    rows =
+      from(s in YtSearch.Slot, where: s.id in ^ids)
+      |> Data.SlotRepo.replica().all()
+      |> Map.new(&{&1.id, &1})
+
+    ids
+    |> Enum.map(&Map.get(rows, &1))
     |> Enum.reject(&is_nil/1)
   end
 
-  defp gather_channel_slots(search_slot) do
-    # Parse slots_json and fetch all channel slots
-    search_slot
-    |> SearchSlot.get_slots()
-    |> Enum.filter(fn slot ->
-      Map.has_key?(slot, "channel_slot") and slot["channel_slot"] != nil
-    end)
-    |> Enum.map(fn slot ->
-      channel_slot_id = String.to_integer(slot["channel_slot"])
-      Data.ChannelSlotRepo.get(YtSearch.ChannelSlot, channel_slot_id)
-    end)
+  @doc false
+  def gather_channel_slots(entries) do
+    # single batched replica query instead of one primary point-read per entry
+    ids =
+      entries
+      |> Enum.filter(fn slot ->
+        Map.has_key?(slot, "channel_slot") and slot["channel_slot"] != nil
+      end)
+      |> Enum.map(fn slot -> String.to_integer(slot["channel_slot"]) end)
+      |> Enum.uniq()
+
+    rows =
+      from(s in YtSearch.ChannelSlot, where: s.id in ^ids)
+      |> Data.ChannelSlotRepo.replica().all()
+      |> Map.new(&{&1.id, &1})
+
+    ids
+    |> Enum.map(&Map.get(rows, &1))
     |> Enum.reject(&is_nil/1)
-    |> Enum.uniq_by(& &1.id)
   end
 
   defp serialize_search_slot(search_slot) do

@@ -2,7 +2,6 @@ defmodule YtSearchWeb.SlotController do
   use YtSearchWeb, :controller
   require Logger
   alias YtSearch.AudioConfig
-  alias YtSearch.SlotUtilities
   alias YtSearch.Slot
   alias YtSearch.Mp4Link
   alias YtSearch.Subtitle
@@ -53,11 +52,8 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp refresh_slot(slot) do
-    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
-         -SlotUtilities.min_time_between_refreshes() do
-      slot
-      |> Slot.refresh()
-    end
+    # Slot.refresh is internally gated on min_time_between_refreshes
+    slot |> Slot.refresh()
 
     :ok
   end
@@ -276,11 +272,8 @@ defmodule YtSearchWeb.SlotController do
   end
 
   defp do_slot_metadata(conn, slot) do
-    if NaiveDateTime.diff(slot.used_at, NaiveDateTime.utc_now(), :second) <=
-         -SlotUtilities.min_time_between_refreshes() do
-      slot
-      |> Slot.refresh()
-    end
+    # Slot.refresh is internally gated on min_time_between_refreshes
+    slot |> Slot.refresh()
 
     subtitle_task =
       Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
@@ -289,17 +282,17 @@ defmodule YtSearchWeb.SlotController do
 
     sponsorblock_task =
       Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
-        do_sponsorblock(slot) |> Jason.decode!()
+        do_sponsorblock(slot) |> json_fragment()
       end)
 
     chapters_task =
       Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
-        do_chapters(slot) |> Jason.decode!()
+        do_chapters(slot) |> json_fragment()
       end)
 
     audio_config_task =
       Task.Supervisor.async_nolink(YtSearch.SlotMetadataSupervisor, fn ->
-        do_audio_config(slot) |> Jason.decode!()
+        do_audio_config(slot) |> json_fragment()
       end)
 
     subtitle = YtSearch.Youtube.Util.maybe_await(subtitle_task)
@@ -404,6 +397,14 @@ defmodule YtSearchWeb.SlotController do
   end
 
   alias YtSearch.Sponsorblock.Segments
+
+  # the metadata helpers return strings that were Jason.encode!-ed at
+  # ingestion time: embed them raw instead of decode!/re-encode round-trips.
+  # non-binary values are error tuples from the with fallthroughs, which
+  # previously crashed the task inside Jason.decode! and surfaced as nil
+  # through maybe_await, so mapping them to nil directly is equivalent
+  defp json_fragment(data) when is_binary(data), do: Jason.Fragment.new(data)
+  defp json_fragment(_), do: nil
 
   defp do_sponsorblock(slot) do
     case Segments.fetch(slot.youtube_id) do
