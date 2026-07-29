@@ -207,6 +207,7 @@ defmodule YtSearch.Application do
     children =
       [YtSearchWeb.Telemetry] ++
         repos() ++
+        checkpointer() ++
         children_for(:trending) ++
         maybe_janitors()
 
@@ -231,7 +232,14 @@ defmodule YtSearch.Application do
         # Start the Telemetry supervisor, wanted to be before repos
         # since repos need telemetry setup
         YtSearchWeb.Telemetry
-      ]
+      ] ++
+        if is_thumbnailer_node?() do
+          []
+        else
+          # hackney connection pool for the Piped micro-client, started before
+          # repos so the primary/monolith roles that talk to Piped have it ready
+          [:hackney_pool.child_spec(:yt_search_piped, timeout: 150_000, max_connections: 50)]
+        end
 
     children_after_repos =
       if is_thumbnailer_node?() do
@@ -255,6 +263,7 @@ defmodule YtSearch.Application do
           },
           {Cachex, name: :tabs},
           YtSearch.CounterServer,
+          {Task, &YtSearch.Counter.Seeder.run/0},
           {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
           {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
           {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
@@ -265,7 +274,7 @@ defmodule YtSearch.Application do
           maybe_janitors()
       end
 
-    children = children_before_repos ++ repos() ++ children_after_repos
+    children = children_before_repos ++ repos() ++ checkpointer() ++ children_after_repos
 
     start_telemetry()
 
@@ -282,7 +291,8 @@ defmodule YtSearch.Application do
       [YtSearch.Thumbnail.Janitor, [every: 2 * 60, jitter: 60..(1 * 60)]],
       [YtSearch.Repo.Janitor, [every: 60, jitter: -30..30]],
       [YtSearch.Chapters.Cleaner, [every: 1 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]],
-      [YtSearch.AudioConfig.Cleaner, [every: 30 * 60, jitter: -60..60]]
+      [YtSearch.AudioConfig.Cleaner, [every: 30 * 60, jitter: -60..60]],
+      [YtSearch.Sponsorblock.Segments.Cleaner, [every: 10 * 60, jitter: -60..60]]
     ]
   end
 
@@ -311,6 +321,16 @@ defmodule YtSearch.Application do
 
   # Default for thumbnailer or other roles
   def periodic_task_specs(_), do: []
+
+  defp checkpointer do
+    # in tests the SQL sandbox owns the connections; a terminate-time
+    # checkpoint would only raise ownership errors
+    if Mix.env() == :test do
+      []
+    else
+      [YtSearch.Repo.Checkpointer]
+    end
+  end
 
   defp maybe_janitors do
     enable_periodic =
@@ -396,6 +416,7 @@ defmodule YtSearch.Application do
     YtSearchWeb.HelloController.BuildReporter.setup()
     YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
     YtSearchWeb.GiftDropController.GiftCounter.setup()
+    YtSearchWeb.FallController.FallCounter.setup()
     YtSearch.Repo.FreelistMeter.Gauge.setup()
     YtSearch.SlotUtilities.RecycledSlotAge.setup()
     YtSearch.CounterServer.Metrics.setup()

@@ -227,7 +227,7 @@ defmodule YtSearch.SlotUtilities do
       where:
         fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive and
           fragment("+?", s.id) < ^max_ids,
-      select: s,
+      select: s.id,
       limit: 1
     )
     |> repo(module).all()
@@ -296,9 +296,9 @@ defmodule YtSearch.SlotUtilities do
             {:ok, id}
         end)
 
-      [expired_slot | _] ->
-        Logger.debug("received expired slot #{expired_slot.id}")
-        {:ok, expired_slot.id}
+      [id | _] ->
+        Logger.debug("received expired slot #{id}")
+        {:ok, id}
     end)
   end
 end

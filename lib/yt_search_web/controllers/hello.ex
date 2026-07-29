@@ -125,12 +125,10 @@ defmodule YtSearchWeb.HelloController do
     else
       # Local unkeepalive
       youtube_ids
-      |> Enum.each(fn youtube_id ->
-        from(s in YtSearch.Thumbnail,
-          update: [set: [keepalive: false]],
-          where: s.id == ^youtube_id
-        )
-        |> ThumbnailRepo.update_all([])
+      |> Enum.chunk_every(500)
+      |> Enum.each(fn chunk ->
+        from(s in YtSearch.Thumbnail, where: s.id in ^chunk)
+        |> ThumbnailRepo.update_all(set: [keepalive: false])
       end)
     end
   end
@@ -171,65 +169,72 @@ defmodule YtSearchWeb.HelloController do
           )
 
           unless data == nil do
+            # to calculate if a given slot from A is in B we build three sets out
+            # of the new trending tab (B):
+            # - video_ids: video slot_id strings
+            # - channel_ids: channel_slot strings (a video entry refers to its channel slot)
+            # - playlist_pairs: {slot_id, youtube_id} pairs for playlist entries
+            #
+            # the reduce keeps the exact same three clause shapes/guards as the old
+            # nested Enum.map, with NO catch-all, so an unknown entry shape still crashes.
+            {video_ids, channel_ids, playlist_pairs} =
+              data.search_results
+              |> Enum.reduce({MapSet.new(), MapSet.new(), MapSet.new()}, fn
+                %{
+                  type: video_type,
+                  slot_id: slot_id_str,
+                  channel_slot: channel_slot_id
+                },
+                {videos, channels, playlists}
+                when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) and
+                       is_bitstring(channel_slot_id) ->
+                  # this entry contributes both its video slot and its inner channel slot
+                  {MapSet.put(videos, slot_id_str), MapSet.put(channels, channel_slot_id),
+                   playlists}
+
+                %{
+                  type: video_type,
+                  slot_id: slot_id_str,
+                  channel_slot: nil
+                },
+                {videos, channels, playlists}
+                when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) ->
+                  {MapSet.put(videos, slot_id_str), channels, playlists}
+
+                # i forgot if playlists exist in the trending tab
+                %{type: :playlist, slot_id: slot_id_str, youtube_id: youtube_id},
+                {videos, channels, playlists}
+                when is_bitstring(slot_id_str) ->
+                  {videos, channels, MapSet.put(playlists, {slot_id_str, youtube_id})}
+              end)
+
+            # old slots not present in the new trending tab (C = A - B) are safe to
+            # unkeepalive. one bulk write per module.
+            now = SlotUtilities.generate_unix_timestamp()
+
             old_keepalived_slots
-            |> Enum.map(fn slot ->
+            |> Enum.reject(fn slot ->
               %module{} = slot
 
-              # to calculate if a given slot from A is in B we need to check
-              # the video slot (and the channel slot the video slot refers to!)
-              any_match? =
-                data.search_results
-                |> Enum.map(fn
-                  %{
-                    type: video_type,
-                    slot_id: slot_id_str,
-                    channel_slot: channel_slot_id
-                  }
-                  when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) and
-                         is_bitstring(channel_slot_id) ->
-                    # either match on the video slot id, or match on the inner channel slot id
-                    (module == YtSearch.Slot and slot_id_str == "#{slot.id}") or
-                      (module == YtSearch.ChannelSlot and channel_slot_id == "#{slot.id}")
+              case module do
+                YtSearch.Slot ->
+                  MapSet.member?(video_ids, "#{slot.id}")
 
-                  %{
-                    type: video_type,
-                    slot_id: slot_id_str,
-                    channel_slot: nil
-                  }
-                  when video_type in [:video, :livestream, :short] and is_bitstring(slot_id_str) ->
-                    # match on the video slot id
-                    module == YtSearch.Slot and slot_id_str == "#{slot.id}"
+                YtSearch.ChannelSlot ->
+                  MapSet.member?(channel_ids, "#{slot.id}")
 
-                  # i forgot if playlists exist in the trending tab
-                  %{type: :playlist, slot_id: slot_id_str, youtube_id: youtube_id}
-                  when is_bitstring(slot_id_str) ->
-                    module == YtSearch.PlaylistSlot and slot_id_str == "#{slot.id}" and
-                      youtube_id == slot.youtube_id
-                end)
-                |> Enum.filter(fn match? -> match? end)
-                |> Enum.at(0)
-                |> then(fn
-                  nil -> false
-                  v -> v
-                end)
-
-              # if the old slot is not in the new refetched trending tab,
-              # its safe to unset keepalive on the old slot
-
-              if not any_match? do
-                slot
-                |> module.changeset(%{keepalive: false})
-                |> SlotUtilities.repo(module).update()
-              else
-                {:ok, nil}
+                YtSearch.PlaylistSlot ->
+                  MapSet.member?(playlist_pairs, {"#{slot.id}", slot.youtube_id})
               end
             end)
-            |> Enum.map(fn
-              {:error, changeset} ->
-                Logger.warning("failed to update, #{inspect(changeset)}")
+            |> Enum.group_by(fn %module{} -> module end)
+            |> Enum.each(fn {module, slots} ->
+              ids = slots |> Enum.map(fn slot -> slot.id end)
 
-              {:ok, _} ->
-                :noop
+              # updated_at set explicitly since update_all bypasses timestamp autogen
+              # (the old changeset path bumped it)
+              from(s in module, where: s.id in ^ids)
+              |> SlotUtilities.repo(module).update_all(set: [keepalive: false, updated_at: now])
             end)
           end
 

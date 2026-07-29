@@ -22,7 +22,7 @@ defmodule YtSearch.Mp4Link do
 
   @spec fetch_by_id(String.t()) :: Mp4Link.t() | nil
   def fetch_by_id(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
 
     case LinkRepo.replica(youtube_id).one(query) do
       nil ->
@@ -147,44 +147,22 @@ defmodule YtSearch.Mp4Link do
   end
 
   defmodule Janitor do
-    require Logger
-
-    alias YtSearch.SlotUtilities
     alias YtSearch.Data.LinkRepo
     alias YtSearch.Mp4Link
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning links...")
-
-      expiry_time =
-        SlotUtilities.generate_unix_timestamp_integer() - Mp4Link.ttl_seconds()
-
-      deleted_count =
-        from(s in Mp4Link,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 3000
-        )
-        |> LinkRepo.JanitorReplica.all()
-        |> Enum.chunk_every(10)
-        |> Enum.map(fn chunk ->
-          chunk
-          |> Enum.map(fn link ->
-            LinkRepo.delete(link)
-            1
-          end)
-          |> then(fn count ->
-            :timer.sleep(1500)
-            count
-          end)
-          |> Enum.sum()
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} links")
+      YtSearch.Janitor.sweep(
+        name: "links",
+        schema: Mp4Link,
+        repo: LinkRepo,
+        replica: LinkRepo.JanitorReplica,
+        keys: [:youtube_id],
+        expiry_column: :inserted_at,
+        ttl: Mp4Link.ttl_seconds(),
+        select_limit: 3000,
+        chunk_size: 500,
+        sleep_ms: 250
+      )
     end
   end
 end

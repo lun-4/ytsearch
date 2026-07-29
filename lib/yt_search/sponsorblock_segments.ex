@@ -37,30 +37,22 @@ defmodule YtSearch.Sponsorblock.Segments do
   end
 
   defmodule Cleaner do
-    require Logger
-
     alias YtSearch.Data.SponsorblockRepo
     alias YtSearch.Sponsorblock.Segments
 
-    import Ecto.Query
-
     def tick() do
-      Logger.debug("cleaning segments...")
-      # TODO use streaming delete
-
-      expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-Segments.ttl_seconds())
-
-      {deleted_count, _entities} =
-        from(s in Segments,
-          where:
-            s.inserted_at <
-              ^expiry_time
-        )
-        |> SponsorblockRepo.delete_all()
-
-      Logger.info("deleted #{deleted_count} segments")
+      YtSearch.Janitor.sweep(
+        name: "segments",
+        schema: Segments,
+        repo: SponsorblockRepo,
+        replica: SponsorblockRepo.JanitorReplica,
+        keys: [:youtube_id],
+        expiry_column: :inserted_at,
+        ttl: Segments.ttl_seconds(),
+        select_limit: 3000,
+        chunk_size: 500,
+        sleep_ms: 250
+      )
     end
   end
 end

@@ -66,12 +66,10 @@ defmodule YtSearchWeb.NodeController do
     import Ecto.Query
 
     youtube_ids
-    |> Enum.each(fn youtube_id ->
-      from(t in YtSearch.Thumbnail,
-        update: [set: [keepalive: false]],
-        where: t.id == ^youtube_id
-      )
-      |> YtSearch.Data.ThumbnailRepo.update_all([])
+    |> Enum.chunk_every(500)
+    |> Enum.each(fn chunk ->
+      from(t in YtSearch.Thumbnail, where: t.id in ^chunk)
+      |> YtSearch.Data.ThumbnailRepo.update_all(set: [keepalive: false])
     end)
 
     json(conn, %{status: "ok", count: length(youtube_ids)})

@@ -119,11 +119,16 @@ defmodule YtSearchWeb.SearchController do
         # we want to have a search slot that contains valid slots within
         # NOTE: asserts slots are "strict TTL" (aka they use TTL.maybe?/1)
 
+        # decode slots_json once here; pass it down so
+        # fetched_slots_from_search and the later thumbnailer sync reuse it
+        entries = SearchSlot.get_slots(data)
+
         child_slots =
           data
           |> SearchSlot.fetched_slots_from_search(
             follow_inner_channel: true,
-            follow_nextpage: true
+            follow_nextpage: true,
+            entries: entries
           )
 
         valid_slots =
@@ -164,22 +169,32 @@ defmodule YtSearchWeb.SearchController do
           data
           |> SlotUtilities.refresh_expiration()
 
-          data
+          {data, entries}
         else
           nil
         end
     end
   end
 
-  def broadcast_sync(search_slot, nextpage_search_slot \\ nil) do
-    search_sync_status = ThumbnailerClient.submit_search_slot(search_slot)
+  def broadcast_sync(search_slot, nextpage_search_slot \\ nil, opts \\ []) do
+    # both submits run concurrently so we pay ~1 RTT instead of 2
+    search_task =
+      Task.async(fn -> ThumbnailerClient.submit_search_slot(search_slot, opts) end)
 
+    # the nextpage slot has its own slots_json, so it must NOT reuse the main
+    # slot's decoded entries. it does keep any throttle flag so each slot
+    # throttles on its own cache key.
     nextpage_sync_status =
       if nextpage_search_slot do
-        ThumbnailerClient.submit_search_slot(nextpage_search_slot)
+        ThumbnailerClient.submit_search_slot(
+          nextpage_search_slot,
+          Keyword.delete(opts, :entries)
+        )
       else
         nil
       end
+
+    search_sync_status = Task.await(search_task, 10_000)
 
     search_sync_ok =
       case search_sync_status do
@@ -279,9 +294,18 @@ defmodule YtSearchWeb.SearchController do
            }}
         end
 
-      %YtSearch.SearchSlot{} = search_slot ->
+      {%YtSearch.SearchSlot{} = search_slot, entries} ->
+        nextpage_search_slot =
+          if search_slot.nextpage_slot_id != nil,
+            do: YtSearch.SearchSlot.fetch(search_slot.nextpage_slot_id),
+            else: nil
+
+        # cache hit: reuse the already-decoded entries for the main slot and
+        # throttle the thumbnailer sync (both main + nextpage slots throttle on
+        # their own keys). the nextpage slot is re-synced too: the thumbnailer's
+        # copy may have expired even though ours is still valid.
         {search_sync_ok, nextpage_sync_ok} =
-          broadcast_sync(search_slot)
+          broadcast_sync(search_slot, nextpage_search_slot, entries: entries, throttle: true)
 
         nextpage_search_slot_id = search_slot.nextpage_slot_id
 

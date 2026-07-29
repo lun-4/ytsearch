@@ -12,13 +12,18 @@ defmodule YtSearch.CounterServer do
 
   defstruct [
     :pending_delta,
-    :snapshots
+    :snapshots,
+    :db_value
   ]
 
   def start_link(_opts) do
     GenServer.start_link(
       __MODULE__,
-      %__MODULE__{pending_delta: 0, snapshots: YtSearch.BoundedQueue.new(@max_snapshot_size)},
+      %__MODULE__{
+        pending_delta: 0,
+        snapshots: YtSearch.BoundedQueue.new(@max_snapshot_size),
+        db_value: 0
+      },
       name: __MODULE__
     )
   end
@@ -115,13 +120,17 @@ defmodule YtSearch.CounterServer do
   def handle_info(:flush_to_db, %__MODULE__{pending_delta: pending_delta} = state) do
     Logger.debug("Flushing counter delta #{pending_delta} to database")
 
-    if pending_delta != 0 do
-      new_counter_entity = Counter.increment(pending_delta)
-      YtSearch.CounterServer.Metrics.set_db(new_counter_entity.value)
-    end
+    new_state =
+      if pending_delta != 0 do
+        new_counter_entity = Counter.increment(pending_delta)
+        YtSearch.CounterServer.Metrics.set_db(new_counter_entity.value)
+        %{state | db_value: new_counter_entity.value}
+      else
+        state
+      end
 
     Process.send_after(self(), :flush_to_db, @batch_interval)
-    {:noreply, %{state | pending_delta: 0}}
+    {:noreply, %{new_state | pending_delta: 0}}
   end
 
   @impl true
@@ -140,13 +149,12 @@ defmodule YtSearch.CounterServer do
 
     # then snapshot normally
     Process.send_after(self(), :snapshot, @snapshot_interval)
-    {:noreply, %{state | snapshots: new_snapshots}}
+    {:noreply, %{state | snapshots: new_snapshots, db_value: db_value}}
   end
 
   @impl true
   def handle_info(:snapshot, %__MODULE__{pending_delta: pending_delta} = state) do
-    db_value = Counter.get_value()
-    current_value = db_value + pending_delta
+    current_value = state.db_value + pending_delta
     timestamp = System.os_time(:millisecond) / 1000
     snapshot = {timestamp, current_value}
     Process.send_after(self(), :snapshot, @snapshot_interval)

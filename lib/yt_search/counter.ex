@@ -6,7 +6,7 @@ defmodule YtSearch.Counter do
 
   @type t :: %__MODULE__{}
 
-  @counter_ids %{global: 1, gift_drops: 2}
+  @counter_ids %{global: 1, gift_drops: 2, falls: 3}
 
   @primary_key {:id, :integer, autogenerate: false}
 
@@ -26,11 +26,11 @@ defmodule YtSearch.Counter do
     |> changeset(params)
   end
 
-  @spec get_counter(atom()) :: t() | nil
-  def get_counter(name \\ :global) do
+  @spec get_counter(atom(), module()) :: t() | nil
+  def get_counter(name \\ :global, repo \\ CounterRepo) do
     id = Map.fetch!(@counter_ids, name)
     query = from(c in __MODULE__, where: c.id == ^id, select: c)
-    CounterRepo.one(query)
+    repo.one(query)
   end
 
   @spec increment(number(), atom()) :: t()
@@ -59,9 +59,35 @@ defmodule YtSearch.Counter do
 
   @spec get_value(atom()) :: integer()
   def get_value(name \\ :global) do
-    case get_counter(name) do
+    case get_counter(name, CounterRepo.replica()) do
       nil -> 0
       counter -> counter.value
+    end
+  end
+
+  defmodule Seeder do
+    @moduledoc """
+    Seeds the prometheus `_db` gauges from the persisted counter values.
+    The plain counters are left at zero so they keep counting since-boot.
+
+    Metrics are declared before the repos boot, so this runs as a one-shot
+    Task child after the repos (see application.ex).
+    """
+
+    @seeds [
+      {:global, YtSearch.CounterServer.Metrics},
+      {:gift_drops, YtSearchWeb.GiftDropController.GiftCounter}
+    ]
+
+    def run() do
+      if Mix.env() != :test do
+        Enum.each(@seeds, fn {name, metrics} ->
+          value = YtSearch.Counter.get_value(name)
+          metrics.set_db(value)
+        end)
+      end
+
+      :ok
     end
   end
 end

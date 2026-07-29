@@ -44,6 +44,11 @@ defmodule YtSearch.Subtitle do
     path_for(subtitle_id(subtitle))
   end
 
+  # the janitor hands us a plain map of the key columns, not a full struct
+  def path_for(%{youtube_id: youtube_id, language: language}) do
+    path_for("#{youtube_id}_#{language}")
+  end
+
   def path_for(id) when is_binary(id) do
     "subtitles/#{id}"
   end
@@ -92,61 +97,23 @@ defmodule YtSearch.Subtitle do
   end
 
   defmodule Cleaner do
-    require Logger
-
     alias YtSearch.Data.SubtitleRepo
-    alias YtSearch.Data.SubtitleRepo.JanitorReplica
     alias YtSearch.Subtitle
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning subtitles...")
-
-      expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-Subtitle.ttl_seconds())
-        |> DateTime.from_naive!("Etc/UTC")
-        |> DateTime.to_unix()
-
-      deleted_count =
-        from(s in Subtitle,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 1000
-        )
-        |> JanitorReplica.all()
-        |> Enum.map(fn subtitle ->
-          # TODO: fix subtitle table
-          # this hack is done because somehow id is nil,
-          # likely due to bad table schema.
-          subtitle
-          |> Map.put(
-            :id,
-            case Map.get(subtitle, :id) do
-              nil -> 0
-              v -> v
-            end
-          )
-        end)
-        |> Enum.chunk_every(10)
-        |> Enum.map(fn chunk ->
-          chunk
-          |> Enum.map(fn subtitle ->
-            SubtitleRepo.delete(subtitle)
-            File.rm(Subtitle.path_for(subtitle))
-            1
-          end)
-          |> then(fn count ->
-            :timer.sleep(1500)
-            count
-          end)
-          |> Enum.sum()
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} subtitles")
+      YtSearch.Janitor.sweep(
+        name: "subtitles",
+        schema: Subtitle,
+        repo: SubtitleRepo,
+        replica: SubtitleRepo.JanitorReplica,
+        keys: [:youtube_id, :language],
+        expiry_column: :inserted_at,
+        ttl: Subtitle.ttl_seconds(),
+        select_limit: 1000,
+        chunk_size: 200,
+        sleep_ms: 250,
+        file_path: &Subtitle.path_for/1
+      )
     end
   end
 end

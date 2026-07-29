@@ -71,6 +71,15 @@ defmodule YtSearch.Thumbnail.Atlas do
   defp internal_assemble(slots) do
     YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:assemble)
 
+    # batch-fetch every non-nil slot's thumbnail row once, instead of a
+    # per-slot replica hit. missing rows are simply absent from the map.
+    thumbs =
+      slots
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(& &1.youtube_id)
+      |> Enum.uniq()
+      |> Thumbnail.batch_fetch()
+
     thumbnail_paths =
       slots
       |> Enum.map(fn slot ->
@@ -79,9 +88,7 @@ defmodule YtSearch.Thumbnail.Atlas do
         # them all before assembling atlas
 
         if slot != nil do
-          thumb1 =
-            slot.youtube_id
-            |> Thumbnail.fetch()
+          thumb1 = Map.get(thumbs, slot.youtube_id)
 
           if thumb1 == nil do
             YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:thumb1_nil)
@@ -92,10 +99,27 @@ defmodule YtSearch.Thumbnail.Atlas do
           # First, check if there's a pending download task
           YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_check)
 
-          case :ets.lookup(:thumbnail_tasks, slot.youtube_id) do
-            [{_id, pid}] when is_pid(pid) ->
-              # Task is running or queued, wait for it with timeout
-              if Process.alive?(pid) do
+          in_flight? =
+            case :ets.lookup(:thumbnail_tasks, slot.youtube_id) do
+              [{_id, pid}] when is_pid(pid) -> Process.alive?(pid) and pid
+              _ -> false
+            end
+
+          # fast path: the row exists and no download task is in flight for it.
+          # the file write strictly precedes the row insert (and the ETS entry
+          # is only removed after the insert), so a present row with no in-flight
+          # task guarantees the image file is fully written. skip the mutex.
+          if thumb1 != nil and in_flight? == false do
+            YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_none)
+
+            {
+              thumb1.id |> Thumbnail.path_for(),
+              thumb1 |> Thumbnail.stat()
+            }
+          else
+            case in_flight? do
+              pid when is_pid(pid) ->
+                # Task is running or queued, wait for it with timeout
                 YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_alive)
                 ref = Process.monitor(pid)
 
@@ -109,37 +133,37 @@ defmodule YtSearch.Thumbnail.Atlas do
                     Process.demonitor(ref, [:flush])
                     Logger.warning("Thumbnail task timeout for #{slot.youtube_id}")
                 end
-              end
 
-            _ ->
-              # No task, proceed normally
-              YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_none)
-              :ok
-          end
-
-          # Now acquire mutex and fetch as before
-          Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
-            thumb =
-              slot.youtube_id
-              |> Thumbnail.fetch()
-
-            if thumb != nil do
-              {
-                thumb.id |> Thumbnail.path_for(),
-                thumb |> Thumbnail.stat()
-              }
-            else
-              maybe_blob = Thumbnail.blob(slot.youtube_id)
-
-              if maybe_blob != nil do
-                InvalidRatio.inc_error(:missing_thumbnail_yet_fs_exists)
-              else
-                InvalidRatio.inc_error(:missing_thumbnail)
-              end
-
-              nil
+              false ->
+                # No task, proceed normally
+                YtSearch.Youtube.Thumbnail.TaskCounter.inc_atlas(:ets_none)
+                :ok
             end
-          end)
+
+            # Now acquire mutex and fetch as before
+            Mutex.under(ThumbnailMutex, slot.youtube_id, fn ->
+              thumb =
+                slot.youtube_id
+                |> Thumbnail.fetch()
+
+              if thumb != nil do
+                {
+                  thumb.id |> Thumbnail.path_for(),
+                  thumb |> Thumbnail.stat()
+                }
+              else
+                maybe_blob = Thumbnail.blob(slot.youtube_id)
+
+                if maybe_blob != nil do
+                  InvalidRatio.inc_error(:missing_thumbnail_yet_fs_exists)
+                else
+                  InvalidRatio.inc_error(:missing_thumbnail)
+                end
+
+                nil
+              end
+            end)
+          end
         else
           InvalidRatio.inc_error(:missing_slot)
           nil

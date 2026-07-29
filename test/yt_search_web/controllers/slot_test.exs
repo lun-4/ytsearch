@@ -41,10 +41,13 @@ defmodule YtSearchWeb.SlotTest do
   @run2 @run1 |> String.replace(@run1_original_url, "https://mp5.com")
 
   defp stop_metadata_workers(_youtube_id) do
-    DynamicSupervisor.which_children(YtSearch.MetadataSupervisor)
-    |> Enum.each(fn {_id, child, _type, _modules} ->
-      DynamicSupervisor.terminate_child(YtSearch.MetadataSupervisor, child)
-    end)
+    # runs from on_exit: the supervisor may already be gone during app shutdown
+    if Process.whereis(YtSearch.MetadataSupervisor) do
+      DynamicSupervisor.which_children(YtSearch.MetadataSupervisor)
+      |> Enum.each(fn {_id, child, _type, _modules} ->
+        DynamicSupervisor.terminate_child(YtSearch.MetadataSupervisor, child)
+      end)
+    end
   end
 
   test "it gets the mp4 url on quest useragents, supporting ttl", %{
@@ -212,6 +215,27 @@ defmodule YtSearchWeb.SlotTest do
     Subtitle.Cleaner.tick()
     # should be empty now
     [] = Subtitle.fetch(slot.youtube_id)
+  end
+
+  test "subtitle janitor keeps fresh sibling languages and their files", %{slot: slot} do
+    expired = Subtitle.insert(slot.youtube_id, "en", "expired subtitle data", %{})
+    fresh = Subtitle.insert(slot.youtube_id, "pt", "fresh subtitle data", %{})
+
+    from(s in Subtitle, where: s.youtube_id == ^slot.youtube_id and s.language == "en")
+    |> SubtitleRepo.update_all(
+      set: [
+        inserted_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-Subtitle.ttl_seconds() - 30_000_000)
+      ]
+    )
+
+    Subtitle.Cleaner.tick()
+
+    # the expired language is gone (row and file), the fresh sibling survives
+    assert Subtitle.fetch(slot.youtube_id) |> Enum.map(& &1.language) == ["pt"]
+    refute File.exists?(Subtitle.path_for(expired))
+    assert File.exists?(Subtitle.path_for(fresh))
   end
 
   alias YtSearch.Sponsorblock.Segments

@@ -2,7 +2,6 @@ defmodule YtSearch.Thumbnail do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Data.ThumbnailRepo
-  alias YtSearch.Data.ThumbnailRepo.JanitorReplica
   alias YtSearch.SlotUtilities
   import Ecto.Changeset
   require Logger
@@ -23,6 +22,18 @@ defmodule YtSearch.Thumbnail do
   def fetch(id) do
     query = from s in __MODULE__, where: s.id == ^id, select: s
     ThumbnailRepo.replica(id).one(query)
+  end
+
+  # batched equivalent of fetch/1: returns a map of id => Thumbnail for the
+  # ids that exist. missing ids are simply absent (Map.get yields nil),
+  # matching how the single fetch returns nil for a missing row.
+  @spec batch_fetch([String.t()]) :: %{String.t() => t()}
+  def batch_fetch([]), do: %{}
+
+  def batch_fetch(ids) do
+    from(s in __MODULE__, where: s.id in ^ids)
+    |> ThumbnailRepo.replica().all()
+    |> Map.new(&{&1.id, &1})
   end
 
   def blob(nil), do: nil
@@ -58,6 +69,11 @@ defmodule YtSearch.Thumbnail do
     }
   end
 
+  # INVARIANT: the image file at path_for(id) must be fully written BEFORE the
+  # row is inserted. Atlas.internal_assemble's mutex-free fast path serves the
+  # file directly whenever a row exists with no in-flight download task, so a
+  # row that becomes visible before its file leads to half-written atlases.
+  # insert/3 callers must write the file first; insert/4 does it for you.
   def insert(id, mimetype, opts) do
     %__MODULE__{}
     |> changeset(
@@ -77,51 +93,30 @@ defmodule YtSearch.Thumbnail do
   end
 
   def insert(id, mimetype, blob, opts) do
-    thumb = insert(id, mimetype, opts)
+    # file before row — see INVARIANT above
     File.write!(path_for(id), blob)
-    thumb
+    insert(id, mimetype, opts)
   end
 
   defmodule Janitor do
-    require Logger
-
     alias YtSearch.Data.ThumbnailRepo
     alias YtSearch.Thumbnail
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning thumbnails...")
-
-      now = SlotUtilities.generate_unix_timestamp_integer()
-
-      deleted_count =
-        from(s in Thumbnail,
-          where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
-          limit: 14000
-        )
-        |> JanitorReplica.all()
-        |> Enum.chunk_every(100)
-        |> Enum.map(fn chunk ->
-          ids = chunk |> Enum.map(fn t -> t.id end)
-
-          {count, _} =
-            from(t in Thumbnail, where: t.id in ^ids)
-            |> ThumbnailRepo.delete_all()
-
-          ids
-          |> Enum.each(fn id ->
-            File.rm(Thumbnail.path_for(id))
-          end)
-
-          # let other ops run for a while
-          :timer.sleep(750)
-          count
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} thumbnails")
-      deleted_count
+      YtSearch.Janitor.sweep(
+        name: "thumbnails",
+        schema: Thumbnail,
+        repo: ThumbnailRepo,
+        replica: ThumbnailRepo.JanitorReplica,
+        keys: [:id],
+        expiry_column: :expires_at,
+        ttl: 0,
+        extra_where: dynamic([s], not s.keepalive),
+        select_limit: 14000,
+        chunk_size: 500,
+        sleep_ms: 750,
+        file_path: fn row -> Thumbnail.path_for(row.id) end
+      )
     end
   end
 end

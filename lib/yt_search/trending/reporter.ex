@@ -50,27 +50,39 @@ defmodule YtSearch.Trending.Reporter do
   end
 
   defp rebuild_video_counter do
-    YtSearch.Data.TrendingRepo.query!("DELETE FROM video_counter")
+    # aggregate outside the write transaction: the transaction below holds the
+    # single writer connection, so keeping the (potentially long) read out of it
+    # means concurrent record_view inserts only block for the DELETE + INSERTs.
+    # views recorded between this read and the transaction are picked up by the
+    # next rebuild, same as they would have been under the old interleaving.
+    %{rows: counts} =
+      YtSearch.Data.TrendingRepo.replica().query!(
+        "SELECT yt_video_id, COUNT(*) FROM video_views GROUP BY yt_video_id"
+      )
 
-    {:ok, counts} =
-      YtSearch.Data.TrendingRepo.transaction(fn ->
-        Ecto.Adapters.SQL.stream(
-          YtSearch.Data.TrendingRepo,
-          "SELECT yt_video_id FROM video_views"
-        )
-        |> Enum.reduce(%{}, fn %{rows: rows}, acc ->
-          Enum.reduce(rows, acc, fn [yt_video_id], inner_acc ->
-            Map.update(inner_acc, yt_video_id, 1, &(&1 + 1))
-          end)
-        end)
-      end)
+    # single immediate transaction so readers (Trending.top_videos) never observe
+    # an empty/half-rebuilt table.
+    {:ok, _} =
+      YtSearch.Data.TrendingRepo.transaction(
+        fn ->
+          YtSearch.Data.TrendingRepo.query!("DELETE FROM video_counter")
 
-    Enum.each(counts, fn {yt_video_id, view_count} ->
-      YtSearch.Data.TrendingRepo.query!("""
-        INSERT INTO video_counter (yt_video_id, view_count)
-        VALUES (?, ?)
-      """, [yt_video_id, view_count])
-    end)
+          counts
+          |> Enum.chunk_every(300)
+          |> Enum.each(&insert_counter_chunk/1)
+        end,
+        mode: :immediate
+      )
+  end
+
+  defp insert_counter_chunk(chunk) do
+    values = Enum.map_join(chunk, ", ", fn _ -> "(?, ?)" end)
+    args = Enum.flat_map(chunk, fn [id, c] -> [id, c] end)
+
+    YtSearch.Data.TrendingRepo.query!(
+      "INSERT INTO video_counter (yt_video_id, view_count) VALUES #{values}",
+      args
+    )
   end
 
   defp send_discord_webhook(trending_videos) do

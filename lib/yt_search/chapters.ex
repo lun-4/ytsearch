@@ -2,7 +2,6 @@ defmodule YtSearch.Chapters do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Data.ChapterRepo
-  alias YtSearch.Data.ChapterRepo.JanitorReplica
 
   @type t :: %__MODULE__{}
 
@@ -39,47 +38,22 @@ defmodule YtSearch.Chapters do
   end
 
   defmodule Cleaner do
-    require Logger
-
     alias YtSearch.Data.ChapterRepo
-    alias YtSearch.Data.ChapterRepo.JanitorReplica
     alias YtSearch.Chapters
 
-    import Ecto.Query
-
     def tick() do
-      Logger.debug("cleaning chapters...")
-
-      expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-Chapters.ttl_seconds())
-        |> DateTime.from_naive!("Etc/UTC")
-        |> DateTime.to_unix()
-
-      deleted_count =
-        from(s in Chapters,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 1000
-        )
-        |> JanitorReplica.all()
-        |> Enum.chunk_every(10)
-        |> Enum.map(fn chunk ->
-          chunk
-          |> Enum.map(fn chapters ->
-            ChapterRepo.delete(chapters)
-            1
-          end)
-          |> then(fn count ->
-            :timer.sleep(1500)
-            count
-          end)
-          |> Enum.sum()
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} chapters")
+      YtSearch.Janitor.sweep(
+        name: "chapters",
+        schema: Chapters,
+        repo: ChapterRepo,
+        replica: ChapterRepo.JanitorReplica,
+        keys: [:youtube_id],
+        expiry_column: :inserted_at,
+        ttl: Chapters.ttl_seconds(),
+        select_limit: 1000,
+        chunk_size: 500,
+        sleep_ms: 250
+      )
     end
   end
 end

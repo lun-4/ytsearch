@@ -52,7 +52,7 @@ defmodule YtSearch.ThumbnailerClient do
   this is a blocking/synchronous operation, so we can safely assume the
   targets of the broadcast received the search slot.
   """
-  def submit_search_slot(search_slot) do
+  def submit_search_slot(search_slot, opts \\ []) do
     case System.get_env("EXTERNAL_THUMBNAIL_NODE") do
       nil ->
         # No thumbnailer configured, skip
@@ -62,8 +62,41 @@ defmodule YtSearch.ThumbnailerClient do
         :ok
 
       thumbnailer_url ->
-        do_submit(thumbnailer_url, search_slot)
+        # on cache-hit paths we throttle: if this exact slot (id + query hash)
+        # was synced within the refresh window, the thumbnailer already holds it,
+        # so we can skip the HTTP round-trip and report success.
+        if Keyword.get(opts, :throttle, false) and recently_synced?(search_slot) do
+          :ok
+        else
+          case do_submit(thumbnailer_url, search_slot, opts) do
+            :ok ->
+              # only a successful sync populates the throttle cache; failures
+              # leave it empty so the next hit retries.
+              mark_synced(search_slot)
+              :ok
+
+            other ->
+              other
+          end
+        end
     end
+  end
+
+  defp sync_cache_key(search_slot) do
+    "thumbnailer_sync:#{search_slot.id}:#{:erlang.phash2(search_slot.query)}"
+  end
+
+  defp recently_synced?(search_slot) do
+    case Cachex.get(:tabs, sync_cache_key(search_slot)) do
+      {:ok, nil} -> false
+      {:ok, _} -> true
+      _ -> false
+    end
+  end
+
+  defp mark_synced(search_slot) do
+    ttl = YtSearch.SlotUtilities.min_time_between_refreshes() * 1000
+    Cachex.put(:tabs, sync_cache_key(search_slot), true, ttl: ttl)
   end
 
   defp do_submit_thumbnail(thumbnailer_url, youtube_id, thumbnail_url, opts) do
@@ -130,10 +163,11 @@ defmodule YtSearch.ThumbnailerClient do
     end
   end
 
-  defp do_submit(thumbnailer_url, search_slot) do
+  defp do_submit(thumbnailer_url, search_slot, opts) do
     try do
-      # Gather all related slots (decode slots_json once for both gathers)
-      entries = SearchSlot.get_slots(search_slot)
+      # Gather all related slots (decode slots_json once for both gathers).
+      # reuse the caller's already-decoded entries when provided.
+      entries = Keyword.get(opts, :entries) || SearchSlot.get_slots(search_slot)
       video_slots = gather_video_slots(entries)
       channel_slots = gather_channel_slots(entries)
 
