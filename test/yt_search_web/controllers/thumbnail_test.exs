@@ -44,6 +44,36 @@ defmodule YtSearchWeb.ThumbnailTest do
     nil = Thumbnail.fetch(@youtube_id)
   end
 
+  test "janitor removes only expired thumbnails and their files" do
+    expired = Thumbnail.insert("expired_thumb", "image/png", Data.png(), [])
+    _fresh = Thumbnail.insert("fresh_thumb", "image/png", Data.png(), [])
+    kept_alive = Thumbnail.insert("keepalive_thumb", "image/png", Data.png(), keepalive: true)
+
+    [expired, kept_alive]
+    |> Enum.each(fn thumb ->
+      thumb
+      |> Ecto.Changeset.change(
+        expires_at:
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(-10, :second)
+          |> NaiveDateTime.truncate(:second)
+      )
+      |> ThumbnailRepo.update!()
+    end)
+
+    assert Thumbnail.Janitor.tick() == 1
+
+    assert Thumbnail.fetch("expired_thumb") == nil
+    refute File.exists?(Thumbnail.path_for("expired_thumb"))
+
+    assert Thumbnail.fetch("fresh_thumb") != nil
+    assert File.exists?(Thumbnail.path_for("fresh_thumb"))
+
+    # keepalive passes strict TTL even when expired, and the janitor spares it
+    assert Thumbnail.fetch("keepalive_thumb") != nil
+    assert File.exists?(Thumbnail.path_for("keepalive_thumb"))
+  end
+
   test "thumbnails are refreshed" do
     thumb = Thumbnail.insert(@youtube_id, "image/png", Data.png(), [])
 

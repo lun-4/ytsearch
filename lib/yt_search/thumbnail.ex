@@ -25,6 +25,18 @@ defmodule YtSearch.Thumbnail do
     ThumbnailRepo.replica(id).one(query)
   end
 
+  # batched equivalent of fetch/1: returns a map of id => Thumbnail for the
+  # ids that exist. missing ids are simply absent (Map.get yields nil),
+  # matching how the single fetch returns nil for a missing row.
+  @spec batch_fetch([String.t()]) :: %{String.t() => t()}
+  def batch_fetch([]), do: %{}
+
+  def batch_fetch(ids) do
+    from(s in __MODULE__, where: s.id in ^ids)
+    |> ThumbnailRepo.replica().all()
+    |> Map.new(&{&1.id, &1})
+  end
+
   def blob(nil), do: nil
 
   def blob(%__MODULE__{} = thumb) do
@@ -58,6 +70,11 @@ defmodule YtSearch.Thumbnail do
     }
   end
 
+  # INVARIANT: the image file at path_for(id) must be fully written BEFORE the
+  # row is inserted. Atlas.internal_assemble's mutex-free fast path serves the
+  # file directly whenever a row exists with no in-flight download task, so a
+  # row that becomes visible before its file leads to half-written atlases.
+  # insert/3 callers must write the file first; insert/4 does it for you.
   def insert(id, mimetype, opts) do
     %__MODULE__{}
     |> changeset(
@@ -77,9 +94,9 @@ defmodule YtSearch.Thumbnail do
   end
 
   def insert(id, mimetype, blob, opts) do
-    thumb = insert(id, mimetype, opts)
+    # file before row — see INVARIANT above
     File.write!(path_for(id), blob)
-    thumb
+    insert(id, mimetype, opts)
   end
 
   defmodule Janitor do
@@ -101,21 +118,32 @@ defmodule YtSearch.Thumbnail do
           limit: 14000
         )
         |> JanitorReplica.all()
-        |> Enum.chunk_every(100)
+        |> Enum.chunk_every(500)
         |> Enum.map(fn chunk ->
           ids = chunk |> Enum.map(fn t -> t.id end)
 
-          {count, _} =
-            from(t in Thumbnail, where: t.id in ^ids)
+          # re-check expiry/keepalive: a thumbnail refreshed between the replica
+          # snapshot and this delete must survive (and keep its file, so only
+          # rows actually deleted get their file removed)
+          {count, deleted} =
+            from(t in Thumbnail,
+              where:
+                t.id in ^ids and fragment("unixepoch(?)", t.expires_at) < ^now and
+                  not t.keepalive,
+              select: t.id
+            )
             |> ThumbnailRepo.delete_all()
 
-          ids
+          (deleted || [])
           |> Enum.each(fn id ->
             File.rm(Thumbnail.path_for(id))
           end)
 
-          # let other ops run for a while
-          :timer.sleep(750)
+          # let other ops run for a while, but only when we're churning through full chunks
+          if length(chunk) == 500 do
+            :timer.sleep(750)
+          end
+
           count
         end)
         |> Enum.sum()

@@ -231,7 +231,14 @@ defmodule YtSearch.Application do
         # Start the Telemetry supervisor, wanted to be before repos
         # since repos need telemetry setup
         YtSearchWeb.Telemetry
-      ]
+      ] ++
+        if is_thumbnailer_node?() do
+          []
+        else
+          # hackney connection pool for the Piped micro-client, started before
+          # repos so the primary/monolith roles that talk to Piped have it ready
+          [:hackney_pool.child_spec(:yt_search_piped, timeout: 150_000, max_connections: 50)]
+        end
 
     children_after_repos =
       if is_thumbnailer_node?() do

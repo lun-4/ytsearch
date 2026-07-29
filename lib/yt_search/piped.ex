@@ -4,8 +4,12 @@ defmodule YtSearch.Piped do
   use Tesla
   require Logger
 
-  plug Tesla.Middleware.Headers, [{"accept", "application/json"}]
-  plug Tesla.Middleware.JSON
+  plug(Tesla.Middleware.Headers, [{"accept", "application/json"}])
+  plug(Tesla.Middleware.JSON)
+
+  plug(Tesla.Middleware.Opts,
+    adapter: [pool: :yt_search_piped, recv_timeout: 5000, connect_timeout: 5000]
+  )
 
   def search(url, text) do
     Logger.debug("piped: searching for #{text}")

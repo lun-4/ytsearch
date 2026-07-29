@@ -22,7 +22,7 @@ defmodule YtSearch.Mp4Link do
 
   @spec fetch_by_id(String.t()) :: Mp4Link.t() | nil
   def fetch_by_id(youtube_id) do
-    query = from s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s
+    query = from(s in __MODULE__, where: s.youtube_id == ^youtube_id, select: s)
 
     case LinkRepo.replica(youtube_id).one(query) do
       nil ->
@@ -166,21 +166,28 @@ defmodule YtSearch.Mp4Link do
           where:
             fragment("unixepoch(?)", s.inserted_at) <
               ^expiry_time,
-          limit: 3000
+          limit: 3000,
+          select: s.youtube_id
         )
         |> LinkRepo.JanitorReplica.all()
-        |> Enum.chunk_every(10)
-        |> Enum.map(fn chunk ->
-          chunk
-          |> Enum.map(fn link ->
-            LinkRepo.delete(link)
-            1
-          end)
-          |> then(fn count ->
-            :timer.sleep(1500)
-            count
-          end)
-          |> Enum.sum()
+        |> Enum.chunk_every(500)
+        |> Enum.map(fn youtube_ids ->
+          # re-check expiry: a link refreshed between the replica snapshot and
+          # this delete must survive
+          {count, _} =
+            from(s in Mp4Link,
+              where:
+                s.youtube_id in ^youtube_ids and
+                  fragment("unixepoch(?)", s.inserted_at) < ^expiry_time
+            )
+            |> LinkRepo.delete_all()
+
+          # let other ops run for a while, but only when we're churning through full chunks
+          if length(youtube_ids) == 500 do
+            :timer.sleep(250)
+          end
+
+          count
         end)
         |> Enum.sum()
 

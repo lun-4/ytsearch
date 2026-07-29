@@ -117,32 +117,45 @@ defmodule YtSearch.Subtitle do
           limit: 1000
         )
         |> JanitorReplica.all()
-        |> Enum.map(fn subtitle ->
-          # TODO: fix subtitle table
-          # this hack is done because somehow id is nil,
-          # likely due to bad table schema.
-          subtitle
-          |> Map.put(
-            :id,
-            case Map.get(subtitle, :id) do
-              nil -> 0
-              v -> v
-            end
-          )
-        end)
-        |> Enum.chunk_every(10)
+        |> Enum.chunk_every(200)
         |> Enum.map(fn chunk ->
-          chunk
-          |> Enum.map(fn subtitle ->
-            SubtitleRepo.delete(subtitle)
-            File.rm(Subtitle.path_for(subtitle))
-            1
+          # composite key {youtube_id, language}: build one query matching exactly
+          # the (youtube_id, language) pairs in this chunk. deleting by youtube_id
+          # alone would wipe unexpired sibling languages. each pair also re-checks
+          # expiry so a subtitle refreshed between the replica snapshot and this
+          # delete survives (and keeps its file).
+          query =
+            Enum.reduce(chunk, from(s in Subtitle, where: false), fn subtitle, q ->
+              or_where(
+                q,
+                [s],
+                s.youtube_id == ^subtitle.youtube_id and s.language == ^subtitle.language and
+                  fragment("unixepoch(?)", s.inserted_at) < ^expiry_time
+              )
+            end)
+
+          {count, deleted} =
+            query
+            |> select([s], %{youtube_id: s.youtube_id, language: s.language})
+            |> SubtitleRepo.delete_all()
+
+          # only remove files for rows we actually deleted
+          (deleted || [])
+          |> Enum.each(fn subtitle ->
+            File.rm(
+              Subtitle.path_for(%Subtitle{
+                youtube_id: subtitle.youtube_id,
+                language: subtitle.language
+              })
+            )
           end)
-          |> then(fn count ->
-            :timer.sleep(1500)
-            count
-          end)
-          |> Enum.sum()
+
+          # let other ops run for a while, but only when we're churning through full chunks
+          if length(chunk) == 200 do
+            :timer.sleep(250)
+          end
+
+          count
         end)
         |> Enum.sum()
 

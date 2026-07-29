@@ -96,7 +96,7 @@ defmodule YtSearch.SearchSlot do
       "LUNA: exec #{search_slot.id} q=#{inspect(search_slot.query)} t=#{inspect(search_slot.type)} nph=#{inspect(search_slot.nextpage_data_hash)}"
     )
 
-    entries = search_slot |> get_slots
+    entries = Keyword.get(opts, :entries) || get_slots(search_slot)
 
     # one batched query per slot type instead of one query per entry
     videos = batch_fetch_by_youtube_id(Slot, entry_youtube_ids(entries, @video_entry_types))
@@ -188,7 +188,10 @@ defmodule YtSearch.SearchSlot do
                 results =
                   slots ++
                     [nextpage_slot] ++
-                    fetched_slots_from_search(nextpage_slot, opts |> Keyword.put(:luna, true))
+                    fetched_slots_from_search(
+                      nextpage_slot,
+                      opts |> Keyword.delete(:entries) |> Keyword.put(:luna, true)
+                    )
 
                 Logger.debug("LUNA: finished for #{search_slot.id}. results #{length(results)}")
                 results

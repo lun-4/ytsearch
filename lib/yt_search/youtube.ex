@@ -510,10 +510,13 @@ defmodule YtSearch.Youtube do
     }
   end
 
+  defp limit_keys("channels"), do: {:pages_from_channels, :results_from_channels}
+  defp limit_keys("playlists"), do: {:pages_from_playlists, :results_from_playlists}
+  defp limit_keys("trending"), do: {:pages_from_trending, :results_from_trending}
+
   defp limit_config(entity) do
-    page_key = ["pages_from_", entity] |> List.to_string() |> String.to_atom()
+    {page_key, result_key} = limit_keys(entity)
     max_pages = Application.get_env(:yt_search, YtSearch.Constants)[page_key]
-    result_key = ["results_from_", entity] |> List.to_string() |> String.to_atom()
     max_result_count = Application.get_env(:yt_search, YtSearch.Constants)[result_key]
     search_config = result_limit()
 

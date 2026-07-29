@@ -1,6 +1,6 @@
 defmodule YtSearchWeb.TrendingMixerTest do
   @moduledoc """
-  End-to-end tests for the trending mixer: hits /api/v6/hello-staging and
+  End-to-end tests for the trending mixer: hits /api/v6/hello-trending and
   verifies that YTS community-trending videos appear in the trending tab
   alongside upstream YouTube trending data. The mixer is currently only
   reachable via the staging endpoint — prod /hello still uses raw
@@ -64,7 +64,7 @@ defmodule YtSearchWeb.TrendingMixerTest do
 
   defp fetch_trending(conn) do
     conn
-    |> get(~p"/api/v6/hello-staging")
+    |> get(~p"/api/v6/hello-trending")
     |> json_response(200)
     |> get_in(["trending_tab", "search_results"])
   end

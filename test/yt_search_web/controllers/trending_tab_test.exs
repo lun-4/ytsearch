@@ -224,5 +224,27 @@ defmodule YtSearchWeb.TrendingTabTest do
         raise ArgumentError, "slot #{inspect(slot)} is not keepalive"
       end
     end)
+
+    # slots from the first tab that are NOT present in the second (disjoint
+    # content) must have been unkeepalived by the refresh (Task 6 bulk update).
+    after_ids =
+      search_slot_after
+      |> SearchSlot.fetched_slots_from_search(follow_inner_channel: true, follow_nextpage: true)
+      |> Enum.map(fn %mod{} = s -> {mod, s.id} end)
+      |> MapSet.new()
+
+    disjoint_old_slots =
+      search_slot_before
+      |> SearchSlot.fetched_slots_from_search(follow_inner_channel: true, follow_nextpage: true)
+      |> Enum.reject(fn %mod{} = s -> MapSet.member?(after_ids, {mod, s.id}) end)
+
+    # sanity: the two trending tabs genuinely differ
+    assert disjoint_old_slots != []
+
+    Enum.each(disjoint_old_slots, fn %mod{} = s ->
+      reloaded = YtSearch.SlotUtilities.repo(mod).get(mod, s.id)
+      assert reloaded != nil
+      refute reloaded.keepalive
+    end)
   end
 end

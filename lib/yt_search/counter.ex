@@ -26,11 +26,11 @@ defmodule YtSearch.Counter do
     |> changeset(params)
   end
 
-  @spec get_counter(atom()) :: t() | nil
-  def get_counter(name \\ :global) do
+  @spec get_counter(atom(), module()) :: t() | nil
+  def get_counter(name \\ :global, repo \\ CounterRepo) do
     id = Map.fetch!(@counter_ids, name)
     query = from(c in __MODULE__, where: c.id == ^id, select: c)
-    CounterRepo.one(query)
+    repo.one(query)
   end
 
   @spec increment(number(), atom()) :: t()
@@ -59,7 +59,7 @@ defmodule YtSearch.Counter do
 
   @spec get_value(atom()) :: integer()
   def get_value(name \\ :global) do
-    case get_counter(name) do
+    case get_counter(name, CounterRepo.replica()) do
       nil -> 0
       counter -> counter.value
     end
