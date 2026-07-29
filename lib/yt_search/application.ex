@@ -207,6 +207,7 @@ defmodule YtSearch.Application do
     children =
       [YtSearchWeb.Telemetry] ++
         repos() ++
+        checkpointer() ++
         children_for(:trending) ++
         maybe_janitors()
 
@@ -272,7 +273,7 @@ defmodule YtSearch.Application do
           maybe_janitors()
       end
 
-    children = children_before_repos ++ repos() ++ children_after_repos
+    children = children_before_repos ++ repos() ++ checkpointer() ++ children_after_repos
 
     start_telemetry()
 
@@ -319,6 +320,16 @@ defmodule YtSearch.Application do
 
   # Default for thumbnailer or other roles
   def periodic_task_specs(_), do: []
+
+  defp checkpointer do
+    # in tests the SQL sandbox owns the connections; a terminate-time
+    # checkpoint would only raise ownership errors
+    if Mix.env() == :test do
+      []
+    else
+      [YtSearch.Repo.Checkpointer]
+    end
+  end
 
   defp maybe_janitors do
     enable_periodic =
