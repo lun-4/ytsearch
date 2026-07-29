@@ -177,7 +177,9 @@ defmodule YtSearchWeb.SearchController do
   end
 
   def broadcast_sync(search_slot, nextpage_search_slot \\ nil, opts \\ []) do
-    search_sync_status = ThumbnailerClient.submit_search_slot(search_slot, opts)
+    # both submits run concurrently so we pay ~1 RTT instead of 2
+    search_task =
+      Task.async(fn -> ThumbnailerClient.submit_search_slot(search_slot, opts) end)
 
     # the nextpage slot has its own slots_json, so it must NOT reuse the main
     # slot's decoded entries. it does keep any throttle flag so each slot
@@ -191,6 +193,8 @@ defmodule YtSearchWeb.SearchController do
       else
         nil
       end
+
+    search_sync_status = Task.await(search_task, 10_000)
 
     search_sync_ok =
       case search_sync_status do
