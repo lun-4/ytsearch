@@ -60,6 +60,7 @@ defmodule YtSearchWeb.Router do
     get("/aod/:error_id", AngelOfDeathController, :report_error)
     get("/co/:delta", CounterController, :increment)
     get("/g/:number", GiftDropController, :increment)
+    get("/u/:number", FallController, :increment)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

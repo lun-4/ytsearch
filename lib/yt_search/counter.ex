@@ -6,7 +6,7 @@ defmodule YtSearch.Counter do
 
   @type t :: %__MODULE__{}
 
-  @counter_ids %{global: 1, gift_drops: 2}
+  @counter_ids %{global: 1, gift_drops: 2, falls: 3}
 
   @primary_key {:id, :integer, autogenerate: false}
 
