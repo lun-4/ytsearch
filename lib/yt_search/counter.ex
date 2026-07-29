@@ -64,4 +64,30 @@ defmodule YtSearch.Counter do
       counter -> counter.value
     end
   end
+
+  defmodule Seeder do
+    @moduledoc """
+    Seeds the prometheus `_db` gauges from the persisted counter values.
+    The plain counters are left at zero so they keep counting since-boot.
+
+    Metrics are declared before the repos boot, so this runs as a one-shot
+    Task child after the repos (see application.ex).
+    """
+
+    @seeds [
+      {:global, YtSearch.CounterServer.Metrics},
+      {:gift_drops, YtSearchWeb.GiftDropController.GiftCounter}
+    ]
+
+    def run() do
+      if Mix.env() != :test do
+        Enum.each(@seeds, fn {name, metrics} ->
+          value = YtSearch.Counter.get_value(name)
+          metrics.set_db(value)
+        end)
+      end
+
+      :ok
+    end
+  end
 end

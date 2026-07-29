@@ -263,6 +263,7 @@ defmodule YtSearch.Application do
           },
           {Cachex, name: :tabs},
           YtSearch.CounterServer,
+          {Task, &YtSearch.Counter.Seeder.run/0},
           {DynamicSupervisor, strategy: :one_for_one, name: YtSearch.MetadataSupervisor},
           {Registry, keys: :unique, name: YtSearch.MetadataWorkers},
           {Registry, keys: :unique, name: YtSearch.MetadataExtractors},
