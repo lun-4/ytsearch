@@ -36,47 +36,22 @@ defmodule YtSearch.AudioConfig do
   end
 
   defmodule Cleaner do
-    require Logger
-
     alias YtSearch.Data.AudioConfigRepo
-    alias YtSearch.Data.AudioConfigRepo.JanitorReplica
     alias YtSearch.AudioConfig
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning audio configs...")
-
-      expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-AudioConfig.ttl_seconds())
-        |> DateTime.from_naive!("Etc/UTC")
-        |> DateTime.to_unix()
-
-      deleted_count =
-        from(s in AudioConfig,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 1000
-        )
-        |> JanitorReplica.all()
-        |> Enum.chunk_every(10)
-        |> Enum.map(fn chunk ->
-          chunk
-          |> Enum.map(fn audio_config ->
-            AudioConfigRepo.delete(audio_config)
-            1
-          end)
-          |> then(fn count ->
-            :timer.sleep(1500)
-            count
-          end)
-          |> Enum.sum()
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} audio configs")
+      YtSearch.Janitor.sweep(
+        name: "audio configs",
+        schema: AudioConfig,
+        repo: AudioConfigRepo,
+        replica: AudioConfigRepo.JanitorReplica,
+        keys: [:youtube_id],
+        expiry_column: :inserted_at,
+        ttl: AudioConfig.ttl_seconds(),
+        select_limit: 1000,
+        chunk_size: 500,
+        sleep_ms: 250
+      )
     end
   end
 end

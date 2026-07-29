@@ -147,51 +147,22 @@ defmodule YtSearch.Mp4Link do
   end
 
   defmodule Janitor do
-    require Logger
-
-    alias YtSearch.SlotUtilities
     alias YtSearch.Data.LinkRepo
     alias YtSearch.Mp4Link
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning links...")
-
-      expiry_time =
-        SlotUtilities.generate_unix_timestamp_integer() - Mp4Link.ttl_seconds()
-
-      deleted_count =
-        from(s in Mp4Link,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 3000,
-          select: s.youtube_id
-        )
-        |> LinkRepo.JanitorReplica.all()
-        |> Enum.chunk_every(500)
-        |> Enum.map(fn youtube_ids ->
-          # re-check expiry: a link refreshed between the replica snapshot and
-          # this delete must survive
-          {count, _} =
-            from(s in Mp4Link,
-              where:
-                s.youtube_id in ^youtube_ids and
-                  fragment("unixepoch(?)", s.inserted_at) < ^expiry_time
-            )
-            |> LinkRepo.delete_all()
-
-          # let other ops run for a while, but only when we're churning through full chunks
-          if length(youtube_ids) == 500 do
-            :timer.sleep(250)
-          end
-
-          count
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} links")
+      YtSearch.Janitor.sweep(
+        name: "links",
+        schema: Mp4Link,
+        repo: LinkRepo,
+        replica: LinkRepo.JanitorReplica,
+        keys: [:youtube_id],
+        expiry_column: :inserted_at,
+        ttl: Mp4Link.ttl_seconds(),
+        select_limit: 3000,
+        chunk_size: 500,
+        sleep_ms: 250
+      )
     end
   end
 end

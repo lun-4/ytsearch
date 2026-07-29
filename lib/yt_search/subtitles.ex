@@ -44,6 +44,11 @@ defmodule YtSearch.Subtitle do
     path_for(subtitle_id(subtitle))
   end
 
+  # the janitor hands us a plain map of the key columns, not a full struct
+  def path_for(%{youtube_id: youtube_id, language: language}) do
+    path_for("#{youtube_id}_#{language}")
+  end
+
   def path_for(id) when is_binary(id) do
     "subtitles/#{id}"
   end
@@ -92,74 +97,23 @@ defmodule YtSearch.Subtitle do
   end
 
   defmodule Cleaner do
-    require Logger
-
     alias YtSearch.Data.SubtitleRepo
-    alias YtSearch.Data.SubtitleRepo.JanitorReplica
     alias YtSearch.Subtitle
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning subtitles...")
-
-      expiry_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-Subtitle.ttl_seconds())
-        |> DateTime.from_naive!("Etc/UTC")
-        |> DateTime.to_unix()
-
-      deleted_count =
-        from(s in Subtitle,
-          where:
-            fragment("unixepoch(?)", s.inserted_at) <
-              ^expiry_time,
-          limit: 1000
-        )
-        |> JanitorReplica.all()
-        |> Enum.chunk_every(200)
-        |> Enum.map(fn chunk ->
-          # composite key {youtube_id, language}: build one query matching exactly
-          # the (youtube_id, language) pairs in this chunk. deleting by youtube_id
-          # alone would wipe unexpired sibling languages. each pair also re-checks
-          # expiry so a subtitle refreshed between the replica snapshot and this
-          # delete survives (and keeps its file).
-          query =
-            Enum.reduce(chunk, from(s in Subtitle, where: false), fn subtitle, q ->
-              or_where(
-                q,
-                [s],
-                s.youtube_id == ^subtitle.youtube_id and s.language == ^subtitle.language and
-                  fragment("unixepoch(?)", s.inserted_at) < ^expiry_time
-              )
-            end)
-
-          {count, deleted} =
-            query
-            |> select([s], %{youtube_id: s.youtube_id, language: s.language})
-            |> SubtitleRepo.delete_all()
-
-          # only remove files for rows we actually deleted
-          (deleted || [])
-          |> Enum.each(fn subtitle ->
-            File.rm(
-              Subtitle.path_for(%Subtitle{
-                youtube_id: subtitle.youtube_id,
-                language: subtitle.language
-              })
-            )
-          end)
-
-          # let other ops run for a while, but only when we're churning through full chunks
-          if length(chunk) == 200 do
-            :timer.sleep(250)
-          end
-
-          count
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} subtitles")
+      YtSearch.Janitor.sweep(
+        name: "subtitles",
+        schema: Subtitle,
+        repo: SubtitleRepo,
+        replica: SubtitleRepo.JanitorReplica,
+        keys: [:youtube_id, :language],
+        expiry_column: :inserted_at,
+        ttl: Subtitle.ttl_seconds(),
+        select_limit: 1000,
+        chunk_size: 200,
+        sleep_ms: 250,
+        file_path: &Subtitle.path_for/1
+      )
     end
   end
 end

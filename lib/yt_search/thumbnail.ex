@@ -2,7 +2,6 @@ defmodule YtSearch.Thumbnail do
   use Ecto.Schema
   import Ecto.Query
   alias YtSearch.Data.ThumbnailRepo
-  alias YtSearch.Data.ThumbnailRepo.JanitorReplica
   alias YtSearch.SlotUtilities
   import Ecto.Changeset
   require Logger
@@ -100,56 +99,24 @@ defmodule YtSearch.Thumbnail do
   end
 
   defmodule Janitor do
-    require Logger
-
     alias YtSearch.Data.ThumbnailRepo
     alias YtSearch.Thumbnail
 
-    import Ecto.Query
-
     def tick() do
-      Logger.info("cleaning thumbnails...")
-
-      now = SlotUtilities.generate_unix_timestamp_integer()
-
-      deleted_count =
-        from(s in Thumbnail,
-          where: fragment("unixepoch(?)", s.expires_at) < ^now and not s.keepalive,
-          limit: 14000
-        )
-        |> JanitorReplica.all()
-        |> Enum.chunk_every(500)
-        |> Enum.map(fn chunk ->
-          ids = chunk |> Enum.map(fn t -> t.id end)
-
-          # re-check expiry/keepalive: a thumbnail refreshed between the replica
-          # snapshot and this delete must survive (and keep its file, so only
-          # rows actually deleted get their file removed)
-          {count, deleted} =
-            from(t in Thumbnail,
-              where:
-                t.id in ^ids and fragment("unixepoch(?)", t.expires_at) < ^now and
-                  not t.keepalive,
-              select: t.id
-            )
-            |> ThumbnailRepo.delete_all()
-
-          (deleted || [])
-          |> Enum.each(fn id ->
-            File.rm(Thumbnail.path_for(id))
-          end)
-
-          # let other ops run for a while, but only when we're churning through full chunks
-          if length(chunk) == 500 do
-            :timer.sleep(750)
-          end
-
-          count
-        end)
-        |> Enum.sum()
-
-      Logger.info("deleted #{deleted_count} thumbnails")
-      deleted_count
+      YtSearch.Janitor.sweep(
+        name: "thumbnails",
+        schema: Thumbnail,
+        repo: ThumbnailRepo,
+        replica: ThumbnailRepo.JanitorReplica,
+        keys: [:id],
+        expiry_column: :expires_at,
+        ttl: 0,
+        extra_where: dynamic([s], not s.keepalive),
+        select_limit: 14000,
+        chunk_size: 500,
+        sleep_ms: 750,
+        file_path: fn row -> Thumbnail.path_for(row.id) end
+      )
     end
   end
 end

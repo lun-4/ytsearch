@@ -289,7 +289,8 @@ defmodule YtSearch.Application do
       [YtSearch.Thumbnail.Janitor, [every: 2 * 60, jitter: 60..(1 * 60)]],
       [YtSearch.Repo.Janitor, [every: 60, jitter: -30..30]],
       [YtSearch.Chapters.Cleaner, [every: 1 * 60 * 60, jitter: (-20 * 60)..(20 * 60)]],
-      [YtSearch.AudioConfig.Cleaner, [every: 30 * 60, jitter: -60..60]]
+      [YtSearch.AudioConfig.Cleaner, [every: 30 * 60, jitter: -60..60]],
+      [YtSearch.Sponsorblock.Segments.Cleaner, [every: 10 * 60, jitter: -60..60]]
     ]
   end
 
