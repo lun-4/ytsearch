@@ -99,4 +99,55 @@ defmodule YtSearchWeb.GiftDropTest do
       _ = json_response(conn2, 400)
     end
   end
+
+  describe "GET /a/6/m/:number" do
+    test "increments m counter and persists to db", %{conn: conn} do
+      conn1 = get(conn, ~p"/a/6/m/1")
+      rjson1 = json_response(conn1, 200)
+      assert rjson1["added"] == 1
+      m1 = rjson1["m"]
+
+      conn2 = get(conn, ~p"/a/6/m/1")
+      rjson2 = json_response(conn2, 200)
+      assert rjson2["added"] == 1
+      m2 = rjson2["m"]
+
+      assert m2 - m1 == 1
+      assert YtSearch.Counter.get_value(:mau_counter) == m2
+    end
+
+    test "does not affect the global counter", %{conn: conn} do
+      global_before = YtSearch.Counter.get_value()
+
+      get(conn, ~p"/a/6/m/1")
+
+      global_after = YtSearch.Counter.get_value()
+
+      assert global_after == global_before
+    end
+
+    test "rejects zero amount", %{conn: conn} do
+      conn2 = get(conn, ~p"/a/6/m/0")
+      _ = json_response(conn2, 400)
+    end
+
+    test "rejects amount over 1", %{conn: conn} do
+      conn2 = get(conn, ~p"/a/6/m/2")
+      _ = json_response(conn2, 400)
+    end
+
+    test "rejects non-integer amount", %{conn: conn} do
+      conn2 = get(conn, ~p"/a/6/m/abc")
+      _ = json_response(conn2, 400)
+    end
+
+    test "rejects requests without unity user agent", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("user-agent", "Mozilla/5.0")
+
+      conn2 = get(conn, ~p"/a/6/m/1")
+      _ = json_response(conn2, 400)
+    end
+  end
 end

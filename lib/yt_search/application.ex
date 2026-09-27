@@ -417,6 +417,7 @@ defmodule YtSearch.Application do
     YtSearchWeb.AngelOfDeathController.ErrorCounter.setup()
     YtSearchWeb.GiftDropController.GiftCounter.setup()
     YtSearchWeb.FallController.FallCounter.setup()
+    YtSearchWeb.MAUController.MAUCounter.setup()
     YtSearch.Repo.FreelistMeter.Gauge.setup()
     YtSearch.SlotUtilities.RecycledSlotAge.setup()
     YtSearch.CounterServer.Metrics.setup()

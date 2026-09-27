@@ -6,7 +6,7 @@ defmodule YtSearch.Counter do
 
   @type t :: %__MODULE__{}
 
-  @counter_ids %{global: 1, gift_drops: 2, falls: 3}
+  @counter_ids %{global: 1, gift_drops: 2, falls: 3, mau_counter: 4}
 
   @primary_key {:id, :integer, autogenerate: false}
 
@@ -76,7 +76,8 @@ defmodule YtSearch.Counter do
 
     @seeds [
       {:global, YtSearch.CounterServer.Metrics},
-      {:gift_drops, YtSearchWeb.GiftDropController.GiftCounter}
+      {:gift_drops, YtSearchWeb.GiftDropController.GiftCounter},
+      {:mau_counter, YtSearchWeb.MAUController.MAUCounter}
     ]
 
     def run() do
